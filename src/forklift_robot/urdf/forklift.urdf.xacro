@@ -24,11 +24,31 @@
     <xacro:property name="front_wheel_mass" value="0.05" /> <!-- Made up number TODO: tune this parameter -->
     <xacro:property name="front_wheel_length_offset" value="${(chassis_bottom_length / 2)}" />
 
+    <xacro:property name="lift_body_connector_length" value="0.15" />
+    <xacro:property name="lift_base_length" value="0.25" />
+    <xacro:property name="lift_base_height" value="3.2" />
+
+
+    <xacro:property name="lift_body_connector_length" value="0.15" />
+    <xacro:property name="lift_body_connector_height" value="0.505" />
+
+    <xacro:property name="fork_base_width" value="1.050" />
+    <xacro:property name="fork_base_length" value="0.035" />
+    <xacro:property name="fork_base_height" value="1.220" />
+    <xacro:property name="fork_base_height_offset" value="${height_of_chassis_from_ground_plane - 0.076}" />
+
+
+    <xacro:property name="fork_length" value="0.99" />
+    <xacro:property name="fork_width" value="0.1" />
+    <xacro:property name="fork_height" value="0.045" />
+    <xacro:property name="fork_separation" value="0.850" /> <!-- separation (distance) between right fork and left fork -->
+
+
     <!-- This first link called "world" is empty -->
     <link name="world"></link>
 
-    <!-- bottom of the chassis -->
 
+    <!-- bottom of the chassis -->
     <joint name="chassis_bottom_joint" type="fixed">
         <origin xyz="1.5 1.0 ${height_of_chassis_from_ground_plane}" rpy="0 0 0"/>
         <parent link="world"/>
@@ -62,7 +82,6 @@
 
 
     <!-- top of the chassis -->
-
     <link name="chassis_top_link">
         <visual>
             <origin xyz="0 0 ${chassis_top_height / 2}" rpy="0 0 0"/>
@@ -96,7 +115,6 @@
 
 
     <!-- right_back_wheel -->
-
     <link name="right_back_wheel_link">
         <visual>
             <geometry>
@@ -154,7 +172,6 @@
 
 
     <!-- right_front_wheel -->
-
     <link name="right_front_wheel_link">
         <visual>
             <geometry>
@@ -182,9 +199,7 @@
     </joint>
 
 
-
     <!-- left_front_wheel -->
-
     <link name="left_front_wheel_link">
         <visual>
             <geometry>
@@ -211,5 +226,153 @@
         <axis xyz="0 0 1"/>
     </joint>
 
+
+    <!-- lift_base -->
+    <link name="lift_base_link">
+        <visual>
+            <origin xyz="0 0 ${lift_base_height / 2}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${chassis_bottom_width} ${lift_base_length} ${lift_base_height}"/>
+            </geometry>
+            <material name="red">
+                <color rgba="1 0 0 1"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 ${lift_base_height / 2}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${chassis_bottom_width} ${lift_base_length} ${lift_base_height}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="lift_base_joint" type="fixed">
+        <parent link="chassis_bottom_link"/>
+        <child link="lift_base_link"/>
+        <origin xyz="0 ${(chassis_bottom_length / 2) + lift_body_connector_length + (lift_base_length / 2)} 0" rpy="0 0 0" />
+    </joint>
+
+
+    <!-- lift_body_connector -->
+    <link name="lift_body_connector_link">
+        <visual>
+            <origin xyz="0 0 ${(lift_body_connector_height / 2)}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${chassis_bottom_width} ${lift_body_connector_length} ${lift_body_connector_height}"/>
+            </geometry>
+            <material name="blue">
+                <color rgba="0 0 1 1"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 ${(lift_body_connector_height / 2)}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${chassis_bottom_width} ${lift_body_connector_length} ${lift_body_connector_height}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="lift_body_connector_joint" type="fixed">
+        <parent link="chassis_bottom_link"/>
+        <child link="lift_body_connector_link"/>
+        <origin xyz="0 ${(chassis_bottom_length / 2) + (lift_body_connector_length / 2)} 0" rpy="0 0 0" />
+    </joint>
+
+
+    <!-- fork_base -->
+    <link name="fork_base_link">
+        <visual>
+            <origin xyz="0 0 ${(fork_base_height / 2)}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${fork_base_width} ${fork_base_length} ${fork_base_height}"/>
+            </geometry>
+            <material name="green">
+                <color rgba="0 1 0 1"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 ${(fork_base_height / 2)}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${fork_base_width} ${fork_base_length} ${fork_base_height}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="fork_base_joint" type="prismatic">
+        <parent link="lift_base_link"/>
+        <child link="fork_base_link"/>
+        <axis xyz="0 0 1"/>
+        <limit lower=" -${height_of_chassis_from_ground_plane - 0.015}" upper="${lift_base_height + fork_base_height_offset}" velocity="0.5" effort="1000.0"/> <!-- TODO: set limits -->
+        <origin xyz="0 ${(lift_base_length / 2) + (fork_base_length / 2)} -${fork_base_height_offset}" rpy="0 0 0"/>
+    </joint>
+    
+
+
+    <!-- right_fork -->
+    <link name="right_fork_link">
+        <visual>
+            <origin xyz="0 0 ${(fork_height / 2)}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${fork_width} ${fork_length} ${fork_height}"/>
+            </geometry>
+            <material name="red">
+                <color rgba="1 0 0 1"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 ${(fork_base_height / 2)}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${fork_width} ${fork_length} ${fork_height}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="right_fork_joint" type="fixed">
+        <parent link="fork_base_link"/>
+        <child link="right_fork_link"/>
+        <origin xyz="${(fork_separation / 2) + (fork_width / 2)} ${(fork_base_length / 2) + (fork_length / 2)} 0" rpy="0 0 0"/>
+    </joint>
+
+
+
+    <!-- left_fork -->
+    <link name="left_fork_link">
+        <visual>
+            <origin xyz="0 0 ${(fork_height / 2)}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${fork_width} ${fork_length} ${fork_height}"/>
+            </geometry>
+            <material name="red">
+                <color rgba="1 0 0 1"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 ${(fork_base_height / 2)}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${fork_width} ${fork_length} ${fork_height}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="left_fork_joint" type="fixed">
+        <parent link="fork_base_link"/>
+        <child link="left_fork_link"/>
+        <origin xyz=" -${(fork_separation / 2) + (fork_width / 2)} ${(fork_base_length / 2) + (fork_length / 2)} 0" rpy="0 0 0"/>
+    </joint>
 
 </robot>
