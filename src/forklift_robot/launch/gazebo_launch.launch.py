@@ -51,18 +51,20 @@ def generate_launch_description():
     # )
     
 
-    gazebo = IncludeLaunchDescription(
+    gazebo_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
             get_package_share_directory('gazebo_ros'), 'launch'), '/gazebo.launch.py']),
         )
 
 
-    spawn_entity = Node(package='gazebo_ros', executable='spawn_entity.py',
+    spawn_entity_node = Node(package='gazebo_ros', executable='spawn_entity.py',
                     arguments=['-topic', 'robot_description',
                                 '-entity', 'forklift_bot'],
                     output='screen')
 
 
+    # teleop_twist_keyboard_node = Node(package='teleop_twist_keyboard', executable='teleop_twist_keyboard',
+    #                 output='screen')
 
 
     # Run the node
@@ -70,6 +72,7 @@ def generate_launch_description():
         node_robot_state_publisher,
         rviz_start_node,
         # joint_state_publisher_gui_node,
-        gazebo,
-        spawn_entity
+        gazebo_node,
+        spawn_entity_node,
+        # teleop_twist_keyboard_node,
     ])

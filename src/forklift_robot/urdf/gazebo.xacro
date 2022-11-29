@@ -66,7 +66,7 @@
             (which robot_state_publisher can then use to broadcast the approprate tf). -->
 
     <!-- TODO: check out ROS2 CONTROL package for an alternative to this plugin -->
-    <gazebo>
+    <!-- <gazebo>
         <plugin name="gazebo_ros_joint_state_publisher"
             filename="libgazebo_ros_joint_state_publisher.so">
             <update_rate>20</update_rate>
@@ -76,7 +76,7 @@
             <joint_name>left_front_wheel_joint</joint_name>
             <joint_name>fork_base_joint</joint_name>
         </plugin>
-    </gazebo>
+    </gazebo> -->
 
 
     <!-- This plugin will read a JointTrajectory message from the /set_joint_trajectory topic 
@@ -87,12 +87,12 @@
             ros2 topic pub -1 /set_joint_trajectory trajectory_msgs/msg/JointTrajectory  '{header: {frame_id: world}, joint_names: [slider_joint, arm_joint], points: [  {positions: {0.8,0.6}} ]}' -->
 
     <!-- TODO: change this after ROS2 CONTROL implementation-->
-    <gazebo>
+    <!-- <gazebo>
         <plugin name="gazebo_ros_joint_pose_trajectory"
             filename="libgazebo_ros_joint_pose_trajectory.so">
             <update_rate>2</update_rate>
         </plugin>
-    </gazebo>
+    </gazebo> -->
 
 
 
@@ -154,6 +154,35 @@
     </gazebo> -->
 
 
+    <!-- Control plugins from another video -->
+    <xacro:property name="chassis_bottom_width" value="1.115" />
+    <xacro:property name="back_wheel_thickness" value="0.221" /> <!-- Made up number TODO: tune this parameter -->
+    <xacro:property name="back_wheel_radius" value="0.221" />
 
+    <gazebo>
+        <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+
+            <!-- Wheel Information -->
+            <left_joint>right_back_wheel_joint</left_joint>
+            <right_joint>left_back_wheel_joint</right_joint>
+            <wheel_separation>${chassis_bottom_width - back_wheel_thickness}</wheel_separation>
+            <wheel_diameter>${back_wheel_radius * 2}</wheel_diameter>
+
+
+            <!-- Limits -->
+            <max_wheel_torque>200</max_wheel_torque>
+            <max_wheel_acceleration>10.0</max_wheel_acceleration>
+
+            
+            <!-- Output -->
+            <odometry_frame>odom</odometry_frame>
+            <robot_base_frame>base_link</robot_base_frame>
+
+            <publish_odom>true</publish_odom>
+            <publish_odom_tf>true</publish_odom_tf>
+            <publish_wheel_tf>true</publish_wheel_tf>
+
+        </plugin>
+    </gazebo>
 
 </robot>
