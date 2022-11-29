@@ -44,11 +44,11 @@ def generate_launch_description():
 
 
     # joint_state_publisher_gui start node
-    joint_state_publisher_gui_node = Node(
-        package='joint_state_publisher_gui',
-        executable='joint_state_publisher_gui',
-        output='screen',
-    )
+    # joint_state_publisher_gui_node = Node(
+    #     package='joint_state_publisher_gui',
+    #     executable='joint_state_publisher_gui',
+    #     output='screen',
+    # )
     
 
     gazebo = IncludeLaunchDescription(
@@ -69,7 +69,7 @@ def generate_launch_description():
     return LaunchDescription([
         node_robot_state_publisher,
         rviz_start_node,
-        joint_state_publisher_gui_node,
+        # joint_state_publisher_gui_node,
         gazebo,
         spawn_entity
     ])

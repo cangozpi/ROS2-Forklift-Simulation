@@ -1,6 +1,11 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="forklift_bot">
     
+
+    <xacro:include filename="inertial_macros.xacro"/>
+    <xacro:include filename="gazebo.xacro"/>
+
+
     <xacro:property name="height_of_chassis_from_ground_plane" value="0.122" />
 
     <xacro:property name="chassis_bottom_width" value="1.115" />
@@ -10,9 +15,6 @@
     <xacro:property name="chassis_top_width" value="1.115" />
     <xacro:property name="chassis_top_length" value="1.59" />
     <xacro:property name="chassis_top_height" value="1.808" />
-
-
-    <xacro:include filename="inertial_macros.xacro"/>
 
     <xacro:property name="back_wheel_radius" value="0.221" />
     <xacro:property name="back_wheel_thickness" value="0.221" /> <!-- Made up number TODO: tune this parameter -->
@@ -37,7 +39,6 @@
     <xacro:property name="fork_base_height" value="1.220" />
     <xacro:property name="fork_base_height_offset" value="${height_of_chassis_from_ground_plane - 0.076}" />
 
-
     <xacro:property name="fork_length" value="0.99" />
     <xacro:property name="fork_width" value="0.1" />
     <xacro:property name="fork_height" value="0.045" />
@@ -45,15 +46,15 @@
 
 
     <!-- This first link called "world" is empty -->
-    <link name="world"></link>
+    <!-- <link name="world"></link> -->
 
 
     <!-- bottom of the chassis -->
-    <joint name="chassis_bottom_joint" type="fixed">
+    <!-- <joint name="chassis_bottom_joint" type="fixed">
         <origin xyz="1.5 1.0 ${height_of_chassis_from_ground_plane}" rpy="0 0 0"/>
         <parent link="world"/>
         <child link="chassis_bottom_link"/>        
-    </joint>
+    </joint> -->
 
 
     <link name="chassis_bottom_link">
