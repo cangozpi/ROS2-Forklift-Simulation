@@ -116,7 +116,7 @@
 
 
     <!-- right_back_wheel -->
-    <link name="right_back_wheel_link">
+    <!-- <link name="right_back_wheel_link">
         <visual>
             <geometry>
                 <cylinder radius="${back_wheel_radius}" length="${back_wheel_thickness}"/>
@@ -140,11 +140,39 @@
         <child link="right_back_wheel_link"/>
         <origin xyz="${(chassis_bottom_width / 2) - (back_wheel_thickness / 2)} -${back_wheel_length_offset} 0" rpy="0 -${pi/2} 0" />
         <axis xyz="0 0 1"/>
+    </joint> -->
+
+
+ 
+    <link name="back_wheel_link">
+        <visual>
+            <geometry>
+                <sphere radius="${back_wheel_radius}"/>
+            </geometry>
+            <material name="blue">
+                <color rgba="0 0 1 1"/>
+            </material>
+        </visual>
+        <collision>
+            <geometry>
+                <sphere radius="${back_wheel_radius}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_cylinder mass="${back_wheel_mass}" length="${back_wheel_thickness}" radius="${back_wheel_radius}">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_cylinder>
+    </link>
+
+    <joint name="back_wheel_joint" type="continuous">
+        <parent link="chassis_bottom_link"/>
+        <child link="back_wheel_link"/>
+        <origin xyz=" 0 -${back_wheel_length_offset} 0" rpy="0 -${pi/2} 0" />
+        <axis xyz="1 1 1"/>
     </joint>
 
-
+ 
     <!-- left_back_wheel -->
-    <link name="left_back_wheel_link">
+    <!-- <link name="left_back_wheel_link">
         <visual>
             <geometry>
                 <cylinder radius="${back_wheel_radius}" length="${back_wheel_thickness}"/>
@@ -168,7 +196,7 @@
         <child link="left_back_wheel_link"/>
         <origin xyz="${- (chassis_bottom_width / 2) + (back_wheel_thickness / 2)} -${back_wheel_length_offset} 0" rpy="0 -${pi/2} 0" />
         <axis xyz="0 0 1"/>
-    </joint>
+    </joint> -->
 
 
 
