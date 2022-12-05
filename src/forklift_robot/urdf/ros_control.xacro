@@ -31,10 +31,17 @@
 
     <!-- Include Ros_Control for Gazebo Simulation plugin -->
     <gazebo>
+        <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+            <robot_param>robot_description</robot_param>
+            <robot_param_node>robot_state_publisher</robot_param_node>
+            <parameters>$(find forklift_ros_control)/config/forklift_control.yaml</parameters>
+        </plugin>
+    </gazebo>
+    <!-- <gazebo>
         <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
             <robotNamespace>/ForkliftBot</robotNamespace>
             <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
         </plugin>
-    </gazebo>
+    </gazebo> -->
 
 </robot>
