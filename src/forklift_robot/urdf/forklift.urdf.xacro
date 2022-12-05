@@ -412,7 +412,7 @@
     
     
     <!-- Setup ROS_CONTROL and transmission tags -->
-    <xacro:include filename="ros_control.xacro"/>
+    <xacro:include filename="ros2_control.xacro"/>
 
 
 </robot>

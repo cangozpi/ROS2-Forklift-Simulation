@@ -18,6 +18,7 @@ setup(
         (os.path.join('share', package_name), glob('launch/*launch.[pxy][yma]*')), # includes files inside /launch directory
         (os.path.join('share', package_name), glob('urdf/*')), # includes files inside /urdf directory
         (os.path.join('share', package_name), glob('rviz/*')), # includes files inside /rviz directory
+        (os.path.join('share', package_name), glob('config/*')), # includes files inside /config directory
     ],
     install_requires=['setuptools'],
     zip_safe=True,
