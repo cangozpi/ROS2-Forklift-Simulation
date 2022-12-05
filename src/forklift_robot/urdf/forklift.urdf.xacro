@@ -43,7 +43,10 @@
     
 
     <xacro:include filename="inertial_macros.xacro"/>
-    <xacro:include filename="gazebo.xacro"/>
+    <xacro:include filename="gazebo_colors.xacro"/>
+    <!-- <xacro:include filename="gazebo.xacro"/> -->
+    
+    
 
 
     <!-- This first link called "world" is empty -->
@@ -404,5 +407,12 @@
         <child link="left_fork_link"/>
         <origin xyz=" -${(fork_separation / 2) + (fork_width / 2)} ${(fork_base_length / 2) + (fork_length / 2)} 0" rpy="0 0 0"/>
     </joint>
+
+
+    
+    
+    <!-- Setup ROS_CONTROL and transmission tags -->
+    <xacro:include filename="ros_control.xacro"/>
+
 
 </robot>

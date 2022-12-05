@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <gazebo reference="chassis_bottom_link">
+        <material>Gazebo/Green</material>
+    </gazebo>
+
+    <gazebo reference="chassis_top_link">
+        <material>Gazebo/Red</material>
+    </gazebo>
+
+    <gazebo reference="right_back_wheel_link">
+        <material>Gazebo/Blue</material>
+    </gazebo>
+
+    <gazebo reference="left_back_wheel_link">
+        <material>Gazebo/Blue</material>
+    </gazebo>
+
+    <gazebo reference="right_front_wheel_link">
+        <material>Gazebo/Blue</material>
+    </gazebo>
+
+    <gazebo reference="left_front_wheel_link">
+        <material>Gazebo/Blue</material>
+    </gazebo>
+
+    <gazebo reference="lift_base_link">
+        <material>Gazebo/Red</material>
+    </gazebo>
+
+    <gazebo reference="lift_body_connector_link">
+        <material>Gazebo/Blue</material>
+    </gazebo>
+
+    <gazebo reference="fork_base_link">
+        <material>Gazebo/Green</material>
+    </gazebo>
+
+    <gazebo reference="right_fork_link">
+        <material>Gazebo/Red</material>
+    </gazebo>
+
+    <gazebo reference="left_fork_link">
+        <material>Gazebo/Red</material>
+    </gazebo>
+    
+
+</robot>

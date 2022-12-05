@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+
+    <!-- Add transmission tags for forklift URDF bot -->
+
+    <transmission name="transmission_right_front_wheel_joint">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="right_front_wheel_joint">
+            <hardwareInterface>EffortJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="motor_right_front_wheel_joint">
+            <hardwareInterface>EffortJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission>
+
+    
+    <transmission name="transmission_left_front_wheel_joint">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="left_front_wheel_joint">
+            <hardwareInterface>EffortJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="motor_left_front_wheel_joint">
+            <hardwareInterface>EffortJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission>
+
+
+
+    <!-- Include Ros_Control for Gazebo Simulation plugin -->
+    <gazebo>
+        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+            <robotNamespace>/ForkliftBot</robotNamespace>
+            <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+        </plugin>
+    </gazebo>
+
+</robot>

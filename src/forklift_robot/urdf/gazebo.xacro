@@ -12,7 +12,7 @@
     <!-- Instead, we need to add gazebo tags for our links that refer to Gazebo materials -->
 
 
-    <gazebo reference="chassis_bottom_link">
+    <!-- <gazebo reference="chassis_bottom_link">
         <material>Gazebo/Green</material>
     </gazebo>
 
@@ -54,7 +54,7 @@
 
     <gazebo reference="left_fork_link">
         <material>Gazebo/Red</material>
-    </gazebo>
+    </gazebo> -->
 
 
 
