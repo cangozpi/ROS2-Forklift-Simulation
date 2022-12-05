@@ -2,10 +2,6 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="forklift_bot">
     
 
-    <xacro:include filename="inertial_macros.xacro"/>
-    <xacro:include filename="gazebo.xacro"/>
-
-
     <xacro:property name="height_of_chassis_from_ground_plane" value="0.122" />
 
     <xacro:property name="chassis_bottom_width" value="1.115" />
@@ -43,6 +39,11 @@
     <xacro:property name="fork_width" value="0.1" />
     <xacro:property name="fork_height" value="0.045" />
     <xacro:property name="fork_separation" value="0.850" /> <!-- separation (distance) between right fork and left fork -->
+
+    
+
+    <xacro:include filename="inertial_macros.xacro"/>
+    <xacro:include filename="gazebo.xacro"/>
 
 
     <!-- This first link called "world" is empty -->
