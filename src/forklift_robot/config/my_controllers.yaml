@@ -13,7 +13,7 @@ diff_cont:
   ros__parameters:
     publish_rate: 50.0 #50 Hz
 
-    base_frame_id: chassis_bottom_link #TODO: this was base_link NOT SURE IF I SET IT CORRECTLY !
+    base_frame_id: base_link #TODO: this was base_link NOT SURE IF I SET IT CORRECTLY !
 
     right_wheel_names: ["right_front_wheel_joint"]
     left_wheel_names: ["left_front_wheel_joint"]
