@@ -9,6 +9,15 @@ controller_manager:
     joint_broad:
       type: joint_state_broadcaster/JointStateBroadcaster
 
+    fork_joint_controller:
+      type: forward_command_controller/ForwardCommandController
+
+fork_joint_controller:
+  ros__parameters:
+    joints:
+      - fork_base_joint
+    interface_name: position
+
 diff_cont:
   ros__parameters:
     publish_rate: 50.0 #50 Hz

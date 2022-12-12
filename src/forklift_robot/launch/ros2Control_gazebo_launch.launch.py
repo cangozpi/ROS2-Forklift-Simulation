@@ -73,6 +73,9 @@ def generate_launch_description():
                     output='screen')
 
 
+    fork_joint_controller_spawner_node = Node(package='controller_manager', executable='spawner',
+                    arguments=['fork_joint_controller'],
+                    output='screen')
     # teleop_twist_keyboard_node = Node(package='teleop_twist_keyboard', executable='teleop_twist_keyboard',
     #                 arguments=['-r', '/cmd_vel:=/diff_cont/cmd_vel_unstamped'],
     #                 output='screen')
@@ -87,5 +90,6 @@ def generate_launch_description():
         spawn_entity_node,
         diff_drive_spawner_node,
         joint_broad_spawner_node,
+        fork_joint_controller_spawner_node, 
         # teleop_twist_keyboard_node,
     ])
