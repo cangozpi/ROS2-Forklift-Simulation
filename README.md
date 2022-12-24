@@ -94,7 +94,17 @@ colcon build --symlink-install
      On another terminal do:
 
      ```bash
-     ros2 run teleop_twist_keyboard teleop_twist_keyboard
+     ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_cont/cmd_vel_unstamped
+     ```
+
+   * Inspecting available hardware_interfaces and controllers:
+
+     ```bash
+     # To list loaded controllers
+     ros2 control list_controllers
+
+     # To list available hardware interfaces:
+     ros2 control list_hardware_interfaces
      ```
 
 ---
