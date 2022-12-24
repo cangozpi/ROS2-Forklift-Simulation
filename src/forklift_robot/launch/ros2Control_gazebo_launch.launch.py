@@ -69,7 +69,7 @@ def generate_launch_description():
 
 
     fork_joint_controller_spawner_node = Node(package='controller_manager', executable='spawner',
-                    arguments=['fork_joint_controller2'],
+                    arguments=['fork_joint_controller'],
                     output='screen')
 
 

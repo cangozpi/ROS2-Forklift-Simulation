@@ -50,11 +50,18 @@ def generate_launch_description():
         output='screen'
     )
 
-    load_gripper_controller = ExecuteProcess(
+    fork_joint_controller = ExecuteProcess(
         cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
-             'fork_joint_controller2'],
+             'fork_joint_controller'],
         output='screen'
     )
+
+    diff_controller = ExecuteProcess(
+            cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+                'diff_cont'],
+            output='screen'
+        )
+
 
     return LaunchDescription([
         RegisterEventHandler(
@@ -66,7 +73,13 @@ def generate_launch_description():
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=load_joint_state_controller,
-                on_exit=[load_gripper_controller],
+                on_exit=[fork_joint_controller],
+            )
+        ),
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=fork_joint_controller,
+                on_exit=[diff_controller],
             )
         ),
         gazebo,

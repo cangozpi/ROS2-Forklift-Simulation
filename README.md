@@ -53,3 +53,48 @@ or
   ```
 
 ---
+
+### Build & Run forklift_robot in gazebo with **ros2_control**
+
+This will start ros2 controllers, spawn robot in gazebo.
+
+- Started Ros2 Controllers are as follows:
+  1. Differential Controller for wheels of the forklift (_'diff_cont'_)
+  2. Forward Command Controller for lifting the fork of the forklift (_'fork_joint_controller'_)
+  3. Joint State Broadcaster for broadcasting the joint states ('_joint_broad_')
+
+1. Building the package:
+
+```bash
+rm -r build/ install/ log/
+colcon build --symlink-install
+```
+
+2. Laucnhing:
+
+   On another terminal:
+
+   ```bash
+   source install/setup.bash
+   ros2 launch forklift_robot demo_launch.launch.py
+   ```
+
+3. Testing (sending commands to controllers):
+
+   - Commanding '_fork_joint_controller_'
+
+     On another terminal do:
+
+     ```bash
+     ros2 topic pub /fork_joint_controller/commands std_msgs/msg/Float64MultiArray "{data: [3.0]}"
+     ```
+
+   - Commanding '_diff_cont_'
+
+     On another terminal do:
+
+     ```bash
+     ros2 run teleop_twist_keyboard teleop_twist_keyboard
+     ```
+
+---

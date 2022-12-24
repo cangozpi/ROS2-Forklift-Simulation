@@ -9,16 +9,16 @@ controller_manager:
     joint_broad:
       type: joint_state_broadcaster/JointStateBroadcaster
 
-    fork_joint_controller2:
+    fork_joint_controller:
       # type: effort_controllers/JointGroupEffortController" # refer to https://github.com/ros-controls/ros2_controllers/blob/master/effort_controllers/effort_controllers_plugins.xml
       type: forward_command_controller/ForwardCommandController # refer to https://github.com/ros-controls/ros2_controllers/blob/master/diff_drive_controller/diff_drive_plugin.xml
       # type: joint_trajectory_controller/JointTrajectoryController
 
-fork_joint_controller2: # refer to https://github.com/ros-controls/ros2_controllers/blob/master/forward_command_controller/src/forward_command_controller_parameters.yaml
+fork_joint_controller: # refer to https://github.com/ros-controls/ros2_controllers/blob/master/forward_command_controller/src/forward_command_controller_parameters.yaml
   ros__parameters:
     joints:
       - fork_base_joint
-    interface_name: position
+    interface_name: effort
     # interface_name: velocity
     # write_op_modes:
     #   - fork_base_joint
