@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+
+    <!-- Add link and a joint for the Camera -->
+    <link name="camera_link">
+        <visual>
+            <origin xyz="${camera_size_x / 2} ${camera_size_y / 2} ${camera_size_z / 2}" rpy="0 0 0"/>
+            <geometry>
+                <box size="${camera_size_x} ${camera_size_y} ${camera_size_z}"/>
+            </geometry>
+            <material name="white">
+                <color rgba="1 1 1 1"/>
+            </material>
+        </visual>
+    </link>
+
+    <joint name="camera_joint" type="fixed">
+        <parent link="fork_base_link"/>
+        <child link="camera_link"/>
+        <origin xyz="${fork_base_length / 2} ${fork_base_length / 2} ${fork_base_length / 2}" rpy="0 0 ${pi / 2}"/> <!-- TODO: when the front of the robot faces x-axis(instead of current y-axis) change to rpy="0 0 0"-->
+    </joint>
+
+    
+    <!-- Convert ros coordinate system to generally used image coordinate system -->
+    <link name="camera_link_optical"></link>
+
+    <joint name="camera_optical_joint" type="fixed">
+        <parent link="camera_link"/>
+        <child link="camera_link_optical"/>
+        <origin xyz="0 0 0" rpy="${-pi / 2} 0 ${-pi / 2}"/>
+    </joint>
+
+
+
+    <!-- Gazebo Plugin for Camera -->
+    <gazebo reference="camera_link">
+        <sensor name="camera" type="depth">
+            <pose> 0 0 0 0 0 0 </pose>
+            <visualize>true</visualize>
+            <update_rate>10</update_rate>
+            <camera>
+                <horizontal_fov>1.089</horizontal_fov>
+                <image>
+                    <format>B8G8R8</format>
+                    <width>${camera_image_width}</width> <!-- Width of the RGB image published by the camera sensor -->
+                    <height>${camera_image_height}</height> <!-- Height of the RGB image published by the camera sensor -->
+                </image>
+                <clip>
+                    <near>${camera_image_clip_near}</near> <!-- how close the camera can see -->
+                    <far>${camera_image_clip_far}</far> <!-- how far the camera can see -->
+                </clip>
+            </camera>
+            <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+                <frame_name>camera_link_optical</frame_name>
+                <min_depth>0.1</min_depth>
+                <max_depth>100.0</max_depth>
+            </plugin>
+        </sensor>
+    </gazebo>
+
+
+</robot>
