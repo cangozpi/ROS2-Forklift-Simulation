@@ -40,10 +40,13 @@
     <xacro:property name="fork_height" value="0.045" />
     <xacro:property name="fork_separation" value="0.850" /> <!-- separation (distance) between right fork and left fork -->
 
-    
+    <xacro:property name="laser_frame_radius" value="0.05" /> 
+    <xacro:property name="laser_frame_length" value="0.04" /> 
+    <xacro:property name="laser_frame_mass" value="0.01" /> 
 
     <xacro:include filename="inertial_macros.xacro"/>
     <xacro:include filename="gazebo_colors.xacro"/>
+    <xacro:include filename="lidar.xacro"/>
     <!-- <xacro:include filename="gazebo.xacro"/> -->
     
     

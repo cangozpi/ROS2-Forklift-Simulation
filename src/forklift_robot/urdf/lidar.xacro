@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="forklift_bot">
+
+
+    <!-- Add link and a joint for the Lidar -->
+    <link name="laser_frame_link">
+        <visual>
+            <origin xyz="0 0 ${laser_frame_length / 2}" rpy="0 0 0"/>
+            <geometry>
+                <cylinder radius="${laser_frame_radius}" length="${laser_frame_length}"/>
+            </geometry>
+            <material name="white">
+                <color rgba="1 1 1 1"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 ${laser_frame_length / 2}" rpy="0 0 0"/>
+            <geometry>
+                <cylinder radius="${laser_frame_radius}" length="laser_frame_length"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_cylinder mass="${laser_frame_mass}" length="${laser_frame_length}" radius="${laser_frame_radius}">
+            <origin xyz="0 0 ${laser_frame_length / 2}" rpy="0 0 0"/>
+        </xacro:inertial_cylinder>
+    </link>
+
+    <joint name="laser_frame_joint" type="fixed">
+        <parent link="chassis_bottom_link"/>
+        <child link="laser_frame_link"/>
+        <origin xyz=" 0 0 ${chassis_bottom_height + chassis_top_height}" rpy="0 0 0" />
+        <axis xyz="1 1 1"/>
+    </joint>
+
+
+
+</robot>
