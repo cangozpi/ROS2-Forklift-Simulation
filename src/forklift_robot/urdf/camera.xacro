@@ -2,39 +2,30 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
 
 
-    <!-- Add link and a joint for the Lidar -->
-    <link name="laser_frame_link">
+    <!-- Add link and a joint for the CamerCamera -->
+    <link name="camera_link">
         <visual>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <origin xyz="${camera_size_x / 2} ${camera_size_y / 2} ${camera_size_z / 2}" rpy="0 0 0"/>
             <geometry>
-                <cylinder radius="${laser_frame_radius}" length="${laser_frame_length}"/>
+                <box size="${camera_size_x} ${camera_size_y} ${camera_size_z}"/>
             </geometry>
             <material name="white">
                 <color rgba="1 1 1 1"/>
             </material>
         </visual>
-        <collision>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-            <geometry>
-                <cylinder radius="${laser_frame_radius}" length="laser_frame_length"/>
-            </geometry>
-        </collision>
-        <xacro:inertial_cylinder mass="${laser_frame_mass}" length="${laser_frame_length}" radius="${laser_frame_radius}">
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-        </xacro:inertial_cylinder>
     </link>
 
-    <joint name="laser_frame_joint" type="fixed">
-        <parent link="chassis_bottom_link"/>
-        <child link="laser_frame_link"/>
-        <origin xyz=" 0 0 ${chassis_bottom_height + chassis_top_height + (laser_frame_length / 2)}" rpy="0 0 0" />
+    <joint name="camera_joint" type="fixed">
+        <parent link="fork_base_link"/>
+        <child link="camera_link"/>
+        <origin xyz="${fork_base_length / 2} ${fork_base_length / 2} ${fork_base_length / 2}" rpy="0 0 0"/>
     </joint>
 
     
 
-    <!-- Gazebo Plugin for Lidar -->
-    <gazebo reference="laser_frame_link">
-        <sensor name="laser" type="ray">
+    <!-- Gazebo Plugin for Camera -->
+    <gazebo reference="camera_link">
+        <!-- <sensor name="laser" type="ray">
             <pose> 0 0 0 0 0 0 </pose>
             <visualize>true</visualize>
             <update_rate>10</update_rate>
@@ -58,7 +49,7 @@
                 <output_type>sensor_msgs/LaserScan</output_type>
                 <frame_name>laser_frame_link</frame_name>
             </plugin>
-        </sensor>
+        </sensor> -->
     </gazebo>
     
 

@@ -49,4 +49,8 @@
         <material>Gazebo/White</material>
     </gazebo>
 
+    <gazebo reference="camera_link">
+        <material>Gazebo/White</material>
+    </gazebo>
+
 </robot>

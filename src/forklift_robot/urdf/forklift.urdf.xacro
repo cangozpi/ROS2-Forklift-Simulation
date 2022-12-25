@@ -44,9 +44,14 @@
     <xacro:property name="laser_frame_length" value="0.04" /> 
     <xacro:property name="laser_frame_mass" value="0.01" /> 
 
+    <xacro:property name="camera_size_x" value="0.010" /> 
+    <xacro:property name="camera_size_y" value="0.03" /> 
+    <xacro:property name="camera_size_z" value="0.03" /> 
+
     <xacro:include filename="inertial_macros.xacro"/>
     <xacro:include filename="gazebo_colors.xacro"/>
     <xacro:include filename="lidar.xacro"/>
+    <xacro:include filename="camera.xacro"/>
     <!-- <xacro:include filename="gazebo.xacro"/> -->
     
     
