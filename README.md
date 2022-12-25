@@ -59,9 +59,22 @@ or
 This will start ros2 controllers, spawn robot in gazebo.
 
 - Started Ros2 Controllers are as follows:
+
   1. Differential Controller for wheels of the forklift (_'diff_cont'_)
   2. Forward Command Controller for lifting the fork of the forklift (_'fork_joint_controller'_)
   3. Joint State Broadcaster for broadcasting the joint states ('_joint_broad_')
+
+- Available sensors are as follows:
+
+  1. Lidar
+  2. Depth Camera
+
+     (_Note that you can swap Depth Camera with a regular Camera by modifying forklift.urdf.xacro file as follows_):
+
+     ```xml
+       <!-- <xacro:include filename="camera.xacro"/> --> <!-- Uncomment this line, and comment the line below to switch between Depth Camera and a Regular Camera -->
+       <xacro:include filename="depth_camera.xacro"/>
+     ```
 
 1. Building the package:
 
@@ -70,7 +83,7 @@ rm -r build/ install/ log/
 colcon build --symlink-install
 ```
 
-2. Laucnhing:
+2. Launching:
 
    On another terminal:
 
