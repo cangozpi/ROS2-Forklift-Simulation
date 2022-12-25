@@ -14,6 +14,29 @@
 
   <!-- Added by me -->
   <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <!-- TODO: add Ros2-Control package, required gazebo plugins (such as libgazebo_ros2_control.so, gazebo camera plugins, e.t.c) and maybe rqt-image-view package
+    # install ros2_control packages for gazebo
+    sudo apt install ros-humble-gazebo-ros2-control
+
+    # install ros2_control
+    sudo apt install ros-humble-ros2-control ros-humble-ros2-controllers
+
+    # Download image_transport package
+    sudo apt install ros-humble-image-transport-plugins
+    # Download rqt_image_view package
+    sudo apt install ros-humble-rqt-image-view 
+    
+    add something like the following packages too maybe not sure I took it from internet, I did not check if I used the following packages
+    <exec_depend>rclpy</exec_depend>
+    <exec_depend>sensor_msgs_py</exec_depend>
+    <exec_depend>python3-numpy</exec_depend>
+    <exec_depend>sensor_msgs</exec_depend>
+    <exec_depend>std_msgs</exec_depend>
+
+   -->
+
   <!-- -->
 
   <export>
