@@ -44,6 +44,9 @@
     <gazebo reference="left_fork_link">
         <material>Gazebo/Red</material>
     </gazebo>
-    
+
+    <gazebo reference="laser_frame_link">
+        <material>Gazebo/White</material>
+    </gazebo>
 
 </robot>
