@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
 
 
-    <!-- Add link and a joint for the CamerCamera -->
+    <!-- Add link and a joint for the Camera -->
     <link name="camera_link">
         <visual>
             <origin xyz="${camera_size_x / 2} ${camera_size_y / 2} ${camera_size_z / 2}" rpy="0 0 0"/>
@@ -18,40 +18,44 @@
     <joint name="camera_joint" type="fixed">
         <parent link="fork_base_link"/>
         <child link="camera_link"/>
-        <origin xyz="${fork_base_length / 2} ${fork_base_length / 2} ${fork_base_length / 2}" rpy="0 0 0"/>
+        <origin xyz="${fork_base_length / 2} ${fork_base_length / 2} ${fork_base_length / 2}" rpy="0 0 ${pi / 2}"/> <!-- TODO: when the front of the robot faces x-axis(instead of current y-axis) change to rpy="0 0 0"-->
     </joint>
 
     
+    <!-- Convert ros coordinate system to generally used image coordinate system -->
+    <link name="camera_link_optical"></link>
+
+    <joint name="camera_optical_joint" type="fixed">
+        <parent link="camera_link"/>
+        <child link="camera_link_optical"/>
+        <origin xyz="0 0 0" rpy="${-pi / 2} 0 ${-pi / 2}"/>
+    </joint>
+
+
 
     <!-- Gazebo Plugin for Camera -->
     <gazebo reference="camera_link">
-        <!-- <sensor name="laser" type="ray">
+        <sensor name="camera" type="camera">
             <pose> 0 0 0 0 0 0 </pose>
             <visualize>true</visualize>
             <update_rate>10</update_rate>
-            <ray>
-                <scan>
-                    <horizontal>
-                        <samples>360</samples>
-                        <min_angle>-3.14</min_angle>
-                        <max_angle>3.14</max_angle>
-                    </horizontal>
-                </scan>
-                <range>
-                    <min>0.3</min>
-                    <max>12</max>
-                </range>
-            </ray>
-            <plugin name="laser_controller" filename="libgazebo_ros_ray_sensor.so">
-                <ros>
-                    <argument>~/out:=scan</argument>
-                </ros>
-                <output_type>sensor_msgs/LaserScan</output_type>
-                <frame_name>laser_frame_link</frame_name>
+            <camera>
+                <horizontal_fov>1.089</horizontal_fov>
+                <image>
+                    <format>R8G8B8</format>
+                    <width>${camera_image_width}</width> <!-- Width of the RGB image published by the camera sensor -->
+                    <height>${camera_image_height}</height> <!-- Height of the RGB image published by the camera sensor -->
+                </image>
+                <clip>
+                    <near>${camera_image_clip_near}</near> <!-- how close the camera can see -->
+                    <far>${camera_image_clip_far}</far> <!-- how far the camera can see -->
+                </clip>
+            </camera>
+            <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+                <frame_name>camera_link_optical</frame_name>
             </plugin>
-        </sensor> -->
+        </sensor>
     </gazebo>
-    
 
 
 </robot>

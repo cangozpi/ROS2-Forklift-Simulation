@@ -48,6 +48,11 @@
     <xacro:property name="camera_size_y" value="0.03" /> 
     <xacro:property name="camera_size_z" value="0.03" /> 
 
+    <xacro:property name="camera_image_width" value="640" />  <!-- Width of the RGB image published by the camera sensor -->
+    <xacro:property name="camera_image_height" value="480" /> <!-- Height of the RGB image published by the camera sensor -->
+    <xacro:property name="camera_image_clip_near" value="0.05" /> <!-- how close the camera can see -->
+    <xacro:property name="camera_image_clip_far" value="8" /> <!-- how far the camera can see -->
+
     <xacro:include filename="inertial_macros.xacro"/>
     <xacro:include filename="gazebo_colors.xacro"/>
     <xacro:include filename="lidar.xacro"/>
@@ -91,8 +96,6 @@
             <inertia ixx="2.26" ixy="0.0" ixz="0.0" iyy="6.26" iyz="0.0" izz="8.5" />
         </inertial>
     </link>
-
-
 
     <!-- top of the chassis -->
     <link name="chassis_top_link">
