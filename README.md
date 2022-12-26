@@ -110,6 +110,12 @@ colcon build --symlink-install
      ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_cont/cmd_vel_unstamped
      ```
 
+     or do:
+
+     ```bash
+     ros2 topic pub /diff_cont/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: 0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 1.0}}"
+     ```
+
    * Inspecting available hardware_interfaces and controllers:
 
      ```bash
@@ -122,8 +128,20 @@ colcon build --symlink-install
 
    * Visualize/stream the depth camera sensor's _/camera/image_raw_ topic.
 
-   ```bash
-   ros2 run forklift_robot depth_camera_raw_image_subscriber
-   ```
+     ```bash
+     ros2 run forklift_robot depth_camera_raw_image_subscriber
+     ```
+
+   - Publish to _/fork_joint_controller/commands_ topic to control the fork of the forklift.
+
+     ```bash
+     ros2 run forklift_robot fork_controller_publisher
+     ```
+
+   - Publish to _/diff_cont/cmd_vel_unstamped_ topic to control the wheels of the forklift.
+
+     ```bash
+     ros2 run forklift_robot diff_cont_cmd_vel_unstamped_publisher
+     ```
 
 ---

@@ -30,7 +30,8 @@ setup(
     entry_points={
         'console_scripts': [
             'fork_controller_publisher = forklift_robot.fork_controller_publisher:main',
-            'depth_camera_raw_image_subscriber = forklift_robot.depth_camera_raw_image_subscriber:main'
+            'depth_camera_raw_image_subscriber = forklift_robot.depth_camera_raw_image_subscriber:main',
+            'diff_cont_cmd_vel_unstamped_publisher = forklift_robot.diff_cont_cmd_vel_unstamped_publisher:main'
         ],
     },
 )
