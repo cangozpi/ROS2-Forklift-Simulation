@@ -53,4 +53,10 @@
         <material>Gazebo/White</material>
     </gazebo>
 
+    <gazebo reference="back_wheel_link">
+        <material>Gazebo/White</material>
+        <mu1 value="0.001"/> <!-- Reduce Friction to use it as a Caster Wheel -->
+        <mu2 value="0.001"/>
+    </gazebo>
+
 </robot>

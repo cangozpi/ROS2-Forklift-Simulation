@@ -179,12 +179,17 @@
         </xacro:inertial_cylinder>
     </link>
 
-    <joint name="back_wheel_joint" type="continuous">
+    <joint name="back_wheel_joint" type="fixed">
+        <parent link="chassis_bottom_link"/>
+        <child link="back_wheel_link"/>
+        <origin xyz=" 0 -${back_wheel_length_offset} 0" rpy="0 -${pi/2} 0" />
+    </joint>
+    <!-- <joint name="back_wheel_joint" type="continuous">
         <parent link="chassis_bottom_link"/>
         <child link="back_wheel_link"/>
         <origin xyz=" 0 -${back_wheel_length_offset} 0" rpy="0 -${pi/2} 0" />
         <axis xyz="1 1 1"/>
-    </joint>
+    </joint> -->
 
  
     <!-- left_back_wheel -->

@@ -22,7 +22,7 @@ class DiffContCmdVelUnstampedPublisher(Node):
         # msg.angular = Vector3()
         msg.angular.x = 0.0
         msg.angular.y = 0.0
-        msg.angular.z = 2.0 # use this one
+        msg.angular.z = 0.0 # use this one
 
         self.publisher_.publish(msg)
         self.get_logger().info('Publishing: "%s"' % msg)
