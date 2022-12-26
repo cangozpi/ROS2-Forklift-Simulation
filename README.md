@@ -54,7 +54,7 @@ or
 
 ---
 
-### Build & Run forklift_robot in gazebo with **ros2_control**
+### Build & Run forklift_robot in gazebo with **ros2_control** & **sensors**
 
 This will start ros2 controllers, spawn robot in gazebo.
 
@@ -94,28 +94,40 @@ colcon build --symlink-install
 
    Then you can do the following in any order:
 
-   - Visualize/stream the camera sensor's _/camera/image_raw_ topic.
+   - Visualize/Stream the camera sensor's _/camera/image_raw_ topic.
 
      ```bash
      ros2 run forklift_robot camera_raw_image_subscriber
      ```
 
-   - Visualize/stream the depth camera sensor's _/camera/depth/image_raw_ topic.
+   - Visualize/Stream the depth camera sensor's _/camera/depth/image_raw_ topic.
 
      ```bash
      ros2 run forklift_robot depth_camera_raw_image_subscriber
      ```
 
-   * Publish to _/fork_joint_controller/commands_ topic to control the fork of the forklift.
+   - Publish to _/fork_joint_controller/commands_ topic to control the fork of the forklift.
 
      ```bash
      ros2 run forklift_robot fork_controller_publisher
      ```
 
-   * Publish to _/diff_cont/cmd_vel_unstamped_ topic to control the wheels of the forklift.
+   - Publish to _/diff_cont/cmd_vel_unstamped_ topic to control the wheels of the forklift.
 
      ```bash
      ros2 run forklift_robot diff_cont_cmd_vel_unstamped_publisher
+     ```
+
+   - Subscribe/Print to console the lidar sensor's _/scan_ topic.
+
+     ```bash
+     ros2 run forklift_robot lidar_scan_subscriber
+     ```
+
+   - Subscribe/Print to console the diff\_cont's _/diff\_cont/odom_ topic.
+
+     ```bash
+     ros2 run forklift_robot odom_subscriber
      ```
 
 3. Testing (sending commands to controllers):
