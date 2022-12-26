@@ -120,4 +120,10 @@ colcon build --symlink-install
      ros2 control list_hardware_interfaces
      ```
 
+   * Visualize/stream the depth camera sensor's _/camera/image_raw_ topic.
+
+   ```bash
+   ros2 run forklift_robot depth_camera_raw_image_subscriber
+   ```
+
 ---

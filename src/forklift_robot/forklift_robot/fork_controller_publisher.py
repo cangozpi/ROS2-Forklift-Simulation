@@ -1,37 +1,36 @@
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String
+from std_msgs.msg import Float64MultiArray
 
 
-class MinimalPublisher(Node):
+class ForkControllerPublisher(Node):
 
     def __init__(self):
-        super().__init__('minimal_publisher')
-        self.publisher_ = self.create_publisher(String, 'topic', 10)
+        super().__init__('fork_controller_publisher')
+        self.publisher_ = self.create_publisher(Float64MultiArray, '/fork_joint_controller/commands', 10)
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
-        self.i = 0
 
     def timer_callback(self):
-        msg = String()
-        msg.data = 'Hello World: %d' % self.i
+        msg = Float64MultiArray()
+        # msg.layout = None
+        msg.data = [3.0]
         self.publisher_.publish(msg)
-        self.get_logger().info('Publishing: "%s"' % msg.data)
-        self.i += 1
+        self.get_logger().info('Publishing: "%s"' % msg)
 
 
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_publisher = MinimalPublisher()
+    fork_controller_publisher = ForkControllerPublisher()
 
-    rclpy.spin(minimal_publisher)
+    rclpy.spin(fork_controller_publisher)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    minimal_publisher.destroy_node()
+    fork_controller_publisher.destroy_node()
     rclpy.shutdown()
 
 
