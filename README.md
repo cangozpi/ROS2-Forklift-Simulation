@@ -92,6 +92,32 @@ colcon build --symlink-install
    ros2 launch forklift_robot demo_launch.launch.py
    ```
 
+   Then you can do the following in any order:
+
+   - Visualize/stream the camera sensor's _/camera/image_raw_ topic.
+
+     ```bash
+     ros2 run forklift_robot camera_raw_image_subscriber
+     ```
+
+   - Visualize/stream the depth camera sensor's _/camera/depth/image_raw_ topic.
+
+     ```bash
+     ros2 run forklift_robot depth_camera_raw_image_subscriber
+     ```
+
+   * Publish to _/fork_joint_controller/commands_ topic to control the fork of the forklift.
+
+     ```bash
+     ros2 run forklift_robot fork_controller_publisher
+     ```
+
+   * Publish to _/diff_cont/cmd_vel_unstamped_ topic to control the wheels of the forklift.
+
+     ```bash
+     ros2 run forklift_robot diff_cont_cmd_vel_unstamped_publisher
+     ```
+
 3. Testing (sending commands to controllers):
 
    - Commanding '_fork_joint_controller_'
@@ -124,24 +150,6 @@ colcon build --symlink-install
 
      # To list available hardware interfaces:
      ros2 control list_hardware_interfaces
-     ```
-
-   * Visualize/stream the depth camera sensor's _/camera/image_raw_ topic.
-
-     ```bash
-     ros2 run forklift_robot depth_camera_raw_image_subscriber
-     ```
-
-   - Publish to _/fork_joint_controller/commands_ topic to control the fork of the forklift.
-
-     ```bash
-     ros2 run forklift_robot fork_controller_publisher
-     ```
-
-   - Publish to _/diff_cont/cmd_vel_unstamped_ topic to control the wheels of the forklift.
-
-     ```bash
-     ros2 run forklift_robot diff_cont_cmd_vel_unstamped_publisher
      ```
 
 ---
