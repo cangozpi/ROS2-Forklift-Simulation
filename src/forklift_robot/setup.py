@@ -32,6 +32,7 @@ setup(
             'fork_controller_publisher = forklift_robot.fork_controller_publisher:main',
             'camera_raw_image_subscriber = forklift_robot.camera_raw_image_subscriber:main',
             'depth_camera_raw_image_subscriber = forklift_robot.depth_camera_raw_image_subscriber:main',
+            'lidar_scan_subscriber = forklift_robot.lidar_scan_subscriber:main',
             'diff_cont_cmd_vel_unstamped_publisher = forklift_robot.diff_cont_cmd_vel_unstamped_publisher:main'
         ],
     },

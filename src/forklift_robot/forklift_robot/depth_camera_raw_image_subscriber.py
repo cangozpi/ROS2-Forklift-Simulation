@@ -1,7 +1,6 @@
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String
 from sensor_msgs.msg import Image
 import numpy as np
 import cv2
