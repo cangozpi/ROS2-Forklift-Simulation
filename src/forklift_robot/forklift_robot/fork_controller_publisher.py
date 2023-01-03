@@ -15,7 +15,7 @@ class ForkControllerPublisher(Node):
     def timer_callback(self):
         msg = Float64MultiArray()
         # msg.layout = None
-        msg.data = [3.0]
+        msg.data = [2.0]
         self.publisher_.publish(msg)
         self.get_logger().info('Publishing: "%s"' % msg)
 
