@@ -7,6 +7,7 @@ import rclpy
 import cv2
 from cv_bridge import CvBridge
 from forklift_gym_env.envs.diff_cont_cmd_vel_unstamped_publisher import DiffContCmdVelUnstampedPublisher
+from forklift_gym_env.envs.forklift_robot_tf_subscriber import ForkliftRobotTfSubscriber
 
 
 class ForkliftEnv(gym.Env):
@@ -19,6 +20,7 @@ class ForkliftEnv(gym.Env):
        # set types of observation_space and action_space 
        self.observation_space = spaces.Dict({
         "depth_camera_raw_image_observation": spaces.Box(low = 0, high = 1, shape = (2, ), dtype = int),
+        "forklift_robot_tf_observation": spaces.Box(low = 0, high = 1),
         # "agent": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int),
         # "target": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int)
        })
@@ -57,12 +59,39 @@ class ForkliftEnv(gym.Env):
        self.depth_camera_raw_image_subscriber = DepthCameraRawImageSubscriber(depth_camera_raw_image_subscriber_cb)
        # rclpy.spin(self.depth_camera_raw_image_subscriber)
        # --------------------  
-       # -------------------- 
+       # -------------------- /tf
+       self.forklift_robot_tf_state = {}
+       def forklift_robot_tf_cb(msg):
+        for cur_msg in msg.transforms:
+            print(cur_msg, "ÜÜÜÜÜÜ")
+            print(int(str(cur_msg.header.stamp.sec) + str(cur_msg.header.stamp.nanosec)), "TIMEEE")
+            print(cur_msg.child_frame_id, "FRAME_IDDDD")
+            print(cur_msg.transform, "TRANSFORMMM")
+
+            cur_msg_time = int(str(cur_msg.header.stamp.sec) + str(cur_msg.header.stamp.nanosec))
+            cur_msg_child_frame_id = cur_msg.child_frame_id
+            cur_msg_transform = cur_msg.transform
+            if cur_msg_child_frame_id not in self.forklift_robot_tf_state:
+                self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
+                    'time': cur_msg_time,
+                    'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
+                        cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
+                }
+            else:
+                if self.forklift_robot_tf_state[cur_msg_child_frame_id]['time'] < cur_msg_time: # newer information came (update)
+                    self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
+                        'time': cur_msg_time,
+                        'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
+                            cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
+                    }
+
+       self.forklift_robot_tf_subscriber = ForkliftRobotTfSubscriber(forklift_robot_tf_cb)
+    #    rclpy.spin(self.forklift_robot_tf_state)
 
        # -------------------- 
        # ====================================================
 
-       # Subscribe to sensors: ============================== 
+       # Create publisher for controlling forklift robot's joints: ============================== 
        # --------------------  /diff_cont/cmd_vel_unstamped
        self.diff_cont_cmd_vel_unstamped_publisher = DiffContCmdVelUnstampedPublisher()
        # -------------------- 
@@ -74,21 +103,46 @@ class ForkliftEnv(gym.Env):
        # -------------------------------------
 
     def _get_obs(self):
+        # Depth_camera_raw_image_observation: -----
         # Update current observation
         rclpy.spin_once(self.depth_camera_raw_image_subscriber)
-        observation = self.depth_camera_img_observation
+        current_depth_camera_raw_image_obs = self.depth_camera_img_observation
 
         # Check that the observation is from after the action was taken
-        while (observation is None) or (int(str(observation["header"].stamp.sec) + (str(observation["header"].stamp.nanosec))) < self.ros_clock.nanoseconds):
+        while (current_depth_camera_raw_image_obs is None) or (int(str(current_depth_camera_raw_image_obs["header"].stamp.sec) + (str(current_depth_camera_raw_image_obs["header"].stamp.nanosec))) < self.ros_clock.nanoseconds):
             # update current observation again
             rclpy.spin_once(self.depth_camera_raw_image_subscriber)
-            observation = self.depth_camera_img_observation
-        
-        depth_camera_raw_image_observation = observation["image"] # get image
+            current_depth_camera_raw_image_obs = self.depth_camera_img_observation
+            rclpy.spin_once(self.forklift_robot_tf_subscriber)
 
+        depth_camera_raw_image_observation = current_depth_camera_raw_image_obs["image"] # get image
+        # --------------------------------------------
+
+
+        # Forklift_robot_tf observation -----
+        rclpy.spin_once(self.forklift_robot_tf_subscriber)
+        current_forklift_robot_tf_obs = self.forklift_robot_tf_state
+
+        # Check taht the observation is from after the action was taken
+        flag = True
+        while current_forklift_robot_tf_obs == {} or flag:
+            rclpy.spin_once(self.forklift_robot_tf_subscriber)
+            current_forklift_robot_tf_obs = self.forklift_robot_tf_state
+
+            flag = False
+            for k, v in current_forklift_robot_tf_obs.items():
+                if v['time'] < self.ros_clock.nanoseconds:
+                    flag = True
+                    break
+        # --------------------------------------------
+
+        # reset observations for next iteration
+        self.forklift_robot_tf_state = {}
         self.depth_camera_img_observation = None 
+
         return {
-            'depth_camera_raw_image_observation': depth_camera_raw_image_observation
+            'depth_camera_raw_image_observation': depth_camera_raw_image_observation,
+            'forklift_robot_tf_observation': current_forklift_robot_tf_obs,
         }
 
 
@@ -124,7 +178,9 @@ class ForkliftEnv(gym.Env):
 
         # return observation, info
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now()
-        return {'depth_camera_raw_image_observation': 0}, {}
+        return {'depth_camera_raw_image_observation': 0,
+            'forklift_robot_tf_observation': {},
+        }, {}
 
     
     def step(self, action):
@@ -146,7 +202,7 @@ class ForkliftEnv(gym.Env):
         # Get observation after taking the action
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure bservation is coming from after the action was taken
         observation = self._get_obs()
-        print(observation['depth_camera_raw_image_observation'].shape, "hohohohoHOHOHOHOH")
+        print(observation, "AAAAAAAAAAAAAAAAAAAAA")
 
         # Calculate reward
         reward = 1 # TODO: implement reward function
