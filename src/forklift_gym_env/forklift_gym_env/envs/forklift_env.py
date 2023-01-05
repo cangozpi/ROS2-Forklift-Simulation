@@ -20,11 +20,11 @@ class ForkliftEnv(gym.Env):
     def __init__(self, render_mode = None):
        # set types of observation_space and action_space 
        self.observation_space = spaces.Dict({
-        "depth_camera_raw_image_observation": spaces.Box(low = 0, high = 255),
+        "depth_camera_raw_image_observation": spaces.Box(low = -float("inf") * np.ones((480, 640)), high = float("inf") * np.ones((480, 640), dtype = np.float32)),
         "forklift_robot_tf_observation": spaces.Dict({
             "chassis_bottom_link": spaces.Dict({
-                "time": spaces.Box(low = 0, high = float("inf")),
-                "transform": spaces.Box(low = -float("inf"), high = float("inf"))
+                "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
+                "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = float)
                 })
             }),
         # "agent": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int),
