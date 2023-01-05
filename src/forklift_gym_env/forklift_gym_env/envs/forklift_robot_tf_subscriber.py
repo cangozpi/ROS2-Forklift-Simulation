@@ -9,7 +9,7 @@ class ForkliftRobotTfSubscriber(Node):
         """
         cb is the callback function passed as subscriber callback.
         """
-        super().__init__('depth_camera_raw_image_subscriber')
+        super().__init__('forklift_robot_tf_subscriber')
         # Set ros node's clock to use simulation time (gazebo time)
         use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
         self.set_parameters([use_sim_time_parameter])
