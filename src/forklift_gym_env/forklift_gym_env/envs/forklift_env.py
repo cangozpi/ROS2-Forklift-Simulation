@@ -2,6 +2,12 @@ import gym
 from gym import spaces
 import numpy as np
 from forklift_gym_env.envs.utils import generateLaunchDescriptionForkliftEnv, startLaunchServiceProcess
+from forklift_gym_env.envs.depth_camera_raw_image_subscriber import DepthCameraRawImageSubscriber
+import rclpy
+import cv2
+from cv_bridge import CvBridge
+from forklift_gym_env.envs.diff_cont_cmd_vel_unstamped_publisher import DiffContCmdVelUnstampedPublisher
+
 
 class ForkliftEnv(gym.Env):
     metadata = {
@@ -24,10 +30,36 @@ class ForkliftEnv(gym.Env):
        # self.clock` will be a clock that is used to ensure that the environment is rendered at the correct framerate in human-mode.
        self.clock = None
 
+       # -------------------- 
        # start gazebo simulation, spawn forklift model, start controllers
        launch_desc = generateLaunchDescriptionForkliftEnv() # generate launch description
        self.launch_subp = startLaunchServiceProcess(launch_desc)# start the generated launch description on a subprocess
-    
+       # -------------------- 
+
+       # Subscribe to sensors: ============================== 
+       rclpy.init()
+       # -------------------- /camera/depth/image/raw
+       self.depth_camera_img = None
+       def depth_camera_raw_image_subscriber_cb(msg):
+        try:
+            self.bridge
+        except:
+            self.bridge = CvBridge()
+        self.depth_camera_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        self.depth_camera_img = cv2.normalize(self.depth_camera_img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F) # Normalize the depth_camera_image to range [0,1]
+
+       self.depth_camera_raw_image_subscriber = DepthCameraRawImageSubscriber(depth_camera_raw_image_subscriber_cb)
+       # --------------------  
+       # -------------------- 
+
+       # -------------------- 
+       # ====================================================
+
+       # Subscribe to sensors: ============================== 
+       # --------------------  /diff_cont/cmd_vel_unstamped
+       self.diff_cont_cmd_vel_unstamped_publisher = DiffContCmdVelUnstampedPublisher()
+       # -------------------- 
+       # ====================================================
 
     def _get_obs(self):
         return {"agent": self._agent_location, "target": self._target_location}
@@ -56,6 +88,11 @@ class ForkliftEnv(gym.Env):
 
         if self.render_mode == "human": # TODO: handle this for rendering gazebo simulation
             self._render_frame()
+
+        # delete ros nodes
+        depth_camera_raw_image_subscriber.destroy_node()
+        diff_cont_cmd_vel_unstamped_publisher.destroy_node()
+        rclpy.shutdown()
 
         return observation, info
 
@@ -144,3 +181,10 @@ class ForkliftEnv(gym.Env):
         if self.window is not None:
             pygame.display.quit()
             pygame.quit()
+
+        # delete ros nodes
+        depth_camera_raw_image_subscriber.destroy_node()
+        diff_cont_cmd_vel_unstamped_publisher.destroy_node()
+        rclpy.shutdown()
+
+        self.launch_subp.join()

@@ -106,8 +106,6 @@ def startLaunchServiceProcess(launchDesc):
     # to avoid leaving orphaned processes running
     process.daemon = True # refer to https://stackoverflow.com/questions/25391025/what-exactly-is-python-multiprocessing-modules-join-method-doing
     process.start()
-    print("yoo process called", process)
-    process.join()
-    print("HOOOJJJ")
+    # process.join()
 
     return process
