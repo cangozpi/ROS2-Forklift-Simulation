@@ -1,6 +1,7 @@
 import gym
 from gym import spaces
 import numpy as np
+from forklift_gym_env.envs.utils import generateLaunchDescriptionForkliftEnv, startLaunchServiceProcess
 
 class ForkliftEnv(gym.Env):
     metadata = {
@@ -22,6 +23,10 @@ class ForkliftEnv(gym.Env):
 
        # self.clock` will be a clock that is used to ensure that the environment is rendered at the correct framerate in human-mode.
        self.clock = None
+
+       # start gazebo simulation, spawn forklift model, start controllers
+       launch_desc = generateLaunchDescriptionForkliftEnv() # generate launch description
+       self.launch_subp = startLaunchServiceProcess(launch_desc)# start the generated launch description on a subprocess
     
 
     def _get_obs(self):
