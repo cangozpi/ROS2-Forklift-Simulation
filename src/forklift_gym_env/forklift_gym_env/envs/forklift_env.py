@@ -9,6 +9,7 @@ from cv_bridge import CvBridge
 from forklift_gym_env.envs.diff_cont_cmd_vel_unstamped_publisher import DiffContCmdVelUnstampedPublisher
 from forklift_gym_env.envs.forklift_robot_tf_subscriber import ForkliftRobotTfSubscriber
 from forklift_gym_env.envs.reset_simulation_client import ResetSimulationClientAsync
+from geometry_msgs.msg import Twist
 
 class ForkliftEnv(gym.Env):
     metadata = {
@@ -19,12 +20,20 @@ class ForkliftEnv(gym.Env):
     def __init__(self, render_mode = None):
        # set types of observation_space and action_space 
        self.observation_space = spaces.Dict({
-        "depth_camera_raw_image_observation": spaces.Box(low = 0, high = 1, shape = (2, ), dtype = int),
-        "forklift_robot_tf_observation": spaces.Box(low = 0, high = 1),
+        "depth_camera_raw_image_observation": spaces.Box(low = 0, high = 255),
+        "forklift_robot_tf_observation": spaces.Dict({
+            "chassis_bottom_link": spaces.Dict({
+                "time": spaces.Box(low = 0, high = float("inf")),
+                "transform": spaces.Box(low = -float("inf"), high = float("inf"))
+                })
+            }),
         # "agent": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int),
         # "target": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int)
        })
-       self.action_space = spaces.Discrete(4) # TODO: change this
+    #    self.action_space = spaces.Discrete(4) # TODO: change this
+       self.action_space = spaces.Dict({
+        "diff_cont_action": spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32) #TODO: set this to limits from config file
+       })
 
        # set render_mode
        assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -50,7 +59,7 @@ class ForkliftEnv(gym.Env):
         except:
             self.bridge = CvBridge()
         depth_camera_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-        depth_camera_img = cv2.normalize(depth_camera_img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F) # Normalize the depth_camera_image to range [0,1]
+        # depth_camera_img = cv2.normalize(depth_camera_img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F) # Normalize the depth_camera_image to range [0,1]
         self.depth_camera_img_observation = {
             'header': msg.header,
             'image': depth_camera_img
@@ -150,7 +159,9 @@ class ForkliftEnv(gym.Env):
 
         return {
             'depth_camera_raw_image_observation': depth_camera_raw_image_observation,
-            'forklift_robot_tf_observation': current_forklift_robot_tf_obs,
+            'forklift_robot_tf_observation': {
+                'chassis_bottom_link': current_forklift_robot_tf_obs["chassis_bottom_link"]
+                },
         }
 
 
@@ -194,8 +205,17 @@ class ForkliftEnv(gym.Env):
         # -------------------- 
         self.cur_iteration += 1
         # Take action
-        diff_cont_action = None # TODO: set this from action parameter of the step function
-        self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_action)
+        diff_cont_action = action['diff_cont_action'] # TODO: set this from action parameter of the step function
+        # convert diff_cont_action to Twist message
+        diff_cont_msg = Twist()
+        diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
+        diff_cont_msg.linear.y = 0.0
+        diff_cont_msg.linear.z = 0.0
+
+        diff_cont_msg.angular.x = 1.0
+        diff_cont_msg.angular.y = 0.0
+        diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
+        self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
         # Get observation after taking the action
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure bservation is coming from after the action was taken

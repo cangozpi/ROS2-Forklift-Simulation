@@ -1,8 +1,8 @@
 import rclpy
 from rclpy.node import Node
 
-from geometry_msgs.msg import Twist, Vector3
-
+from geometry_msgs.msg import Twist
+# from geometry_msgs.msg import Vector3
 
 class DiffContCmdVelUnstampedPublisher(Node):
 
@@ -34,17 +34,7 @@ class DiffContCmdVelUnstampedPublisher(Node):
     #     self.get_logger().info('Publishing: "%s"' % msg)
     
     def publish_cmd(self, twist_msg): #TODO: make it use twist_msg instead of a constant msg
-        msg = Twist()
-        # msg.linear = Vector3()
-        msg.linear.x = 1.0 # use this one
-        msg.linear.y = 0.0
-        msg.linear.z = 0.0
-
-        # msg.angular = Vector3()
-        msg.angular.x = 1.0
-        msg.angular.y = 0.0
-        msg.angular.z = 0.0 # use this one
-        self.publisher_.publish(msg)
+        self.publisher_.publish(twist_msg)
         # self.get_logger().info('Publishing: "%s"' % msg)
 
 def main(args=None):
