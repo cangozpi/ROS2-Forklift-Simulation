@@ -8,8 +8,14 @@ class DiffContCmdVelUnstampedPublisher(Node):
 
     def __init__(self):
         super().__init__('diff_cont_cmd_vel_unstamped_publisher')
+        # Set ros_node's clock to use simulation time (gazebo time)
+        use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
+        self.set_parameters([use_sim_time_parameter])
+        # print("KK", self.get_parameter('use_sim_time').get_parameter_value().bool_value, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
         self.publisher_ = self.create_publisher(Twist, '/diff_cont/cmd_vel_unstamped', 10)
-        timer_period = 0.5  # seconds
+
+        # timer_period = 0.5  # seconds
         # self.timer = self.create_timer(timer_period, self.timer_callback)
 
     # def timer_callback(self):
@@ -35,7 +41,7 @@ class DiffContCmdVelUnstampedPublisher(Node):
         msg.linear.z = 0.0
 
         # msg.angular = Vector3()
-        msg.angular.x = 0.0
+        msg.angular.x = 1.0
         msg.angular.y = 0.0
         msg.angular.z = 0.0 # use this one
         self.publisher_.publish(msg)

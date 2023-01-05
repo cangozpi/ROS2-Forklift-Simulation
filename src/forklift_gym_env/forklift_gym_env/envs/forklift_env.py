@@ -18,8 +18,9 @@ class ForkliftEnv(gym.Env):
     def __init__(self, render_mode = None):
        # set types of observation_space and action_space 
        self.observation_space = spaces.Dict({
-        "agent": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int),
-        "target": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int)
+        "depth_camera_raw_image_observation": spaces.Box(low = 0, high = 1, shape = (2, ), dtype = int),
+        # "agent": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int),
+        # "target": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int)
        })
        self.action_space = spaces.Discrete(4) # TODO: change this
 
@@ -29,6 +30,7 @@ class ForkliftEnv(gym.Env):
 
        # self.clock` will be a clock that is used to ensure that the environment is rendered at the correct framerate in human-mode.
        self.clock = None
+       self.ros_clock = None
 
        # -------------------- 
        # start gazebo simulation, spawn forklift model, start controllers
@@ -39,16 +41,21 @@ class ForkliftEnv(gym.Env):
        # Subscribe to sensors: ============================== 
        rclpy.init()
        # -------------------- /camera/depth/image/raw
-       self.depth_camera_img = None
+       self.depth_camera_img_observation = None
        def depth_camera_raw_image_subscriber_cb(msg):
         try:
             self.bridge
         except:
             self.bridge = CvBridge()
-        self.depth_camera_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-        self.depth_camera_img = cv2.normalize(self.depth_camera_img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F) # Normalize the depth_camera_image to range [0,1]
+        depth_camera_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        depth_camera_img = cv2.normalize(depth_camera_img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F) # Normalize the depth_camera_image to range [0,1]
+        self.depth_camera_img_observation = {
+            'header': msg.header,
+            'image': depth_camera_img
+        }
 
        self.depth_camera_raw_image_subscriber = DepthCameraRawImageSubscriber(depth_camera_raw_image_subscriber_cb)
+       # rclpy.spin(self.depth_camera_raw_image_subscriber)
        # --------------------  
        # -------------------- 
 
@@ -60,13 +67,34 @@ class ForkliftEnv(gym.Env):
        self.diff_cont_cmd_vel_unstamped_publisher = DiffContCmdVelUnstampedPublisher()
        # -------------------- 
        # ====================================================
+       
+       # HYPERPARAMETERS: --------------------  # TODO: get these from config
+       self.cur_iteration = 0
+       self.max_episode_length = 1024
+       # -------------------------------------
 
     def _get_obs(self):
-        return {"agent": self._agent_location, "target": self._target_location}
+        # Update current observation
+        rclpy.spin_once(self.depth_camera_raw_image_subscriber)
+        observation = self.depth_camera_img_observation
+
+        # Check that the observation is from after the action was taken
+        while (observation is None) or (int(str(observation["header"].stamp.sec) + (str(observation["header"].stamp.nanosec))) < self.ros_clock.nanoseconds):
+            # update current observation again
+            rclpy.spin_once(self.depth_camera_raw_image_subscriber)
+            observation = self.depth_camera_img_observation
+        
+        depth_camera_raw_image_observation = observation["image"] # get image
+
+        self.depth_camera_img_observation = None 
+        return {
+            'depth_camera_raw_image_observation': depth_camera_raw_image_observation
+        }
 
 
-    def _get_info(self):
-        return {"distance": np.linalg.norm(self._agent_location - self._target_location, ord=1)}
+    def _get_info(self): # TODO: implement this
+        # return {"distance": np.linalg.norm(self._agent_location - self._target_location, ord=1)}
+        return {}
     
 
     def reset(self, seed=None, options=None):
@@ -74,41 +102,64 @@ class ForkliftEnv(gym.Env):
         super().reset(seed=seed)
 
         # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int) # TODO: set this to agent (forklift) location at start in gazebo
+        # self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int) # TODO: set this to agent (forklift) location at start in gazebo
 
-        # We will sample the target's location randomly until it does not coincide with the agent's location
-        self._target_location = self._agent_location
-        while np.array_equal(self._target_location, self._agent_location):
-            self._target_location = self.np_random.integers(
-                0, self.size, size=2, dtype=int
-            )
+        # # We will sample the target's location randomly until it does not coincide with the agent's location
+        # self._target_location = self._agent_location
+        # while np.array_equal(self._target_location, self._agent_location):
+        #     self._target_location = self.np_random.integers(
+        #         0, self.size, size=2, dtype=int
+        #     )
 
-        observation = self._get_obs()
-        info = self._get_info()
+        # observation = self._get_obs()
+        # info = self._get_info()
 
-        if self.render_mode == "human": # TODO: handle this for rendering gazebo simulation
-            self._render_frame()
+        # if self.render_mode == "human": # TODO: handle this for rendering gazebo simulation
+        #     self._render_frame()
 
-        # delete ros nodes
-        depth_camera_raw_image_subscriber.destroy_node()
-        diff_cont_cmd_vel_unstamped_publisher.destroy_node()
-        rclpy.shutdown()
+        # # delete ros nodes
+        # depth_camera_raw_image_subscriber.destroy_node()
+        # diff_cont_cmd_vel_unstamped_publisher.destroy_node()
+        # rclpy.shutdown()
 
-        return observation, info
+        # return observation, info
+        self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now()
+        return {'depth_camera_raw_image_observation': 0}, {}
 
     
     def step(self, action):
-        self._agent_location = self._agent_location + 1 # TODO: update this with the new location read from ros subscribers to the state of the agent
+        # self._agent_location = self._agent_location + 1 # TODO: update this with the new location read from ros subscribers to the state of the agent
         # An episode is done iff the agent has reached the target
-        terminated = np.array_equal(self._agent_location, self._target_location)
-        reward = 1 if terminated else 0  # TODO: change this once the reward function is figured out
+        # terminated = np.array_equal(self._agent_location, self._target_location)
+        # reward = 1 if terminated else 0  # TODO: change this once the reward function is figured out
+        # observation = self._get_obs()
+        # info = self._get_info()
+
+        # if self.render_mode == "human": # TODO: handle this once the simulation is figured out with gazebo
+        #     self._render_frame()
+
+        # -------------------- 
+        # Take action
+        diff_cont_action = None # TODO: set this from action parameter of the step function
+        self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_action)
+
+        # Get observation after taking the action
+        self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure bservation is coming from after the action was taken
         observation = self._get_obs()
-        info = self._get_info()
+        print(observation['depth_camera_raw_image_observation'].shape, "hohohohoHOHOHOHOH")
 
-        if self.render_mode == "human": # TODO: handle this once the simulation is figured out with gazebo
-            self._render_frame()
+        # Calculate reward
+        reward = 1 # TODO: implement reward function
 
-        return observation, reward, terminated, False, info # (observation, reward, done, truncated, info)
+        # Check if episode should terminate
+        done = bool(self.cur_iteration == self.max_episode_length)
+
+        # Set info
+        info = self._get_info() # TODO: set this with useful info such as forklift's manhattan distance to target location
+
+        # -------------------- 
+
+        return observation, reward, done, False, info # (observation, reward, done, truncated, info)
 
 
     def render(self): # TODO: rewrite for gazebo
