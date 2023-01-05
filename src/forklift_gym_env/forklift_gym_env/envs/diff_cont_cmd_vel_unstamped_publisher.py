@@ -45,7 +45,7 @@ class DiffContCmdVelUnstampedPublisher(Node):
         msg.angular.y = 0.0
         msg.angular.z = 0.0 # use this one
         self.publisher_.publish(msg)
-        self.get_logger().info('Publishing: "%s"' % msg)
+        # self.get_logger().info('Publishing: "%s"' % msg)
 
 def main(args=None):
     rclpy.init(args=args)

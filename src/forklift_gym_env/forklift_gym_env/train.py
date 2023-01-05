@@ -8,5 +8,7 @@ def main():
     env.reset()
     while True: # simulate action taking of an agent for debugging the env
         action = None
-        env.step(action)
+        # action = env.action_space.sample()
+        obs, reward, done, _, info = env.step(action)
+        # print(obs, "AAAAAAAAA")
     print("end")

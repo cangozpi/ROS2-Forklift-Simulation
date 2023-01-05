@@ -30,7 +30,7 @@ class ForkliftEnv(gym.Env):
        assert render_mode is None or render_mode in self.metadata["render_modes"]
        self.render_mode = render_mode
 
-       # self.clock` will be a clock that is used to ensure that the environment is rendered at the correct framerate in human-mode.
+       # self.clock` will be a clock that is used to ensure that the environment is rendered at the correct frame rate in human-mode.
        self.clock = None
        self.ros_clock = None
 
@@ -63,11 +63,6 @@ class ForkliftEnv(gym.Env):
        self.forklift_robot_tf_state = {}
        def forklift_robot_tf_cb(msg):
         for cur_msg in msg.transforms:
-            print(cur_msg, "ÜÜÜÜÜÜ")
-            print(int(str(cur_msg.header.stamp.sec) + str(cur_msg.header.stamp.nanosec)), "TIMEEE")
-            print(cur_msg.child_frame_id, "FRAME_IDDDD")
-            print(cur_msg.transform, "TRANSFORMMM")
-
             cur_msg_time = int(str(cur_msg.header.stamp.sec) + str(cur_msg.header.stamp.nanosec))
             cur_msg_child_frame_id = cur_msg.child_frame_id
             cur_msg_transform = cur_msg.transform
@@ -101,6 +96,10 @@ class ForkliftEnv(gym.Env):
        self.cur_iteration = 0
        self.max_episode_length = 1024
        # -------------------------------------
+       self.target_transform = { # TODO: take this as parameter and set it randomly
+        'transform': np.asarray([0.0, 0.0, 0.0, \
+            0.0, 0.0, 0.0, 0.0]) # [translation_x,translation_y, translation_z, rotation_x, rotation_y, rotation_z, rotation_w]
+       }
 
     def _get_obs(self):
         # Depth_camera_raw_image_observation: -----
@@ -134,6 +133,8 @@ class ForkliftEnv(gym.Env):
                 if v['time'] < self.ros_clock.nanoseconds:
                     flag = True
                     break
+            if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
+                flag = True
         # --------------------------------------------
 
         # reset observations for next iteration
@@ -176,6 +177,8 @@ class ForkliftEnv(gym.Env):
         # diff_cont_cmd_vel_unstamped_publisher.destroy_node()
         # rclpy.shutdown()
 
+        # --------------
+        self.cur_iteration = 0
         # return observation, info
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now()
         return {'depth_camera_raw_image_observation': 0,
@@ -195,6 +198,7 @@ class ForkliftEnv(gym.Env):
         #     self._render_frame()
 
         # -------------------- 
+        self.cur_iteration += 1
         # Take action
         diff_cont_action = None # TODO: set this from action parameter of the step function
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_action)
@@ -202,10 +206,18 @@ class ForkliftEnv(gym.Env):
         # Get observation after taking the action
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure bservation is coming from after the action was taken
         observation = self._get_obs()
-        print(observation, "AAAAAAAAAAAAAAAAAAAAA")
 
         # Calculate reward
-        reward = 1 # TODO: implement reward function
+        def calc_reward(forklift_robot_transform, target_transform):
+            # Return negative L2 distance btw chassis_bottom_link and the target location as reward
+            # Note that we are only using translation here, NOT using rotation information
+            robot_transform_translation = forklift_robot_transform['chassis_bottom_link']['transform'][:3]
+            target_translation = target_transform['transform'][:3]
+            l2_dist = np.linalg.norm(robot_transform_translation - target_translation)
+            return - l2_dist
+            
+        reward = calc_reward(observation['forklift_robot_tf_observation'], self.target_transform) # TODO: implement reward function
+        print(reward, "AAAAAAAAAA")
 
         # Check if episode should terminate
         done = bool(self.cur_iteration == self.max_episode_length)
