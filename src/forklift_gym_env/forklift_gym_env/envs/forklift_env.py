@@ -10,6 +10,9 @@ from forklift_gym_env.envs.diff_cont_cmd_vel_unstamped_publisher import DiffCont
 from forklift_gym_env.envs.forklift_robot_tf_subscriber import ForkliftRobotTfSubscriber
 from forklift_gym_env.envs.reset_simulation_client import ResetSimulationClientAsync
 from geometry_msgs.msg import Twist
+from forklift_gym_env.envs.pause_pyhsics_client import PausePhysicsClient
+from forklift_gym_env.envs.unpause_pyhsics_client import UnpausePhysicsClient
+
 
 class ForkliftEnv(gym.Env):
     metadata = {
@@ -105,6 +108,12 @@ class ForkliftEnv(gym.Env):
        # --------------------  /reset_simulation
        self.reset_sim = ResetSimulationClientAsync()
        # -------------------- 
+       # --------------------  /pause_physics
+       self.pause_sim = PausePhysicsClient()
+       # -------------------- 
+       # --------------------  /unpause_physics
+       self.unpause_sim = UnpausePhysicsClient()
+       # -------------------- 
        # ====================================================
        
        # HYPERPARAMETERS: --------------------  # TODO: get these from config
@@ -190,6 +199,9 @@ class ForkliftEnv(gym.Env):
 
         self.cur_iteration = 0
 
+        # Unpause sim so that simulation can be reset
+        self.unpause_sim.send_request()
+
         # Reset the simulation (gazebo)
         future_result = self.reset_sim.send_request()
 
@@ -204,6 +216,11 @@ class ForkliftEnv(gym.Env):
 
         # -------------------- 
         self.cur_iteration += 1
+
+        # Unpause simulation so that action can be taken
+        print("1"*20)
+        self.unpause_sim.send_request()
+
         # Take action
         diff_cont_action = action['diff_cont_action'] # TODO: set this from action parameter of the step function
         # convert diff_cont_action to Twist message
@@ -220,6 +237,10 @@ class ForkliftEnv(gym.Env):
         # Get observation after taking the action
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure bservation is coming from after the action was taken
         observation = self._get_obs()
+        
+        # Pause simuation so that obseration does not change until another action is taken
+        self.pause_sim.send_request()
+        print("222222222222222222222222222222222")
 
         # Calculate reward
         def calc_reward(forklift_robot_transform, target_transform):
