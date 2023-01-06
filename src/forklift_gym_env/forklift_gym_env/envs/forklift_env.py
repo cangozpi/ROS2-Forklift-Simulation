@@ -118,7 +118,7 @@ class ForkliftEnv(gym.Env):
        
        # HYPERPARAMETERS: --------------------  # TODO: get these from config
        self.cur_iteration = 0
-       self.max_episode_length = 5
+       self.max_episode_length = 50
        # -------------------------------------
        self.target_transform = { # TODO: take this as parameter and set it randomly
         'transform': np.asarray([0.0, 0.0, 0.0, \
@@ -218,7 +218,6 @@ class ForkliftEnv(gym.Env):
         self.cur_iteration += 1
 
         # Unpause simulation so that action can be taken
-        print("1"*20)
         self.unpause_sim.send_request()
 
         # Take action
@@ -240,7 +239,6 @@ class ForkliftEnv(gym.Env):
         
         # Pause simuation so that obseration does not change until another action is taken
         self.pause_sim.send_request()
-        print("222222222222222222222222222222222")
 
         # Calculate reward
         def calc_reward(forklift_robot_transform, target_transform):
