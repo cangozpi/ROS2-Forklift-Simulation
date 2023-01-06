@@ -78,10 +78,10 @@ This will start ros2 controllers, spawn robot in gazebo.
 
 1. Building the package:
 
-```bash
-rm -r build/ install/ log/
-colcon build --symlink-install
-```
+    ```bash
+    rm -r build/ install/ log/
+    colcon build --symlink-install
+    ```
 
 2. Launching:
 
@@ -165,3 +165,37 @@ colcon build --symlink-install
      ```
 
 ---
+
+
+### Build & Run forklift_gym_env 
+
+This package builds on top of the _forklift\_robot_ package. It implements an OpenAI Gym environment which can be used to train _forklift\_robot_. 
+
+
+1. Building the package:
+
+    ```bash
+    rm -r build/ install/ log/
+    colcon build --symlink-install
+    ```
+
+2. Launching:
+
+   On another terminal:
+
+   ```bash
+   source install/setup.bash
+   ros2 run forklift_gym_env forklift_gym_env_training
+   ```
+  
+* Setting Parameters:
+
+  * max_iteration_steps (sets max episode length of an episode) -> forklift_env.py
+  * <real_time_update_rate> & <max_step_size> parameters of Gazebo simulation (speeds up and slows down the simulation time) -> world/*.world
+  * setting the used world by the environment -> inside utils.py change the _world_file_name_ value
+
+* _NOTE_: if launching gazebo gives errors and you feel like you need to reboot your system to solve those issues you can try the following
+  ```bash
+  kill -9 $(pidof gzserver) $(pidof gzclient) $(pidof gazebo)
+  ```
+
