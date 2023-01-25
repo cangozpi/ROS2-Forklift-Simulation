@@ -1,4 +1,5 @@
 import gym
+import time
 from gym import spaces
 import numpy as np
 from forklift_gym_env.envs.utils import generateLaunchDescriptionForkliftEnv, startLaunchServiceProcess
@@ -120,13 +121,51 @@ class ForkliftEnv(gym.Env):
        self.cur_iteration = 0
        self.max_episode_length = 50
        # -------------------------------------
-       self.target_transform = { # TODO: take this as parameter and set it randomly
+       self.target_transform = { # TODO: take this as parameter and set it randomly, This is the Goal State
         'transform': np.asarray([0.0, 0.0, 0.0, \
-            0.0, 0.0, 0.0, 0.0]) # [translation_x,translation_y, translation_z, rotation_x, rotation_y, rotation_z, rotation_w]
+            0.0, 0.0, 0.0, 0.0]) # [translation_x, translation_y, translation_z, rotation_x, rotation_y, rotation_z, rotation_w]
        }
 
 
-    def _get_obs(self):
+    def _get_obs_tf_only(self):
+        # --------------------------------------------
+        # Forklift_robot_tf observation -----
+        rclpy.spin_once(self.forklift_robot_tf_subscriber)
+        current_forklift_robot_tf_obs = self.forklift_robot_tf_state
+
+        # Check taht the observation is from after the action was taken
+        flag = True
+        while current_forklift_robot_tf_obs == {} or flag:
+            rclpy.spin_once(self.forklift_robot_tf_subscriber)
+            current_forklift_robot_tf_obs = self.forklift_robot_tf_state
+
+            flag = False
+            for k, v in current_forklift_robot_tf_obs.items():
+                if v['time'] < self.ros_clock.nanoseconds:
+                    flag = True
+                    break
+            if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
+                flag = True
+                current_forklift_robot_tf_obs["chassis_bottom_link"] = { 
+                    "time": 0,
+                    "transform": np.ones((7, )) 
+                }
+            break
+        # --------------------------------------------
+
+        # reset observations for next iteration
+        self.forklift_robot_tf_state = {}
+        self.depth_camera_img_observation = None 
+
+        return {
+            'depth_camera_raw_image_observation': None,
+            'forklift_robot_tf_observation': {
+                'chassis_bottom_link': current_forklift_robot_tf_obs["chassis_bottom_link"]
+                },
+        }
+
+
+    def _get_obs_camera(self):
         # Depth_camera_raw_image_observation: -----
         # Update current observation
         rclpy.spin_once(self.depth_camera_raw_image_subscriber)
@@ -200,14 +239,26 @@ class ForkliftEnv(gym.Env):
         self.cur_iteration = 0
 
         # Unpause sim so that simulation can be reset
-        self.unpause_sim.send_request()
+        # self.unpause_sim.send_request()
 
+        # send 'no action' action to forklift robot
+        diff_cont_msg = Twist()
+        diff_cont_msg.linear.x = 0.0 # use this one
+        diff_cont_msg.linear.y = 0.0
+        diff_cont_msg.linear.z = 0.0
+
+        diff_cont_msg.angular.x = 0.0
+        diff_cont_msg.angular.y = 0.0
+        diff_cont_msg.angular.z = 0.0 # use this one
+        self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
+
+        time.sleep(2)
         # Reset the simulation (gazebo)
         future_result = self.reset_sim.send_request()
 
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now()
 
-        return self._get_obs(), self._get_info()
+        return self._get_obs_tf_only(), self._get_info()
 
     
     def step(self, action):
@@ -218,7 +269,8 @@ class ForkliftEnv(gym.Env):
         self.cur_iteration += 1
 
         # Unpause simulation so that action can be taken
-        self.unpause_sim.send_request()
+        time.sleep(0.05)
+        # self.unpause_sim.send_request()
 
         # Take action
         diff_cont_action = action['diff_cont_action'] # TODO: set this from action parameter of the step function
@@ -228,17 +280,28 @@ class ForkliftEnv(gym.Env):
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 
-        diff_cont_msg.angular.x = 1.0
+        diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
         diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
         # Get observation after taking the action
-        self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure bservation is coming from after the action was taken
-        observation = self._get_obs()
+        self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure observation is coming from after the action was taken
+        observation = self._get_obs_tf_only()
+        # observation = {
+        # "depth_camera_raw_image_observation": None,
+        # "forklift_robot_tf_observation": {
+        #     "chassis_bottom_link": { 
+        #         "time": 0,
+        #         "transform": np.ones((7, )) 
+        #         }
+        #     }
+        # }
         
         # Pause simuation so that obseration does not change until another action is taken
-        self.pause_sim.send_request()
+        # self.pause_sim.send_request()
+        #TODO: sleep(0.1)
+        # time.sleep(1.0)
 
         # Calculate reward
         def calc_reward(forklift_robot_transform, target_transform):
@@ -249,7 +312,8 @@ class ForkliftEnv(gym.Env):
             l2_dist = np.linalg.norm(robot_transform_translation - target_translation)
             return - l2_dist
             
-        reward = calc_reward(observation['forklift_robot_tf_observation'], self.target_transform) # TODO: implement reward function
+        # reward = calc_reward(observation['forklift_robot_tf_observation'], self.target_transform) # TODO: implement reward function
+        reward = 1
 
         # Check if episode should terminate
         done = bool(self.cur_iteration == self.max_episode_length)

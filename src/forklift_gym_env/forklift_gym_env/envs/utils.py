@@ -60,7 +60,10 @@ def generateLaunchDescriptionForkliftEnv():
 
     spawn_entity = Node(package='gazebo_ros', executable='spawn_entity.py',
                         arguments=['-topic', 'robot_description',
-                                   '-entity', 'forklift_bot'],
+                                   '-entity', 'forklift_bot',
+                                   '-x', '10',
+                                   '-y', '10',
+                                   '-z', '0.30'],
                         output='screen')
 
     load_joint_state_controller = ExecuteProcess(
