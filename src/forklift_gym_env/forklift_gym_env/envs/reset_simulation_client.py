@@ -12,14 +12,15 @@ class ResetSimulationClientAsync(Node):
         self.set_parameters([use_sim_time_parameter])
         # print("KK", self.get_parameter('use_sim_time').get_parameter_value().bool_value, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 
-        self.cli = self.create_client(Empty, '/reset_simulation')
+        # self.cli = self.create_client(Empty, '/reset_simulation')
+        self.cli = self.create_client(Empty, '/reset_world')
         while not self.cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
     def send_request(self):
         # Check that Service is available
         while not self.cli.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('/reset_simulation service not available, waiting again...')
+            self.get_logger().info('/reset_world service not available, waiting again...')
 
         # Call Service
         future = self.cli.call_async(Empty.Request())

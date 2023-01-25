@@ -133,7 +133,7 @@ class ForkliftEnv(gym.Env):
         rclpy.spin_once(self.forklift_robot_tf_subscriber)
         current_forklift_robot_tf_obs = self.forklift_robot_tf_state
 
-        # Check taht the observation is from after the action was taken
+        # Check that the observation is from after the action was taken
         flag = True
         while current_forklift_robot_tf_obs == {} or flag:
             rclpy.spin_once(self.forklift_robot_tf_subscriber)
@@ -141,7 +141,7 @@ class ForkliftEnv(gym.Env):
 
             flag = False
             for k, v in current_forklift_robot_tf_obs.items():
-                if v['time'] < self.ros_clock.nanoseconds:
+                if v['time'] < self.ros_clock.nanoseconds: # make sure that observation was obtained after the action was taken
                     flag = True
                     break
             if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
@@ -150,7 +150,6 @@ class ForkliftEnv(gym.Env):
                     "time": 0,
                     "transform": np.ones((7, )) 
                 }
-            break
         # --------------------------------------------
 
         # reset observations for next iteration
@@ -186,7 +185,7 @@ class ForkliftEnv(gym.Env):
         rclpy.spin_once(self.forklift_robot_tf_subscriber)
         current_forklift_robot_tf_obs = self.forklift_robot_tf_state
 
-        # Check taht the observation is from after the action was taken
+        # Check that the observation is from after the action was taken
         flag = True
         while current_forklift_robot_tf_obs == {} or flag:
             rclpy.spin_once(self.forklift_robot_tf_subscriber)
@@ -315,7 +314,7 @@ class ForkliftEnv(gym.Env):
         # reward = calc_reward(observation['forklift_robot_tf_observation'], self.target_transform) # TODO: implement reward function
         reward = 1
 
-        # Check if episode should terminate
+        # Check if episode should terminate #TODO: check also if goal state is reached
         done = bool(self.cur_iteration == self.max_episode_length)
 
         # Set info
