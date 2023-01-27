@@ -1,10 +1,6 @@
 import rclpy
 from rclpy.node import Node
-
 from sensor_msgs.msg import Image
-import numpy as np
-import cv2
-from cv_bridge import CvBridge
 
 class DepthCameraRawImageSubscriber(Node):
 
@@ -16,7 +12,6 @@ class DepthCameraRawImageSubscriber(Node):
         # Set ros node's clock to use simulation time (gazebo time)
         use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
         self.set_parameters([use_sim_time_parameter])
-        # print("KK", self.get_parameter('use_sim_time').get_parameter_value().bool_value, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 
 
         self.subscription = self.create_subscription(

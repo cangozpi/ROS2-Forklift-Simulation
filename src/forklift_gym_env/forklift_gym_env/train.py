@@ -9,28 +9,22 @@ def debug_console():
         print(eval(var_name))
 
 def main():
-    # start debugging console
+    # Start debugging console
     from threading import Thread
     debug_console_thread = Thread(target=debug_console)
     debug_console_thread.daemon = True
     debug_console_thread.start()
 
     # Start Env
-    print("start:")
     env = gym.make('forklift_gym_env/ForkliftWorld-v0')
-    print(env)
     time.sleep(15.0)
+    cur_episode = 1
     obs, info = env.reset()
     while True: # simulate action taking of an agent for debugging the env
         action = env.action_space.sample()
         obs, reward, done, _, info = env.step(action)
-        print(env.cur_iteration, "EEEEEEEEE")
+        print(f"Episode: {cur_episode}, Iteration: {env.cur_iteration + 1}/{env.max_episode_length}")
         if done:
             obs, info = env.reset()
-            time.sleep(5)
-            #TODO: sleep ?
-            print("Environment is reset!")
-        # print(obs['depth_camera_raw_image_observation'].shape, "AAAAAAAAA")
-        # print(obs['forklift_robot_tf_observation']['chassis_bottom_link']['transform'].dtype == float, "AAAAAAAAA")
-        # print(obs['forklift_robot_tf_observation']['chassis_bottom_link']['time'], "AAAAAAAAA")
-    print("end")
+            time.sleep(3)
+            cur_episode += 1

@@ -12,6 +12,19 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from multiprocessing import Process
 
+def get_robot_description_raw():
+    """
+    Reads robots xacro files, converts it to xml and returns it.
+    """
+    # specify the name of the package and path to xacro file within the package
+    forklift_robot_pkg_name = 'forklift_robot'
+    urdf_file_name = 'forklift.urdf.xacro'
+
+    # use xacro to process the file
+    xacro_file = os.path.join(get_package_share_directory(forklift_robot_pkg_name), urdf_file_name)
+    robot_description_raw = xacro.process_file(xacro_file).toxml()
+    return robot_description_raw
+
 
 def generateLaunchDescriptionForkliftEnv():
     """
@@ -20,11 +33,9 @@ def generateLaunchDescriptionForkliftEnv():
 
     # specify the name of the package and path to xacro file within the package
     forklift_robot_pkg_name = 'forklift_robot'
-    urdf_file_name = 'forklift.urdf.xacro'
 
-    # use xacro to process the file
-    xacro_file = os.path.join(get_package_share_directory(forklift_robot_pkg_name), urdf_file_name)
-    robot_description_raw = xacro.process_file(xacro_file).toxml()
+    # Get robot description as xml
+    robot_description_raw = get_robot_description_raw()
 
 
     # robot_state_publisher node
@@ -122,10 +133,20 @@ def startLaunchServiceProcess(launchDesc):
     launchService = LaunchService()
     launchService.include_launch_description(launchDesc)
     process = Process(target=launchService.run)
-    #The daemon process is terminated automatically before the main program exits,
+    # The daemon process is terminated automatically before the main program exits,
     # to avoid leaving orphaned processes running
     process.daemon = True # refer to https://stackoverflow.com/questions/25391025/what-exactly-is-python-multiprocessing-modules-join-method-doing
     process.start()
     # process.join()
 
     return process
+
+
+def generate_and_launch_ros_description_as_new_process():
+    """
+    Generates the Launch Description and starts it on a new process. Returns a reference to the started process.
+    """
+    # Start gazebo simulation, spawn forklift model, load ros controllers
+    launch_desc = generateLaunchDescriptionForkliftEnv() # generate launch description
+    launch_subp = startLaunchServiceProcess(launch_desc) # start the generated launch description on a subprocess
+    return launch_subp

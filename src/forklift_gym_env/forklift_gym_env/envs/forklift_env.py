@@ -2,7 +2,7 @@ import gym
 import time
 from gym import spaces
 import numpy as np
-from forklift_gym_env.envs.utils import generateLaunchDescriptionForkliftEnv, startLaunchServiceProcess
+from forklift_gym_env.envs.utils import generate_and_launch_ros_description_as_new_process
 from forklift_gym_env.envs.depth_camera_raw_image_subscriber import DepthCameraRawImageSubscriber
 import rclpy
 import cv2
@@ -14,89 +14,39 @@ from geometry_msgs.msg import Twist
 from forklift_gym_env.envs.pause_pyhsics_client import PausePhysicsClient
 from forklift_gym_env.envs.unpause_pyhsics_client import UnpausePhysicsClient
 from forklift_gym_env.envs.simulation_controller import SimulationController
+import numpy as np
 
 
 class ForkliftEnv(gym.Env):
     metadata = {
-        "render_modes": ["human", "rgb_array"], # TODO: set this to supported types
-        "render_fps": 4 #TODO: set this
+        "render_modes": ["human", "rgb_array", "no_render"], # TODO: set this to supported types
+        # "render_fps": 4 #TODO: set this
     }
 
     def __init__(self, render_mode = None):
-       # set types of observation_space and action_space 
-       self.observation_space = spaces.Dict({
-        "depth_camera_raw_image_observation": spaces.Box(low = -float("inf") * np.ones((480, 640)), high = float("inf") * np.ones((480, 640), dtype = np.float32)),
-        "forklift_robot_tf_observation": spaces.Dict({
-            "chassis_bottom_link": spaces.Dict({
-                "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
-                "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = float)
-                })
-            }),
-        # "agent": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int),
-        # "target": spaces.Box(low = 0, high = 1, shape=(2, ),  dtype=int)
-       })
-    #    self.action_space = spaces.Discrete(4) # TODO: change this
-       self.action_space = spaces.Dict({
-        "diff_cont_action": spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32) #TODO: set this to limits from config file
-       })
+       # Set observation_space, _get_obs method, and action_space
+       self.observation_space, self._get_obs = self.observation_space_factory(obs_type="tf_only")
+       self.action_space = self.action_space_factory(act_type="diff_cont")
 
-       # set render_mode
+       # Set render_mode
        assert render_mode is None or render_mode in self.metadata["render_modes"]
        self.render_mode = render_mode
 
-       # self.clock` will be a clock that is used to ensure that the environment is rendered at the correct frame rate in human-mode.
-       self.clock = None
+       # self.ros_clock will be used to check that observations are obtained after the actions are taken
        self.ros_clock = None
 
        # -------------------- 
-       # start gazebo simulation, spawn forklift model, start controllers
-       launch_desc = generateLaunchDescriptionForkliftEnv() # generate launch description
-       self.launch_subp = startLaunchServiceProcess(launch_desc)# start the generated launch description on a subprocess
-       # -------------------- 
+       # Start gazebo simulation, spawn forklift model, load ros controllers
+       self.launch_subp = generate_and_launch_ros_description_as_new_process()
 
+       # -------------------- 
        # Subscribe to sensors: ============================== 
        rclpy.init()
        # -------------------- /camera/depth/image/raw
-       self.depth_camera_img_observation = None
-       def depth_camera_raw_image_subscriber_cb(msg):
-        try:
-            self.bridge
-        except:
-            self.bridge = CvBridge()
-        depth_camera_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-        # depth_camera_img = cv2.normalize(depth_camera_img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F) # Normalize the depth_camera_image to range [0,1]
-        self.depth_camera_img_observation = {
-            'header': msg.header,
-            'image': depth_camera_img
-        }
+       self.depth_camera_raw_image_subscriber = self.initialize_depth_camera_raw_image_subscriber()
 
-       self.depth_camera_raw_image_subscriber = DepthCameraRawImageSubscriber(depth_camera_raw_image_subscriber_cb)
-       # rclpy.spin(self.depth_camera_raw_image_subscriber)
-       # --------------------  
        # -------------------- /tf
-       self.forklift_robot_tf_state = {}
-       def forklift_robot_tf_cb(msg):
-        for cur_msg in msg.transforms:
-            cur_msg_time = int(str(cur_msg.header.stamp.sec) + str(cur_msg.header.stamp.nanosec))
-            cur_msg_child_frame_id = cur_msg.child_frame_id
-            cur_msg_transform = cur_msg.transform
-            if cur_msg_child_frame_id not in self.forklift_robot_tf_state:
-                self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
-                    'time': cur_msg_time,
-                    'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
-                        cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
-                }
-            else:
-                if self.forklift_robot_tf_state[cur_msg_child_frame_id]['time'] < cur_msg_time: # newer information came (update)
-                    self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
-                        'time': cur_msg_time,
-                        'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
-                            cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
-                    }
-
-       self.forklift_robot_tf_subscriber = ForkliftRobotTfSubscriber(forklift_robot_tf_cb)
-    #    rclpy.spin(self.forklift_robot_tf_state)
-
+       self.forklift_robot_tf_subscriber = self.initialize_forklift_robot_tf_subscriber()
        # -------------------- 
        # ====================================================
 
@@ -107,62 +57,46 @@ class ForkliftEnv(gym.Env):
        # ====================================================
 
        # Create Clients for Services: ============================== 
+       # --------------------  /reset_simulation, /pause_physics, /unpause_physics
        self.simulation_controller_node = SimulationController()
-    #    # --------------------  /reset_simulation
-    #    self.reset_sim = ResetSimulationClientAsync()
-    #    # -------------------- 
-    #    # --------------------  /pause_physics
-    #    self.pause_sim = PausePhysicsClient()
-    #    # -------------------- 
-    #    # --------------------  /unpause_physics
-    #    self.unpause_sim = UnpausePhysicsClient()
        # -------------------- 
        # ====================================================
        
        # HYPERPARAMETERS: --------------------  # TODO: get these from config
        self.cur_iteration = 0
        self.max_episode_length = 50
+       self._entity_name = 'forklift_bot'
+       self._ros_controller_names = ['joint_broad', 'fork_joint_controller', 'diff_cont']
        # -------------------------------------
-       self.target_transform = { # TODO: take this as parameter and set it randomly, This is the Goal State
+
+       self._target_transform = { # TODO: take this as a parameter and set it randomly, This is the Goal State
         'transform': np.asarray([0.0, 0.0, 0.0, \
             0.0, 0.0, 0.0, 0.0]) # [translation_x, translation_y, translation_z, rotation_x, rotation_y, rotation_z, rotation_w]
        }
 
 
     def _get_obs_tf_only(self):
-        # --------------------------------------------
-        # Forklift_robot_tf observation -----
-        rclpy.spin_once(self.forklift_robot_tf_subscriber)
-        current_forklift_robot_tf_obs = self.forklift_robot_tf_state
-
-        # Check that the observation is from after the action was taken
+        # Obtain an observation which belongs to a time after the action was taken
+        current_forklift_robot_tf_obs = {}
         flag = True
         while current_forklift_robot_tf_obs == {} or flag:
+            # Obtain forklift_robot_tf observation -----
             rclpy.spin_once(self.forklift_robot_tf_subscriber)
             current_forklift_robot_tf_obs = self.forklift_robot_tf_state
 
             flag = False
             for k, v in current_forklift_robot_tf_obs.items():
-                print("in the for loop 1")
                 if v['time'] < self.ros_clock.nanoseconds: # make sure that observation was obtained after the action was taken
-                    print("inside the if in the for loop 2")
                     flag = True
                     break
             if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
-                print("for loop 3")
                 flag = True
-                current_forklift_robot_tf_obs["chassis_bottom_link"] = { 
-                    "time": 0,
-                    "transform": np.ones((7, )) 
-                }
         # --------------------------------------------
 
         # reset observations for next iteration
         self.forklift_robot_tf_state = {}
-        self.depth_camera_img_observation = None 
 
         return {
-            'depth_camera_raw_image_observation': None,
             'forklift_robot_tf_observation': {
                 'chassis_bottom_link': current_forklift_robot_tf_obs["chassis_bottom_link"]
                 },
@@ -170,14 +104,9 @@ class ForkliftEnv(gym.Env):
 
 
     def _get_obs_camera(self):
-        # Depth_camera_raw_image_observation: -----
-        # Update current observation
-        rclpy.spin_once(self.depth_camera_raw_image_subscriber)
-        current_depth_camera_raw_image_obs = self.depth_camera_img_observation
-
         # Check that the observation is from after the action was taken
         while (current_depth_camera_raw_image_obs is None) or (int(str(current_depth_camera_raw_image_obs["header"].stamp.sec) + (str(current_depth_camera_raw_image_obs["header"].stamp.nanosec))) < self.ros_clock.nanoseconds):
-            # update current observation again
+            # Obtain new depth_camera_raw_image_observation: -----
             rclpy.spin_once(self.depth_camera_raw_image_subscriber)
             current_depth_camera_raw_image_obs = self.depth_camera_img_observation
             rclpy.spin_once(self.forklift_robot_tf_subscriber)
@@ -223,32 +152,27 @@ class ForkliftEnv(gym.Env):
     
 
     def reset(self, seed=None, options=None):
-        # We need the following line to seed self.np_random
         super().reset(seed=seed)
-
-        # Choose the agent's location uniformly at random
-        # self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int) # TODO: set this to agent (forklift) location at start in gazebo
-
-        # # We will sample the target's location randomly until it does not coincide with the agent's location
-        # self._target_location = self._agent_location
-        # while np.array_equal(self._target_location, self._agent_location):
-        #     self._target_location = self.np_random.integers(
-        #         0, self.size, size=2, dtype=int
-        #     )
-
-
-        # --------------
-        # TODO: set self.target to something new and random
 
         self.cur_iteration = 0
 
-        # Unpause sim so that simulation can be reset
-        print("POOOOOOOOO")
-        self.simulation_controller_node.send_unpause_physics_client_request()
-        # self.unpause_sim.send_request()
-        print("TOOOOOOOOOO")
+        # Choose the agent's location uniformly at random
+        # self._agent_location = np.random.random_integers(low = -10, high = 10, size = 2, dtype = float)
+        self._agent_location = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
+        # Change agent location in the simulation
+        self.simulation_controller_node.change_agent_location(self._entity_name, self._agent_location, self._ros_controller_names)
 
-        # send 'no action' action to forklift robot
+        # Sample the target's location randomly until it does not coincide with the agent's location
+        self._target_transform = self._agent_location
+        while np.array_equal(self._target_transform, self._agent_location):
+            # self._target_transform = np.random.random_integers(low = -20, high = 20, size = 2, dtype = float)
+            self._target_transform = np.random.random(size=2) * 40 - 20 # in the range [-20, 20]
+
+
+        # Unpause sim so that simulation can be reset
+        self.simulation_controller_node.send_unpause_physics_client_request()
+
+        # Send 'no action' action to forklift robot
         diff_cont_msg = Twist()
         diff_cont_msg.linear.x = 0.0 # use this one
         diff_cont_msg.linear.y = 0.0
@@ -262,11 +186,10 @@ class ForkliftEnv(gym.Env):
         time.sleep(2)
         # Reset the simulation (gazebo)
         self.simulation_controller_node.send_reset_simulation_request()
-        # future_result = self.reset_sim.send_request()
 
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now()
 
-        return self._get_obs_tf_only(), self._get_info()
+        return self._get_obs(), self._get_info()
 
     
     def step(self, action):
@@ -299,7 +222,7 @@ class ForkliftEnv(gym.Env):
         # Get observation after taking the action
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure observation is coming from after the action was taken
         print("line 289 getting observations 1")
-        observation = self._get_obs_tf_only()
+        observation = self._get_obs()
         # observation = {
         # "depth_camera_raw_image_observation": None,
         # "forklift_robot_tf_observation": {
@@ -326,7 +249,7 @@ class ForkliftEnv(gym.Env):
             l2_dist = np.linalg.norm(robot_transform_translation - target_translation)
             return - l2_dist
             
-        # reward = calc_reward(observation['forklift_robot_tf_observation'], self.target_transform) # TODO: implement reward function
+        # reward = calc_reward(observation['forklift_robot_tf_observation'], self._target_transform) # TODO: implement reward function
         reward = 1
 
         # Check if episode should terminate #TODO: check also if goal state is reached
@@ -343,10 +266,11 @@ class ForkliftEnv(gym.Env):
     def render(self): # TODO: rewrite for gazebo
         # if self.render_mode == "rgb_array":
         #     return self._render_frame()
-        raise NotImplemented
+        # TODO: render sensory information such as camera mounted on the forklift
+        raise NotImplementedError("render not supported")
     
     def _render_frame(self):
-        raise NotImplemented
+        raise NotImplementedError("_render_frame not supported")
 
 
     def close(self): # TODO: close any resources that are open (e.g. ros2 nodes, gazebo, rviz e.t.c)
@@ -363,3 +287,94 @@ class ForkliftEnv(gym.Env):
         rclpy.shutdown()
 
         self.launch_subp.join()
+    
+
+    # ============================================= Helper functions
+    def initialize_depth_camera_raw_image_subscriber(self):
+       self.depth_camera_img_observation = None
+       def depth_camera_raw_image_subscriber_cb(msg):
+        try:
+            self.bridge
+        except:
+            self.bridge = CvBridge()
+        depth_camera_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        # depth_camera_img = cv2.normalize(depth_camera_img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F) # Normalize the depth_camera_image to range [0,1]
+        self.depth_camera_img_observation = {
+            'header': msg.header,
+            'image': depth_camera_img
+        }
+
+       return DepthCameraRawImageSubscriber(depth_camera_raw_image_subscriber_cb)
+    
+
+
+    def initialize_forklift_robot_tf_subscriber(self):
+       self.forklift_robot_tf_state = {}
+       def forklift_robot_tf_cb(msg):
+        for cur_msg in msg.transforms:
+            cur_msg_time = int(str(cur_msg.header.stamp.sec) + str(cur_msg.header.stamp.nanosec))
+            cur_msg_child_frame_id = cur_msg.child_frame_id
+            cur_msg_transform = cur_msg.transform
+            if cur_msg_child_frame_id not in self.forklift_robot_tf_state:
+                self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
+                    'time': cur_msg_time,
+                    'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
+                        cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
+                }
+            else:
+                if self.forklift_robot_tf_state[cur_msg_child_frame_id]['time'] < cur_msg_time: # newer information came (update)
+                    self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
+                        'time': cur_msg_time,
+                        'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
+                            cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
+                    }
+
+       return ForkliftRobotTfSubscriber(forklift_robot_tf_cb)
+    
+
+    def observation_space_factory(self, obs_type = "tf_only"):
+        """
+        Returns observation space and corresponding _get_obs method that corresponds to the given obs_type
+        Inputs:
+            obs_type: supports "tf_only", "tf and depth_camera_raw".
+        """
+        assert obs_type in ["tf_only", "tf and depth_camera_raw"]
+
+        # Set observation_space according to obs_type 
+        if obs_type == "tf_only":
+            return spaces.Dict({ 
+                "forklift_robot_tf_observation": spaces.Dict({
+                    "chassis_bottom_link": spaces.Dict({
+                        "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
+                        "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = float) # TODO: set these values to min and max from ros diff_controller
+                        })
+                    }),
+            }), self._get_obs_tf_only
+
+        elif obs_type == "tf and depth_camera_raw":
+            return spaces.Dict({ 
+                "depth_camera_raw_image_observation": spaces.Box(low = -float("inf") * np.ones((480, 640)), high = float("inf") * np.ones((480, 640), dtype = np.float32)),
+                "forklift_robot_tf_observation": spaces.Dict({
+                    "chassis_bottom_link": spaces.Dict({
+                        "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
+                        "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = float)
+                        })
+                    }),
+            }), self._get_obs_camera
+    
+
+    def action_space_factory(self, act_type = "diff_cont"):
+        """
+        Returns observation space that corresponds to obs_type
+        Inputs:
+            act_type: supports "diff_cont".
+        """
+        assert act_type in ["diff_cont"]
+
+        # Set action space according to act_type 
+        if act_type == "diff_cont":
+            return spaces.Dict({
+                "diff_cont_action": spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32) #TODO: set this to limits from config file
+            })
+
+    
