@@ -18,7 +18,7 @@ fork_joint_controller: # refer to https://github.com/ros-controls/ros2_controlle
   ros__parameters:
     joints:
       - fork_base_joint
-    interface_name: position # available options are as follows [effort, position, velocity]
+    interface_name: effort # available options are as follows [effort, position, velocity]
     # interface_name: velocity
     # write_op_modes:
     #   - fork_base_joint

@@ -13,6 +13,7 @@ from forklift_gym_env.envs.reset_simulation_client import ResetSimulationClientA
 from geometry_msgs.msg import Twist
 from forklift_gym_env.envs.pause_pyhsics_client import PausePhysicsClient
 from forklift_gym_env.envs.unpause_pyhsics_client import UnpausePhysicsClient
+from forklift_gym_env.envs.simulation_controller import SimulationController
 
 
 class ForkliftEnv(gym.Env):
@@ -106,14 +107,15 @@ class ForkliftEnv(gym.Env):
        # ====================================================
 
        # Create Clients for Services: ============================== 
-       # --------------------  /reset_simulation
-       self.reset_sim = ResetSimulationClientAsync()
-       # -------------------- 
-       # --------------------  /pause_physics
-       self.pause_sim = PausePhysicsClient()
-       # -------------------- 
-       # --------------------  /unpause_physics
-       self.unpause_sim = UnpausePhysicsClient()
+       self.simulation_controller_node = SimulationController()
+    #    # --------------------  /reset_simulation
+    #    self.reset_sim = ResetSimulationClientAsync()
+    #    # -------------------- 
+    #    # --------------------  /pause_physics
+    #    self.pause_sim = PausePhysicsClient()
+    #    # -------------------- 
+    #    # --------------------  /unpause_physics
+    #    self.unpause_sim = UnpausePhysicsClient()
        # -------------------- 
        # ====================================================
        
@@ -141,10 +143,13 @@ class ForkliftEnv(gym.Env):
 
             flag = False
             for k, v in current_forklift_robot_tf_obs.items():
+                print("in the for loop 1")
                 if v['time'] < self.ros_clock.nanoseconds: # make sure that observation was obtained after the action was taken
+                    print("inside the if in the for loop 2")
                     flag = True
                     break
             if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
+                print("for loop 3")
                 flag = True
                 current_forklift_robot_tf_obs["chassis_bottom_link"] = { 
                     "time": 0,
@@ -238,7 +243,10 @@ class ForkliftEnv(gym.Env):
         self.cur_iteration = 0
 
         # Unpause sim so that simulation can be reset
+        print("POOOOOOOOO")
+        self.simulation_controller_node.send_unpause_physics_client_request()
         # self.unpause_sim.send_request()
+        print("TOOOOOOOOOO")
 
         # send 'no action' action to forklift robot
         diff_cont_msg = Twist()
@@ -253,7 +261,8 @@ class ForkliftEnv(gym.Env):
 
         time.sleep(2)
         # Reset the simulation (gazebo)
-        future_result = self.reset_sim.send_request()
+        self.simulation_controller_node.send_reset_simulation_request()
+        # future_result = self.reset_sim.send_request()
 
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now()
 
@@ -269,6 +278,8 @@ class ForkliftEnv(gym.Env):
 
         # Unpause simulation so that action can be taken
         time.sleep(0.05)
+        print("line 272 next step is to call unpause_sim")
+        self.simulation_controller_node.send_unpause_physics_client_request()
         # self.unpause_sim.send_request()
 
         # Take action
@@ -282,10 +293,12 @@ class ForkliftEnv(gym.Env):
         diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
         diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
+        print("line 286 next step is to publish_cmd")
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
         # Get observation after taking the action
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure observation is coming from after the action was taken
+        print("line 289 getting observations 1")
         observation = self._get_obs_tf_only()
         # observation = {
         # "depth_camera_raw_image_observation": None,
@@ -298,6 +311,8 @@ class ForkliftEnv(gym.Env):
         # }
         
         # Pause simuation so that obseration does not change until another action is taken
+        print("line 302 observations arrived next step is to pause the simulation 2")
+        self.simulation_controller_node.send_pause_physics_client_request()
         # self.pause_sim.send_request()
         #TODO: sleep(0.1)
         # time.sleep(1.0)
@@ -343,7 +358,8 @@ class ForkliftEnv(gym.Env):
         self.depth_camera_raw_image_subscriber.destroy_node()
         self.diff_cont_cmd_vel_unstamped_publisher.destroy_node()
         self.forklift_robot_tf_subscriber.destroy_node()
-        self.reset_sim.destroy_node()
+        # self.reset_sim.destroy_node()
+        self.simulation_controller_node.destroy_node()
         rclpy.shutdown()
 
         self.launch_subp.join()
