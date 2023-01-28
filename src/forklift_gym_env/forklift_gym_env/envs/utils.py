@@ -169,7 +169,7 @@ def read_yaml_config(config_path):
 
 class ObservationType(Enum):
     """
-    Specifies the observation space that is being used.
+    Specifies the observation space that is being used. Used in config.yaml
     """
     TF_ONLY = "tf_only"
     TF_AND_DEPTH_CAMERA_RAW = "tf and depth_camera_raw"
@@ -177,13 +177,13 @@ class ObservationType(Enum):
 
 class RewardType(Enum):
     """
-    Specifies the reward function being used.
+    Specifies the reward function being used. Used in config.yaml
     """
     L2_DIST = "L2_distance"
 
 
 class ActionType(Enum):
     """
-    Specifies the action space for the actions that will be taken by the agent.
+    Specifies the action space for the actions that will be taken by the agent. Used in config.yaml
     """
     DIFF_CONT = "differential_control"

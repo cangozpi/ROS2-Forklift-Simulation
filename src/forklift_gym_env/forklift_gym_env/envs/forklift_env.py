@@ -20,7 +20,7 @@ import numpy as np
 
 class ForkliftEnv(gym.Env):
     metadata = {
-        "render_modes": ["human", "rgb_array", "no_render"], # TODO: set this to supported types
+        "render_modes": ["no_render", "show_depth_camera_img_raw"], # TODO: set this to supported types
         # "render_fps": 4 #TODO: set this
     }
 
@@ -35,8 +35,9 @@ class ForkliftEnv(gym.Env):
         self.calc_reward = self.calculate_reward_factory(reward_type = RewardType(self.config["reward_type"]))
 
         # Set render_mode
-        assert render_mode is None or render_mode in self.metadata["render_modes"]
-        self.render_mode = render_mode
+        for x in self.config["render_mode"]:
+            assert x in ForkliftEnv.metadata['render_modes'] 
+        self.render_mode = self.config['render_mode']
 
         # self.ros_clock will be used to check that observations are obtained after the actions are taken
         self.ros_clock = None
@@ -48,11 +49,12 @@ class ForkliftEnv(gym.Env):
         # -------------------- 
         # Subscribe to sensors: ============================== 
         rclpy.init()
-        # -------------------- /camera/depth/image/raw
-        self.depth_camera_raw_image_subscriber = self.initialize_depth_camera_raw_image_subscriber()
 
         # -------------------- /tf
         self.forklift_robot_tf_subscriber = self.initialize_forklift_robot_tf_subscriber()
+        # -------------------- 
+        # -------------------- /camera/depth/image/raw
+        self.depth_camera_raw_image_subscriber = self.initialize_depth_camera_raw_image_subscriber(normalize_img = True)
         # -------------------- 
         # ====================================================
 
@@ -82,7 +84,7 @@ class ForkliftEnv(gym.Env):
 
 
     def _get_obs_tf_only(self):
-        # Obtain an observation which belongs to a time after the action was taken
+        # Obtain a tf observation which belongs to a time after the action was taken
         current_forklift_robot_tf_obs = {}
         flag = True
         while current_forklift_robot_tf_obs == {} or flag:
@@ -109,31 +111,34 @@ class ForkliftEnv(gym.Env):
         }
 
 
-    def _get_obs_camera(self):
+    def _get_obs_depth_camera_raw_image_and_tf(self):
+        # Depth_camera_raw_image observation -----
         # Check that the observation is from after the action was taken
-        while (current_depth_camera_raw_image_obs is None) or (int(str(current_depth_camera_raw_image_obs["header"].stamp.sec) + (str(current_depth_camera_raw_image_obs["header"].stamp.nanosec))) < self.ros_clock.nanoseconds):
+        current_depth_camera_raw_image_obs = None
+        while (current_depth_camera_raw_image_obs is None) or \
+            (int(str(current_depth_camera_raw_image_obs["header"].stamp.sec) \
+                + (str(current_depth_camera_raw_image_obs["header"].stamp.nanosec))) \
+                    < self.ros_clock.nanoseconds):
             # Obtain new depth_camera_raw_image_observation: -----
             rclpy.spin_once(self.depth_camera_raw_image_subscriber)
             current_depth_camera_raw_image_obs = self.depth_camera_img_observation
-            rclpy.spin_once(self.forklift_robot_tf_subscriber)
 
         depth_camera_raw_image_observation = current_depth_camera_raw_image_obs["image"] # get image
         # --------------------------------------------
 
 
         # Forklift_robot_tf observation -----
-        rclpy.spin_once(self.forklift_robot_tf_subscriber)
-        current_forklift_robot_tf_obs = self.forklift_robot_tf_state
-
-        # Check that the observation is from after the action was taken
+        # Obtain a tf observation which belongs to a time after the action was taken
+        current_forklift_robot_tf_obs = {}
         flag = True
         while current_forklift_robot_tf_obs == {} or flag:
+            # Obtain forklift_robot_tf observation -----
             rclpy.spin_once(self.forklift_robot_tf_subscriber)
             current_forklift_robot_tf_obs = self.forklift_robot_tf_state
 
             flag = False
             for k, v in current_forklift_robot_tf_obs.items():
-                if v['time'] < self.ros_clock.nanoseconds:
+                if v['time'] < self.ros_clock.nanoseconds: # make sure that observation was obtained after the action was taken
                     flag = True
                     break
             if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
@@ -201,7 +206,15 @@ class ForkliftEnv(gym.Env):
 
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now()
 
-        return self._get_obs(), self._get_info(None, diff_cont_msg)
+        # Get observation
+        observation = self._get_obs()
+        print(observation, "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+        print(self.depth_camera_img_observation)
+
+        # Render
+        self.render(observation)
+
+        return observation, self._get_info(None, diff_cont_msg)
 
     
     def step(self, action):
@@ -247,17 +260,21 @@ class ForkliftEnv(gym.Env):
         # Get info
         info = self._get_info(reward, diff_cont_msg) 
 
+        # Render
+        self.render(observation)
+
         return observation, reward, done, False, info # (observation, reward, done, truncated, info)
 
 
-    def render(self): # TODO: rewrite for sensory information such as camera
-        # if self.render_mode == "rgb_array":
-        #     return self._render_frame()
-        # TODO: render sensory information such as camera mounted on the forklift
-        raise NotImplementedError("render not supported")
+    def render(self, observation): 
+        if self.render_mode is not None:
+            self._render_frame(observation)
     
-    def _render_frame(self):
-        raise NotImplementedError("_render_frame not supported")
+    def _render_frame(self, observation):
+        if "show_depth_camera_img_raw" in self.render_mode:
+            depth_camera_img = observation['depth_camera_raw_image_observation']
+            cv2.imshow('Forklift depth_camera_raw_image message', depth_camera_img)
+            cv2.waitKey(1)
 
 
     def close(self): # TODO: close any resources that are open (e.g. ros2 nodes, gazebo, rviz e.t.c)
@@ -273,21 +290,29 @@ class ForkliftEnv(gym.Env):
     
 
     # ============================================= Helper functions
-    def initialize_depth_camera_raw_image_subscriber(self):
-       self.depth_camera_img_observation = None
-       def depth_camera_raw_image_subscriber_cb(msg):
-        try:
-            self.bridge
-        except:
-            self.bridge = CvBridge()
-        depth_camera_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-        # depth_camera_img = cv2.normalize(depth_camera_img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F) # Normalize the depth_camera_image to range [0,1]
-        self.depth_camera_img_observation = {
-            'header': msg.header,
-            'image': depth_camera_img
-        }
+    def initialize_depth_camera_raw_image_subscriber(self, normalize_img = False):
+        """
+        Input:
+            normalize_img (bool) = if True, img is normalized into range [0, 1]. Defaults to False.
+        """
+        self.depth_camera_img_observation = None
+        def depth_camera_raw_image_subscriber_cb(msg):
+            try:
+                self.bridge
+            except:
+                self.bridge = CvBridge()
 
-       return DepthCameraRawImageSubscriber(depth_camera_raw_image_subscriber_cb)
+            depth_camera_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+
+            if normalize_img:
+                depth_camera_img = cv2.normalize(depth_camera_img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F) # Normalize the depth_camera_image to range [0,1]
+
+            self.depth_camera_img_observation = {
+                'header': msg.header,
+                'image': depth_camera_img
+            }
+
+        return DepthCameraRawImageSubscriber(depth_camera_raw_image_subscriber_cb)
     
 
 
@@ -336,14 +361,17 @@ class ForkliftEnv(gym.Env):
 
         elif obs_type == ObservationType.TF_AND_DEPTH_CAMERA_RAW:
             return spaces.Dict({ 
-                "depth_camera_raw_image_observation": spaces.Box(low = -float("inf") * np.ones((480, 640)), high = float("inf") * np.ones((480, 640), dtype = np.float32)),
+                "depth_camera_raw_image_observation": spaces.Box(low = -float("inf") * \
+                    np.ones(tuple(self.config['depth_camera_raw_image_dimensions'])), \
+                        high = float("inf") * np.ones(tuple(self.config['depth_camera_raw_image_dimensions']), dtype = np.float32)),
+
                 "forklift_robot_tf_observation": spaces.Dict({
                     "chassis_bottom_link": spaces.Dict({
                         "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
                         "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = float)
                         })
                     }),
-            }), self._get_obs_camera
+            }), self._get_obs_depth_camera_raw_image_and_tf
     
     
     def calculate_reward_factory(self, reward_type: RewardType):
