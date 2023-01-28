@@ -2,7 +2,8 @@ import gym
 import time
 from gym import spaces
 import numpy as np
-from forklift_gym_env.envs.utils import generate_and_launch_ros_description_as_new_process, read_yaml_config
+from forklift_gym_env.envs.utils import generate_and_launch_ros_description_as_new_process, read_yaml_config, \
+    ObservationType, RewardType, ActionType
 from forklift_gym_env.envs.depth_camera_raw_image_subscriber import DepthCameraRawImageSubscriber
 import rclpy
 import cv2
@@ -29,9 +30,9 @@ class ForkliftEnv(gym.Env):
         self.config = read_yaml_config(config_path)
 
         # Set observation_space, _get_obs method, and action_space
-        self.observation_space, self._get_obs = self.observation_space_factory(obs_type="tf_only")
-        self.action_space = self.action_space_factory(act_type="diff_cont")
-        self.calc_reward = self.calculate_reward_factory(reward_type="L2_dist")
+        self.observation_space, self._get_obs = self.observation_space_factory(obs_type = ObservationType(self.config["observation_type"]))
+        self.action_space = self.action_space_factory(act_type = ActionType(self.config["action_type"]))
+        self.calc_reward = self.calculate_reward_factory(reward_type = RewardType(self.config["reward_type"]))
 
         # Set render_mode
         assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -192,7 +193,7 @@ class ForkliftEnv(gym.Env):
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
         time.sleep(2)
-        # Reset the simulation (gazebo)
+        # Reset the simulation & world (gazebo)
         self.simulation_controller_node.send_reset_simulation_request()
 
         # Change agent location in the simulation
@@ -207,7 +208,6 @@ class ForkliftEnv(gym.Env):
         # if self.render_mode == "human": # TODO: handle this once the simulation is figured out with gazebo
         #     self._render_frame()
 
-        # -------------------- 
         self.cur_iteration += 1
 
         # Unpause simulation so that action can be taken
@@ -246,8 +246,6 @@ class ForkliftEnv(gym.Env):
 
         # Get info
         info = self._get_info(reward, diff_cont_msg) 
-
-        # -------------------- 
 
         return observation, reward, done, False, info # (observation, reward, done, truncated, info)
 
@@ -317,16 +315,16 @@ class ForkliftEnv(gym.Env):
        return ForkliftRobotTfSubscriber(forklift_robot_tf_cb)
     
 
-    def observation_space_factory(self, obs_type = "tf_only"):
+    def observation_space_factory(self, obs_type: ObservationType):
         """
         Returns observation space and corresponding _get_obs method that corresponds to the given obs_type
         Inputs:
-            obs_type: supports "tf_only", "tf and depth_camera_raw".
+            obs_type (ObservationType): specificies which observation is being used.
         """
-        assert obs_type in ["tf_only", "tf and depth_camera_raw"]
+        assert obs_type in ObservationType
 
         # Set observation_space according to obs_type 
-        if obs_type == "tf_only":
+        if obs_type == ObservationType.TF_ONLY:
             return spaces.Dict({ 
                 "forklift_robot_tf_observation": spaces.Dict({
                     "chassis_bottom_link": spaces.Dict({
@@ -336,7 +334,7 @@ class ForkliftEnv(gym.Env):
                     }),
             }), self._get_obs_tf_only
 
-        elif obs_type == "tf and depth_camera_raw":
+        elif obs_type == ObservationType.TF_AND_DEPTH_CAMERA_RAW:
             return spaces.Dict({ 
                 "depth_camera_raw_image_observation": spaces.Box(low = -float("inf") * np.ones((480, 640)), high = float("inf") * np.ones((480, 640), dtype = np.float32)),
                 "forklift_robot_tf_observation": spaces.Dict({
@@ -348,16 +346,16 @@ class ForkliftEnv(gym.Env):
             }), self._get_obs_camera
     
     
-    def calculate_reward_factory(self, reward_type = "L2_dist"):
+    def calculate_reward_factory(self, reward_type: RewardType):
         """
         Returns a function that calculates reward which corresponds to the given reward_type
         Inputs:
-            reward_type: supports "L2_dist".
+            reward_type (RewardType): specifies which reward function is used.
         """
-        assert reward_type in ["L2_dist"]
+        assert reward_type in RewardType
 
         # return corresponding reward calculation funciton 
-        if reward_type == "L2_dist":
+        if reward_type == RewardType.L2_DIST:
             def calc_reward_L2_dist(forklift_robot_transform, target_transform):
                 """
                 Returns negative of L2 distance between the (translation_x, translation_y) coordinates 
@@ -379,16 +377,16 @@ class ForkliftEnv(gym.Env):
             return calc_reward_L2_dist
     
 
-    def action_space_factory(self, act_type = "diff_cont"):
+    def action_space_factory(self, act_type: ActionType):
         """
         Returns observation space that corresponds to obs_type
         Inputs:
-            act_type: supports "diff_cont".
+            act_type (ActionType): specifies which actions can be taken by the agent.
         """
-        assert act_type in ["diff_cont"]
+        assert act_type in ActionType
 
         # Set action space according to act_type 
-        if act_type == "diff_cont":
+        if act_type == ActionType.DIFF_CONT:
             return spaces.Dict({
                 "diff_cont_action": spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32) #TODO: set this to limits from config file
             })

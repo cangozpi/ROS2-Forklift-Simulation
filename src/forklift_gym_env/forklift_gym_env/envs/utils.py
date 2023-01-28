@@ -2,8 +2,6 @@ import os
 from ament_index_python.packages import get_package_share_directory
 import xacro
 import yaml
-
-# from demo imports
 from launch import LaunchDescription, LaunchService
 from launch.actions import ExecuteProcess, IncludeLaunchDescription, RegisterEventHandler, DeclareLaunchArgument
 from launch.event_handlers import OnProcessExit
@@ -12,6 +10,8 @@ from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, 
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from multiprocessing import Process
+from enum import Enum
+
 
 def get_robot_description_raw():
     """
@@ -165,3 +165,25 @@ def read_yaml_config(config_path):
     with open(config_path) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     return config
+
+
+class ObservationType(Enum):
+    """
+    Specifies the observation space that is being used.
+    """
+    TF_ONLY = "tf_only"
+    TF_AND_DEPTH_CAMERA_RAW = "tf and depth_camera_raw"
+
+
+class RewardType(Enum):
+    """
+    Specifies the reward function being used.
+    """
+    L2_DIST = "L2_distance"
+
+
+class ActionType(Enum):
+    """
+    Specifies the action space for the actions that will be taken by the agent.
+    """
+    DIFF_CONT = "differential_control"
