@@ -27,6 +27,7 @@ class ForkliftEnv(gym.Env):
        # Set observation_space, _get_obs method, and action_space
        self.observation_space, self._get_obs = self.observation_space_factory(obs_type="tf_only")
        self.action_space = self.action_space_factory(act_type="diff_cont")
+       self.calc_reward = self.calculate_reward_factory(reward_type="L2_dist")
 
        # Set render_mode
        assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -37,7 +38,7 @@ class ForkliftEnv(gym.Env):
 
        # -------------------- 
        # Start gazebo simulation, spawn forklift model, load ros controllers
-       self.launch_subp = generate_and_launch_ros_description_as_new_process()
+       self.launch_subp = generate_and_launch_ros_description_as_new_process() # Reference to subprocess that runs these things
 
        # -------------------- 
        # Subscribe to sensors: ============================== 
@@ -57,7 +58,7 @@ class ForkliftEnv(gym.Env):
        # ====================================================
 
        # Create Clients for Services: ============================== 
-       # --------------------  /reset_simulation, /pause_physics, /unpause_physics
+       # --------------------  /reset_simulation, /pause_physics, /unpause_physics, /controller_manager/*
        self.simulation_controller_node = SimulationController()
        # -------------------- 
        # ====================================================
@@ -67,11 +68,12 @@ class ForkliftEnv(gym.Env):
        self.max_episode_length = 50
        self._entity_name = 'forklift_bot'
        self._ros_controller_names = ['joint_broad', 'fork_joint_controller', 'diff_cont']
+       self._tolerance_x = 1.115 # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state
+       self._tolerance_y = 1.59  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state
        # -------------------------------------
 
        self._target_transform = { # TODO: take this as a parameter and set it randomly, This is the Goal State
-        'transform': np.asarray([0.0, 0.0, 0.0, \
-            0.0, 0.0, 0.0, 0.0]) # [translation_x, translation_y, translation_z, rotation_x, rotation_y, rotation_z, rotation_w]
+        'transform': np.asarray([0.0, 0.0]) # [translation_x, translation_y]
        }
 
 
@@ -146,9 +148,15 @@ class ForkliftEnv(gym.Env):
         }
 
 
-    def _get_info(self): # TODO: implement this
-        # return {"distance": np.linalg.norm(self._agent_location - self._target_location, ord=1)}
-        return {}
+    def _get_info(self, reward, diff_cont_msg):
+        info = {
+            "iteration": self.cur_iteration,
+            "max_episode_length": self.max_episode_length,
+            "reward": reward,
+            "agent_location": self._agent_location,
+            "target_location": self._target_transform
+        }
+        return info
     
 
     def reset(self, seed=None, options=None):
@@ -157,7 +165,6 @@ class ForkliftEnv(gym.Env):
         self.cur_iteration = 0
 
         # Choose the agent's location uniformly at random
-        # self._agent_location = np.random.random_integers(low = -10, high = 10, size = 2, dtype = float)
         self._agent_location = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
         # Change agent location in the simulation
         self.simulation_controller_node.change_agent_location(self._entity_name, self._agent_location, self._ros_controller_names)
@@ -165,7 +172,6 @@ class ForkliftEnv(gym.Env):
         # Sample the target's location randomly until it does not coincide with the agent's location
         self._target_transform = self._agent_location
         while np.array_equal(self._target_transform, self._agent_location):
-            # self._target_transform = np.random.random_integers(low = -20, high = 20, size = 2, dtype = float)
             self._target_transform = np.random.random(size=2) * 40 - 20 # in the range [-20, 20]
 
 
@@ -189,7 +195,7 @@ class ForkliftEnv(gym.Env):
 
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now()
 
-        return self._get_obs(), self._get_info()
+        return self._get_obs(), self._get_info(None, diff_cont_msg)
 
     
     def step(self, action):
@@ -203,10 +209,9 @@ class ForkliftEnv(gym.Env):
         time.sleep(0.05)
         print("line 272 next step is to call unpause_sim")
         self.simulation_controller_node.send_unpause_physics_client_request()
-        # self.unpause_sim.send_request()
 
         # Take action
-        diff_cont_action = action['diff_cont_action'] # TODO: set this from action parameter of the step function
+        diff_cont_action = action['diff_cont_action'] 
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
         diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
@@ -223,47 +228,26 @@ class ForkliftEnv(gym.Env):
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure observation is coming from after the action was taken
         print("line 289 getting observations 1")
         observation = self._get_obs()
-        # observation = {
-        # "depth_camera_raw_image_observation": None,
-        # "forklift_robot_tf_observation": {
-        #     "chassis_bottom_link": { 
-        #         "time": 0,
-        #         "transform": np.ones((7, )) 
-        #         }
-        #     }
-        # }
-        
+
         # Pause simuation so that obseration does not change until another action is taken
         print("line 302 observations arrived next step is to pause the simulation 2")
         self.simulation_controller_node.send_pause_physics_client_request()
-        # self.pause_sim.send_request()
-        #TODO: sleep(0.1)
-        # time.sleep(1.0)
 
         # Calculate reward
-        def calc_reward(forklift_robot_transform, target_transform):
-            # Return negative L2 distance btw chassis_bottom_link and the target location as reward
-            # Note that we are only using translation here, NOT using rotation information
-            robot_transform_translation = forklift_robot_transform['chassis_bottom_link']['transform'][:3]
-            target_translation = target_transform['transform'][:3]
-            l2_dist = np.linalg.norm(robot_transform_translation - target_translation)
-            return - l2_dist
-            
-        # reward = calc_reward(observation['forklift_robot_tf_observation'], self._target_transform) # TODO: implement reward function
-        reward = 1
+        reward = self.calc_reward(observation['forklift_robot_tf_observation'], self._target_transform) 
 
         # Check if episode should terminate #TODO: check also if goal state is reached
-        done = bool(self.cur_iteration == self.max_episode_length)
+        done = bool(self.cur_iteration >= (self.max_episode_length - 1)) or (self.check_goal_achieved(observation))
 
-        # Set info
-        info = self._get_info() # TODO: set this with useful info such as forklift's manhattan distance to target location
+        # Get info
+        info = self._get_info(reward, diff_cont_msg) 
 
         # -------------------- 
 
         return observation, reward, done, False, info # (observation, reward, done, truncated, info)
 
 
-    def render(self): # TODO: rewrite for gazebo
+    def render(self): # TODO: rewrite for sensory information such as camera
         # if self.render_mode == "rgb_array":
         #     return self._render_frame()
         # TODO: render sensory information such as camera mounted on the forklift
@@ -274,16 +258,12 @@ class ForkliftEnv(gym.Env):
 
 
     def close(self): # TODO: close any resources that are open (e.g. ros2 nodes, gazebo, rviz e.t.c)
-        if self.window is not None:
-            pygame.display.quit()
-            pygame.quit()
+        # TODO: Close cv2 window if render is used
 
         # delete ros nodes
         self.depth_camera_raw_image_subscriber.destroy_node()
         self.diff_cont_cmd_vel_unstamped_publisher.destroy_node()
-        self.forklift_robot_tf_subscriber.destroy_node()
-        # self.reset_sim.destroy_node()
-        self.simulation_controller_node.destroy_node()
+        # self.forklift_robot_tf_subscriber.destroy_node()
         rclpy.shutdown()
 
         self.launch_subp.join()
@@ -362,6 +342,37 @@ class ForkliftEnv(gym.Env):
                     }),
             }), self._get_obs_camera
     
+    
+    def calculate_reward_factory(self, reward_type = "L2_dist"):
+        """
+        Returns a function that calculates reward which corresponds to the given reward_type
+        Inputs:
+            reward_type: supports "L2_dist".
+        """
+        assert reward_type in ["L2_dist"]
+
+        # return corresponding reward calculation funciton 
+        if reward_type == "L2_dist":
+            def calc_reward_L2_dist(forklift_robot_transform, target_transform):
+                """
+                Returns negative of L2 distance between the (translation_x, translation_y) coordinates 
+                of forklift_robot_transform and target_transform.
+                Inputs:
+                    forklift_robot_transform (dict): has a key "chassis_bottom_link" which holds (translation_x, translation_y) 
+                        in its first two indices. This cooresponds to the current location of the forklift robot
+                    target_transform (list): has (tranlation_x, translation_y) coordinates in its first two indices of the 
+                        target location
+                Returns:
+                    reward: -L2 distance
+
+                """
+                # Return negative L2 distance btw chassis_bottom_link and the target location as reward
+                # Note that we are only using translation here, NOT using rotation information
+                robot_transform_translation = forklift_robot_transform['chassis_bottom_link']['transform'][:2] # [translation_x, translation_y]
+                l2_dist = np.linalg.norm(robot_transform_translation - target_transform)
+                return - l2_dist
+            return calc_reward_L2_dist
+    
 
     def action_space_factory(self, act_type = "diff_cont"):
         """
@@ -376,5 +387,22 @@ class ForkliftEnv(gym.Env):
             return spaces.Dict({
                 "diff_cont_action": spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32) #TODO: set this to limits from config file
             })
+
+
+    def check_goal_achieved(self, observation):
+        """
+        Returns True if "chassis_bottom_link" is withing the (self._tolerance_x, self._tolerance_y) 
+        distance from the self_target_transform. In other words, checks if goal state is reached by the agent In other words, checks 
+        if goal state is reached by the agent.
+        """
+        # Get (translation_x, translation_y) of forklift robotA
+        agent_location = observation["forklift_robot_tf_observation"]["chassis_bottom_link"]["transform"][:2] 
+
+        # Check if agent is withing the tolerance of target_location
+        if (abs(agent_location[0] - self._target_transform[0]) <= self._tolerance_x) and \
+            (abs(agent_location[1] - self._target_transform[1]) <= self._tolerance_y):
+            return True
+        else:
+            return False
 
     
