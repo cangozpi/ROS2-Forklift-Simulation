@@ -5,6 +5,9 @@ from gazebo_msgs.srv import DeleteEntity, SpawnEntity
 from geometry_msgs.msg import Pose
 from controller_manager.controller_manager_services import LoadController, ConfigureController, SwitchController
 from .utils import get_robot_description_raw
+from launch import LaunchDescription, LaunchService
+from launch_ros.actions import Node
+from multiprocessing import Process
 
 
 class SimulationController():
@@ -12,21 +15,47 @@ class SimulationController():
         self.empty_req = Empty.Request()
 
 
+    def launch_robot_state_publisher(self):
+        # robot_state_publisher node
+        node_robot_state_publisher = Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            output='screen',
+            parameters=[{'robot_description': get_robot_description_raw(),
+            'use_sim_time': True}] # add other parameters here if required
+        )
+
+        launchDesc =  LaunchDescription([
+            node_robot_state_publisher,
+        ])
+
+        # Create the LauchService and feed the LaunchDescription obj to it.
+        launchService = LaunchService()
+        launchService.include_launch_description(launchDesc)
+        process = Process(target=launchService.run)
+        # The daemon process is terminated automatically before the main program exits,
+        # to avoid leaving orphaned processes running
+        process.daemon = True # refer to https://stackoverflow.com/questions/25391025/what-exactly-is-python-multiprocessing-modules-join-method-doing
+        process.start()
+        return process
+
+
     def send_reset_simulation_request(self):
         # Request /reset_simulation
         # Note that this resets the simulation_time (self.ros_clock)
-        cur_node = rclpy.create_node('reset_simulation_client')        
-        use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
-        cur_node.set_parameters([use_sim_time_parameter])
+        # cur_node = rclpy.create_node('reset_simulation_client')        
+        # use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
+        # cur_node.set_parameters([use_sim_time_parameter])
 
-        cli = cur_node.create_client(Empty, '/reset_simulation')
-        while not cli.wait_for_service(timeout_sec=1.0):
-            cur_node.get_logger().info('/reset_simulation service not available, waiting again...')
+        # cli = cur_node.create_client(Empty, '/reset_simulation')
+        # while not cli.wait_for_service(timeout_sec=1.0):
+        #     cur_node.get_logger().info('/reset_simulation service not available, waiting again...')
 
-        self.future = cli.call_async(self.empty_req)
-        rclpy.spin_until_future_complete(cur_node, self.future)
+        # self.future = cli.call_async(self.empty_req)
+        # rclpy.spin_until_future_complete(cur_node, self.future)
 
-        cur_node.destroy_node()
+        # cur_node.destroy_node()
+
 
         # Request /reset_world
         cur_node = rclpy.create_node('reset_world_client')        

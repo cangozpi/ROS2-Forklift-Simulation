@@ -43,8 +43,8 @@ class ForkliftEnv(gym.Env):
         self.ros_clock = None
 
         # -------------------- 
-        # Start gazebo simulation, spawn forklift model, load ros controllers
-        self.launch_subp = generate_and_launch_ros_description_as_new_process(self.config) # Reference to subprocess that runs these things
+        # Start gazebo simulation, robot_state_publisher
+        self.gazebo_launch_subp = generate_and_launch_ros_description_as_new_process(self.config) # Reference to subprocess that runs these things
 
         # -------------------- 
         # Subscribe to sensors: ============================== 
@@ -94,7 +94,7 @@ class ForkliftEnv(gym.Env):
 
             flag = False
             for k, v in current_forklift_robot_tf_obs.items():
-                if v['time'] < self.ros_clock.nanoseconds: # make sure that observation was obtained after the action was taken
+                if v['time'] < (self.ros_clock.nanoseconds + self.config['step_duration']): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.
                     flag = True
                     break
             if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
@@ -118,7 +118,7 @@ class ForkliftEnv(gym.Env):
         while (current_depth_camera_raw_image_obs is None) or \
             (int(str(current_depth_camera_raw_image_obs["header"].stamp.sec) \
                 + (str(current_depth_camera_raw_image_obs["header"].stamp.nanosec))) \
-                    < self.ros_clock.nanoseconds):
+                    < (self.ros_clock.nanoseconds + self.config['step_duration'])): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.  
             # Obtain new depth_camera_raw_image_observation: -----
             rclpy.spin_once(self.depth_camera_raw_image_subscriber)
             current_depth_camera_raw_image_obs = self.depth_camera_img_observation
@@ -138,7 +138,7 @@ class ForkliftEnv(gym.Env):
 
             flag = False
             for k, v in current_forklift_robot_tf_obs.items():
-                if v['time'] < self.ros_clock.nanoseconds: # make sure that observation was obtained after the action was taken
+                if v['time'] < (self.ros_clock.nanoseconds + self.config['step_duration']): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.
                     flag = True
                     break
             if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
@@ -197,19 +197,16 @@ class ForkliftEnv(gym.Env):
         diff_cont_msg.angular.z = 0.0 # use this one
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
-        time.sleep(2)
         # Reset the simulation & world (gazebo)
         self.simulation_controller_node.send_reset_simulation_request()
 
-        # Change agent location in the simulation
+        # Change agent location in the simulation, activate ros_controllers
         self.simulation_controller_node.change_agent_location(self._entity_name, self._agent_location, self._ros_controller_names, self.config['agent_pose_position_z'])
 
-        self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now()
+        self.ros_clock = self.forklift_robot_tf_subscriber.get_clock().now()
 
         # Get observation
         observation = self._get_obs()
-        print(observation, "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
-        print(self.depth_camera_img_observation)
 
         # Render
         self.render(observation)
@@ -224,11 +221,9 @@ class ForkliftEnv(gym.Env):
         self.cur_iteration += 1
 
         # Unpause simulation so that action can be taken
-        time.sleep(0.05)
-        print("line 272 next step is to call unpause_sim")
         self.simulation_controller_node.send_unpause_physics_client_request()
 
-        # Take action
+        # Set action
         diff_cont_action = action['diff_cont_action'] 
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
@@ -239,23 +234,22 @@ class ForkliftEnv(gym.Env):
         diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
         diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
-        print("line 286 next step is to publish_cmd")
+        # Take action
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
         # Get observation after taking the action
-        self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now() # will be used to make sure observation is coming from after the action was taken
-        print("line 289 getting observations 1")
+        self.ros_clock = self.forklift_robot_tf_subscriber.get_clock().now() # will be used to make sure observation is coming from after the action was taken
+
         observation = self._get_obs()
 
         # Pause simuation so that obseration does not change until another action is taken
-        print("line 302 observations arrived next step is to pause the simulation 2")
         self.simulation_controller_node.send_pause_physics_client_request()
 
         # Calculate reward
         reward = self.calc_reward(observation['forklift_robot_tf_observation'], self._target_transform) 
 
         # Check if episode should terminate #TODO: check also if goal state is reached
-        done = bool(self.cur_iteration >= (self.max_episode_length - 1)) or (self.check_goal_achieved(observation))
+        done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(observation))
 
         # Get info
         info = self._get_info(reward, diff_cont_msg) 
@@ -286,8 +280,9 @@ class ForkliftEnv(gym.Env):
         # self.forklift_robot_tf_subscriber.destroy_node()
         rclpy.shutdown()
 
-        self.launch_subp.join()
-    
+        self.gazebo_launch_subp.terminate() 
+        self.gazebo_launch_subp.join() 
+        self.gazebo_launch_subp.close()     
 
     # ============================================= Helper functions
     def initialize_depth_camera_raw_image_subscriber(self, normalize_img = False):
