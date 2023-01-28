@@ -13,7 +13,23 @@ class SimulationController():
 
 
     def send_reset_simulation_request(self):
+        # Request /reset_simulation
+        # Note that this resets the simulation_time (self.ros_clock)
         cur_node = rclpy.create_node('reset_simulation_client')        
+        use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
+        cur_node.set_parameters([use_sim_time_parameter])
+
+        cli = cur_node.create_client(Empty, '/reset_simulation')
+        while not cli.wait_for_service(timeout_sec=1.0):
+            cur_node.get_logger().info('/reset_simulation service not available, waiting again...')
+
+        self.future = cli.call_async(self.empty_req)
+        rclpy.spin_until_future_complete(cur_node, self.future)
+
+        cur_node.destroy_node()
+
+        # Request /reset_world
+        cur_node = rclpy.create_node('reset_world_client')        
         use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
         cur_node.set_parameters([use_sim_time_parameter])
 
@@ -115,7 +131,7 @@ class SimulationController():
     
 
 
-    def change_agent_location(self, entity_name, agent_location, ros_controller_names: list):
+    def change_agent_location(self, entity_name, agent_location, ros_controller_names: list, agent_pose_position_z):
         """
         Delete agent and respawn it at the self._agent_location coordinates in the simulation. 
         Loads, Configures, and Activates the given ros2 controllers with the names specified in the controller_names (list).
@@ -154,7 +170,7 @@ class SimulationController():
         agent_pose = Pose()
         agent_pose.position.x = agent_location[0]
         agent_pose.position.y = agent_location[1]
-        agent_pose.position.z = 0.30
+        agent_pose.position.z = agent_pose_position_z
 
         agent_pose.orientation.x = 0.0
         agent_pose.orientation.y = 0.0

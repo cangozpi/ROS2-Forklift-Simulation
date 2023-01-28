@@ -77,7 +77,7 @@ def generateLaunchDescriptionForkliftEnv(config):
                                    '-entity', 'forklift_bot',
                                    '-x', '10',
                                    '-y', '10',
-                                   '-z', '0.30'],
+                                   '-z', str(config['agent_pose_position_z'])],
                         output='screen')
 
     load_joint_state_controller = ExecuteProcess(

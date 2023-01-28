@@ -4,4 +4,5 @@ entity_name: 'forklift_bot'
 ros_controller_names:  ['joint_broad', 'fork_joint_controller', 'diff_cont']
 tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state
 tolerance_y: 1.59  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state
+agent_pose_position_z: 0.30 # agent's z coordinate when spawned in the world
 world_file_name: 'road.world'

@@ -180,9 +180,6 @@ class ForkliftEnv(gym.Env):
         # Unpause sim so that simulation can be reset
         self.simulation_controller_node.send_unpause_physics_client_request()
 
-        # Change agent location in the simulation
-        self.simulation_controller_node.change_agent_location(self._entity_name, self._agent_location, self._ros_controller_names)
-
         # Send 'no action' action to forklift robot
         diff_cont_msg = Twist()
         diff_cont_msg.linear.x = 0.0 # use this one
@@ -197,6 +194,9 @@ class ForkliftEnv(gym.Env):
         time.sleep(2)
         # Reset the simulation (gazebo)
         self.simulation_controller_node.send_reset_simulation_request()
+
+        # Change agent location in the simulation
+        self.simulation_controller_node.change_agent_location(self._entity_name, self._agent_location, self._ros_controller_names, self.config['agent_pose_position_z'])
 
         self.ros_clock = self.depth_camera_raw_image_subscriber.get_clock().now()
 
