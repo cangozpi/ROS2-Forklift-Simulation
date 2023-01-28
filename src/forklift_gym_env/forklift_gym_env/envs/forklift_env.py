@@ -2,7 +2,7 @@ import gym
 import time
 from gym import spaces
 import numpy as np
-from forklift_gym_env.envs.utils import generate_and_launch_ros_description_as_new_process
+from forklift_gym_env.envs.utils import generate_and_launch_ros_description_as_new_process, read_yaml_config
 from forklift_gym_env.envs.depth_camera_raw_image_subscriber import DepthCameraRawImageSubscriber
 import rclpy
 import cv2
@@ -24,57 +24,60 @@ class ForkliftEnv(gym.Env):
     }
 
     def __init__(self, render_mode = None):
-       # Set observation_space, _get_obs method, and action_space
-       self.observation_space, self._get_obs = self.observation_space_factory(obs_type="tf_only")
-       self.action_space = self.action_space_factory(act_type="diff_cont")
-       self.calc_reward = self.calculate_reward_factory(reward_type="L2_dist")
+        # Read in parameters from config.yaml
+        config_path = 'build/forklift_gym_env/forklift_gym_env/config/config.yaml'
+        self.config = read_yaml_config(config_path)
 
-       # Set render_mode
-       assert render_mode is None or render_mode in self.metadata["render_modes"]
-       self.render_mode = render_mode
+        # Set observation_space, _get_obs method, and action_space
+        self.observation_space, self._get_obs = self.observation_space_factory(obs_type="tf_only")
+        self.action_space = self.action_space_factory(act_type="diff_cont")
+        self.calc_reward = self.calculate_reward_factory(reward_type="L2_dist")
 
-       # self.ros_clock will be used to check that observations are obtained after the actions are taken
-       self.ros_clock = None
+        # Set render_mode
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
 
-       # -------------------- 
-       # Start gazebo simulation, spawn forklift model, load ros controllers
-       self.launch_subp = generate_and_launch_ros_description_as_new_process() # Reference to subprocess that runs these things
+        # self.ros_clock will be used to check that observations are obtained after the actions are taken
+        self.ros_clock = None
 
-       # -------------------- 
-       # Subscribe to sensors: ============================== 
-       rclpy.init()
-       # -------------------- /camera/depth/image/raw
-       self.depth_camera_raw_image_subscriber = self.initialize_depth_camera_raw_image_subscriber()
+        # -------------------- 
+        # Start gazebo simulation, spawn forklift model, load ros controllers
+        self.launch_subp = generate_and_launch_ros_description_as_new_process(self.config) # Reference to subprocess that runs these things
 
-       # -------------------- /tf
-       self.forklift_robot_tf_subscriber = self.initialize_forklift_robot_tf_subscriber()
-       # -------------------- 
-       # ====================================================
+        # -------------------- 
+        # Subscribe to sensors: ============================== 
+        rclpy.init()
+        # -------------------- /camera/depth/image/raw
+        self.depth_camera_raw_image_subscriber = self.initialize_depth_camera_raw_image_subscriber()
 
-       # Create publisher for controlling forklift robot's joints: ============================== 
-       # --------------------  /diff_cont/cmd_vel_unstamped
-       self.diff_cont_cmd_vel_unstamped_publisher = DiffContCmdVelUnstampedPublisher()
-       # -------------------- 
-       # ====================================================
+        # -------------------- /tf
+        self.forklift_robot_tf_subscriber = self.initialize_forklift_robot_tf_subscriber()
+        # -------------------- 
+        # ====================================================
 
-       # Create Clients for Services: ============================== 
-       # --------------------  /reset_simulation, /pause_physics, /unpause_physics, /controller_manager/*
-       self.simulation_controller_node = SimulationController()
-       # -------------------- 
-       # ====================================================
+        # Create publisher for controlling forklift robot's joints: ============================== 
+        # --------------------  /diff_cont/cmd_vel_unstamped
+        self.diff_cont_cmd_vel_unstamped_publisher = DiffContCmdVelUnstampedPublisher()
+        # -------------------- 
+        # ====================================================
+
+        # Create Clients for Services: ============================== 
+        # --------------------  /reset_simulation, /pause_physics, /unpause_physics, /controller_manager/*
+        self.simulation_controller_node = SimulationController()
+        # -------------------- 
+        # ====================================================
        
-       # HYPERPARAMETERS: --------------------  # TODO: get these from config
-       self.cur_iteration = 0
-       self.max_episode_length = 50
-       self._entity_name = 'forklift_bot'
-       self._ros_controller_names = ['joint_broad', 'fork_joint_controller', 'diff_cont']
-       self._tolerance_x = 1.115 # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state
-       self._tolerance_y = 1.59  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state
-       # -------------------------------------
+        # Parameters: --------------------  # TODO: get these from config
+        self.cur_iteration = 0
+        self.max_episode_length = self.config['max_episode_length']
+        self._entity_name = self.config['entity_name']
+        self._ros_controller_names = self.config['ros_controller_names']
+        self._tolerance_x = self.config['tolerance_x'] # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state
+        self._tolerance_y = self.config['tolerance_y']  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state
+        # -------------------------------------
 
-       self._target_transform = { # TODO: take this as a parameter and set it randomly, This is the Goal State
-        'transform': np.asarray([0.0, 0.0]) # [translation_x, translation_y]
-       }
+        self._target_transform = None 
+        
 
 
     def _get_obs_tf_only(self):
@@ -154,7 +157,8 @@ class ForkliftEnv(gym.Env):
             "max_episode_length": self.max_episode_length,
             "reward": reward,
             "agent_location": self._agent_location,
-            "target_location": self._target_transform
+            "target_location": self._target_transform,
+            "verbose": self.config["verbose"]
         }
         return info
     
@@ -166,8 +170,6 @@ class ForkliftEnv(gym.Env):
 
         # Choose the agent's location uniformly at random
         self._agent_location = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
-        # Change agent location in the simulation
-        self.simulation_controller_node.change_agent_location(self._entity_name, self._agent_location, self._ros_controller_names)
 
         # Sample the target's location randomly until it does not coincide with the agent's location
         self._target_transform = self._agent_location
@@ -177,6 +179,9 @@ class ForkliftEnv(gym.Env):
 
         # Unpause sim so that simulation can be reset
         self.simulation_controller_node.send_unpause_physics_client_request()
+
+        # Change agent location in the simulation
+        self.simulation_controller_node.change_agent_location(self._entity_name, self._agent_location, self._ros_controller_names)
 
         # Send 'no action' action to forklift robot
         diff_cont_msg = Twist()

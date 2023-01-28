@@ -1,6 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 import xacro
+import yaml
 
 # from demo imports
 from launch import LaunchDescription, LaunchService
@@ -26,9 +27,11 @@ def get_robot_description_raw():
     return robot_description_raw
 
 
-def generateLaunchDescriptionForkliftEnv():
+def generateLaunchDescriptionForkliftEnv(config):
     """
     Generates Launch Description for starting gazebo, spawning forklift model, and loading controllers and returns it.
+    Input:
+        config (dict): config dict that corresponds to config/config.yaml configurations
     """
 
     # specify the name of the package and path to xacro file within the package
@@ -49,7 +52,7 @@ def generateLaunchDescriptionForkliftEnv():
 
     # Set the path to the world file
     forklift_gym_env_pkg_name = 'forklift_gym_env'
-    world_file_name = 'road.world'
+    world_file_name = config['world_file_name']
     world_path = os.path.join(get_package_share_directory(forklift_gym_env_pkg_name), world_file_name)
 
     world = LaunchConfiguration('world')
@@ -98,27 +101,27 @@ def generateLaunchDescriptionForkliftEnv():
 
     return LaunchDescription([
         declare_world_arg, # Launch argument
-        RegisterEventHandler(
-          event_handler=OnProcessExit(
-                target_action=spawn_entity,
-                on_exit=[load_joint_state_controller],
-            )
-        ),
-        RegisterEventHandler(
-            event_handler=OnProcessExit(
-                target_action=load_joint_state_controller,
-                on_exit=[fork_joint_controller],
-            )
-        ),
-        RegisterEventHandler(
-            event_handler=OnProcessExit(
-                target_action=fork_joint_controller,
-                on_exit=[diff_controller],
-            )
-        ),
+        # RegisterEventHandler(
+        #   event_handler=OnProcessExit(
+        #         target_action=spawn_entity,
+        #         on_exit=[load_joint_state_controller],
+        #     )
+        # ),
+        # RegisterEventHandler(
+        #     event_handler=OnProcessExit(
+        #         target_action=load_joint_state_controller,
+        #         on_exit=[fork_joint_controller],
+        #     )
+        # ),
+        # RegisterEventHandler(
+        #     event_handler=OnProcessExit(
+        #         target_action=fork_joint_controller,
+        #         on_exit=[diff_controller],
+        #     )
+        # ),
         gazebo,
         node_robot_state_publisher,
-        spawn_entity,
+        # spawn_entity,
     ])
 
 
@@ -142,11 +145,23 @@ def startLaunchServiceProcess(launchDesc):
     return process
 
 
-def generate_and_launch_ros_description_as_new_process():
+def generate_and_launch_ros_description_as_new_process(config):
     """
     Generates the Launch Description and starts it on a new process. Returns a reference to the started process.
     """
     # Start gazebo simulation, spawn forklift model, load ros controllers
-    launch_desc = generateLaunchDescriptionForkliftEnv() # generate launch description
+    launch_desc = generateLaunchDescriptionForkliftEnv(config) # generate launch description
     launch_subp = startLaunchServiceProcess(launch_desc) # start the generated launch description on a subprocess
     return launch_subp
+
+
+def read_yaml_config(config_path):
+    """
+    Inputs:
+        config_path (str): path to config.yaml file
+    Outputs:
+        config (dict): parsed config.yaml parameters
+    """
+    with open(config_path) as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    return config
