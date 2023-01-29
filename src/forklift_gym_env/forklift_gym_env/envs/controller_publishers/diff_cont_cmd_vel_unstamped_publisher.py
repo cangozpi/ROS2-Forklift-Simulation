@@ -36,7 +36,7 @@ class DiffContCmdVelUnstampedPublisher(Node):
     #     self.publisher_.publish(msg)
     #     self.get_logger().info('Publishing: "%s"' % msg)
     
-    def publish_cmd(self, twist_msg): #TODO: make it use twist_msg instead of a constant msg
+    def publish_cmd(self, twist_msg):
         self.publisher_.publish(twist_msg)
         # self.get_logger().info('Publishing: "%s"' % msg)
 

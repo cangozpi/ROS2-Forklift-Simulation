@@ -1,26 +1,28 @@
 import gym
-import time
 from gym import spaces
 import numpy as np
-from forklift_gym_env.envs.utils import generate_and_launch_ros_description_as_new_process, read_yaml_config, \
-    ObservationType, RewardType, ActionType
-from forklift_gym_env.envs.depth_camera_raw_image_subscriber import DepthCameraRawImageSubscriber
-import rclpy
 import cv2
 from cv_bridge import CvBridge
-from forklift_gym_env.envs.diff_cont_cmd_vel_unstamped_publisher import DiffContCmdVelUnstampedPublisher
-from forklift_gym_env.envs.forklift_robot_tf_subscriber import ForkliftRobotTfSubscriber
-from forklift_gym_env.envs.reset_simulation_client import ResetSimulationClientAsync
+import time
+import rclpy
 from geometry_msgs.msg import Twist
-from forklift_gym_env.envs.pause_pyhsics_client import PausePhysicsClient
-from forklift_gym_env.envs.unpause_pyhsics_client import UnpausePhysicsClient
+
+from forklift_gym_env.envs.utils import generate_and_launch_ros_description_as_new_process, read_yaml_config, \
+    ObservationType, RewardType, ActionType
 from forklift_gym_env.envs.simulation_controller import SimulationController
-import numpy as np
+
+# Sensor Subscribers
+from forklift_gym_env.envs.sensor_subscribers.forklift_robot_tf_subscriber import ForkliftRobotTfSubscriber
+from forklift_gym_env.envs.sensor_subscribers.depth_camera_raw_image_subscriber import DepthCameraRawImageSubscriber
+
+# Controller Publishers
+from forklift_gym_env.envs.controller_publishers.diff_cont_cmd_vel_unstamped_publisher import DiffContCmdVelUnstampedPublisher
+
 
 
 class ForkliftEnv(gym.Env):
     metadata = {
-        "render_modes": ["no_render", "show_depth_camera_img_raw"], # TODO: set this to supported types
+        "render_modes": ["no_render", "show_depth_camera_img_raw"], 
         # "render_fps": 4 #TODO: set this
     }
 
@@ -70,7 +72,7 @@ class ForkliftEnv(gym.Env):
         # -------------------- 
         # ====================================================
        
-        # Parameters: --------------------  # TODO: get these from config
+        # Parameters: -------------------- 
         self.cur_iteration = 0
         self.max_episode_length = self.config['max_episode_length']
         self._entity_name = self.config['entity_name']
@@ -215,9 +217,6 @@ class ForkliftEnv(gym.Env):
 
     
     def step(self, action):
-        # if self.render_mode == "human": # TODO: handle this once the simulation is figured out with gazebo
-        #     self._render_frame()
-
         self.cur_iteration += 1
 
         # Unpause simulation so that action can be taken
@@ -248,7 +247,7 @@ class ForkliftEnv(gym.Env):
         # Calculate reward
         reward = self.calc_reward(observation['forklift_robot_tf_observation'], self._target_transform) 
 
-        # Check if episode should terminate #TODO: check also if goal state is reached
+        # Check if episode should terminate 
         done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(observation))
 
         # Get info
@@ -271,9 +270,7 @@ class ForkliftEnv(gym.Env):
             cv2.waitKey(1)
 
 
-    def close(self): # TODO: close any resources that are open (e.g. ros2 nodes, gazebo, rviz e.t.c)
-        # TODO: Close cv2 window if render is used
-
+    def close(self): 
         # delete ros nodes
         self.depth_camera_raw_image_subscriber.destroy_node()
         self.diff_cont_cmd_vel_unstamped_publisher.destroy_node()
@@ -284,6 +281,9 @@ class ForkliftEnv(gym.Env):
         self.gazebo_launch_subp.terminate() 
         self.gazebo_launch_subp.join() 
         self.gazebo_launch_subp.close()     
+
+        # Release used CV2 resources
+        cv2.destroyAllWindows()
 
 
     # ============================================= Helper functions

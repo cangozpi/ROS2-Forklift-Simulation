@@ -2,19 +2,7 @@ import gym
 import time
 from forklift_gym_env.envs.forklift_env import ForkliftEnv
 
-def debug_console():
-    while True:
-        var_name = input("Type the name of the variable you want to print its value of:")
-        test = 1
-        print(eval(var_name))
-
 def main():
-    # Start debugging console
-    from threading import Thread
-    debug_console_thread = Thread(target=debug_console)
-    debug_console_thread.daemon = True
-    debug_console_thread.start()
-
     # Start Env
     env = gym.make('forklift_gym_env/ForkliftWorld-v0')
     time.sleep(15.0)
