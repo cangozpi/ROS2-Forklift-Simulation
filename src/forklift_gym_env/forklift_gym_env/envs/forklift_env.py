@@ -277,12 +277,14 @@ class ForkliftEnv(gym.Env):
         # delete ros nodes
         self.depth_camera_raw_image_subscriber.destroy_node()
         self.diff_cont_cmd_vel_unstamped_publisher.destroy_node()
-        # self.forklift_robot_tf_subscriber.destroy_node()
+        self.forklift_robot_tf_subscriber.destroy_node()
         rclpy.shutdown()
 
+        # Stop gazebo launch process
         self.gazebo_launch_subp.terminate() 
         self.gazebo_launch_subp.join() 
         self.gazebo_launch_subp.close()     
+
 
     # ============================================= Helper functions
     def initialize_depth_camera_raw_image_subscriber(self, normalize_img = False):

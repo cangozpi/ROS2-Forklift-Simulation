@@ -25,7 +25,7 @@ def main():
         obs, reward, done, _, info = env.step(action)
 
         if info["verbose"]:
-            print(f'Episode: {cur_episode}, Iteration: {info["iteration"] + 1}/{info["max_episode_length"]},', 
+            print(f'Episode: {cur_episode}, Iteration: {info["iteration"]}/{info["max_episode_length"]},', 
             f'Agent_location: {info["agent_location"]}, Target_location: {info["target_location"]}')
 
         if done:
