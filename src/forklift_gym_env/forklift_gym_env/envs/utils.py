@@ -58,19 +58,27 @@ def generateLaunchDescriptionForkliftEnv(config):
     world = LaunchConfiguration('world')
 
     declare_world_arg = DeclareLaunchArgument(
-    name='world',
-    default_value=world_path,
-    description='Full path to the world model file to load')
+    name = 'world',
+    default_value = world_path,
+    description = 'Full path to the world model file to load')
 
 
 
+    gui = LaunchConfiguration('gui')
+    declare_gui_arg = DeclareLaunchArgument(
+    name = 'gui',
+    default_value = str(config['gui']),
+    description = 'Whether to launch gzclient. gzclient is run when it is True.')
+    assert type(config['gui']) == bool
 
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [FindPackageShare('gazebo_ros'), '/launch', '/gazebo.launch.py']
         ),
-        launch_arguments={'world': world}.items(),
+        launch_arguments={'world': world, 'gui': gui}.items(),
     )
+
+
 
     spawn_entity = Node(package='gazebo_ros', executable='spawn_entity.py',
                         arguments=['-topic', 'robot_description',
@@ -101,6 +109,7 @@ def generateLaunchDescriptionForkliftEnv(config):
 
     return LaunchDescription([
         declare_world_arg, # Launch argument
+        declare_gui_arg, # Launch argument
         # RegisterEventHandler(
         #   event_handler=OnProcessExit(
         #         target_action=spawn_entity,

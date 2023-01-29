@@ -12,3 +12,4 @@ action_type: "differential_control" # specifies the actions that will be taken b
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
 render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
 step_duration: 5_000_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds.
+gui: True # Whether to launch gzclient. gzclient is run when it is True.
