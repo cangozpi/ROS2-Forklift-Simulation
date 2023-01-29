@@ -2,7 +2,6 @@ import rclpy
 from rclpy.node import Node
 
 from geometry_msgs.msg import Twist
-# from geometry_msgs.msg import Vector3
 
 class DiffContCmdVelUnstampedPublisher(Node):
 
@@ -13,7 +12,11 @@ class DiffContCmdVelUnstampedPublisher(Node):
         self.set_parameters([use_sim_time_parameter])
         # print("KK", self.get_parameter('use_sim_time').get_parameter_value().bool_value, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 
-        self.publisher_ = self.create_publisher(Twist, '/diff_cont/cmd_vel_unstamped', 10)
+        self.publisher_ = self.create_publisher(
+            Twist,
+            '/diff_cont/cmd_vel_unstamped',
+            10
+            )
 
         # timer_period = 0.5  # seconds
         # self.timer = self.create_timer(timer_period, self.timer_callback)

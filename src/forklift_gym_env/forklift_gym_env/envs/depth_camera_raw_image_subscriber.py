@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from rclpy.qos import qos_profile_sensor_data
 
 class DepthCameraRawImageSubscriber(Node):
 
@@ -18,7 +19,8 @@ class DepthCameraRawImageSubscriber(Node):
             Image,
             '/camera/depth/image_raw',
             cb,
-            10)
+            qos_profile = qos_profile_sensor_data
+            )
         self.subscription  # prevent unused variable warning
 
     # def listener_callback(self, msg):

@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
-
 from tf2_msgs.msg import TFMessage
+from rclpy.qos import qos_profile_sensor_data
 
 class ForkliftRobotTfSubscriber(Node):
 
@@ -20,7 +20,8 @@ class ForkliftRobotTfSubscriber(Node):
             TFMessage,
             '/tf',
             cb,
-            10)
+            qos_profile = qos_profile_sensor_data
+            )
         self.subscription  # prevent unused variable warning
 
 
