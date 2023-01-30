@@ -57,9 +57,9 @@
 
     <xacro:include filename="inertial_macros.xacro"/>
     <xacro:include filename="gazebo_colors.xacro"/>
-    <xacro:include filename="lidar.xacro"/>
+    <!-- <xacro:include filename="lidar.xacro"/> -->
     <!-- <xacro:include filename="camera.xacro"/> --> <!-- Uncomment this line, and comment the line below to switch between Depth Camera and a Regular Camera -->
-    <xacro:include filename="depth_camera.xacro"/>
+    <!-- <xacro:include filename="depth_camera.xacro"/> -->
     <!-- <xacro:include filename="gazebo.xacro"/> -->
     
     
@@ -295,6 +295,20 @@
             <geometry>
                 <box size="${chassis_bottom_width} ${lift_base_length} ${lift_base_height}"/>
             </geometry>
+            <!-- Added by me (surface tag) to prevent fork falling down issue -->
+            <surface>
+                <friction>
+                    <ode>
+                        <mu>100000.0</mu> <!-- TODO: set mu values -->
+                        <mu2>100000.0</mu2>
+                    </ode>
+                </friction>
+                <contact>
+                    <ode>
+                        <min_depth>0.003</min_depth>
+                    </ode>
+                </contact>
+            </surface>
         </collision>
         <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
             <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -353,6 +367,20 @@
             <geometry>
                 <box size="${fork_base_width} ${fork_base_length} ${fork_base_height}"/>
             </geometry>
+            <!-- Added by me (surface tag) to prevent fork falling down issue -->
+            <surface>
+                <friction>
+                    <ode>
+                        <mu>100000.0</mu> <!-- TODO: set mu values-->
+                        <mu2>100000.0</mu2>
+                    </ode>
+                </friction>
+                <contact>
+                    <ode>
+                        <min_depth>0.003</min_depth>
+                    </ode>
+                </contact>
+            </surface>
         </collision>
         <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
             <origin xyz="0 0 0" rpy="0 0 0"/>

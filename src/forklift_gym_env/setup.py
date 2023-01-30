@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'forklift_gym_env_training = forklift_gym_env.train:main',
+            'gui_controller = forklift_gym_env.gui_controller.gui_controller:main',
         ],
     },
 )

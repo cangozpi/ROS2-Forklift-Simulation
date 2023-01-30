@@ -13,12 +13,21 @@ controller_manager:
       # type: effort_controllers/JointGroupEffortController" # refer to https://github.com/ros-controls/ros2_controllers/blob/master/effort_controllers/effort_controllers_plugins.xml
       type: forward_command_controller/ForwardCommandController # refer to https://github.com/ros-controls/ros2_controllers/blob/master/diff_drive_controller/diff_drive_plugin.xml
       # type: joint_trajectory_controller/JointTrajectoryController
+    
+    fix_fork_controller:
+      type: position_controllers/JointGroupPositionController
+
+fix_fork_controller: # refer to https://github.com/ros-controls/ros2_controllers/blob/master/forward_command_controller/src/forward_command_controller_parameters.yaml
+  ros__parameters:
+    joints:
+      - fork_base_joint
+    # interface_name: position # available options are as follows [effort, position, velocity]
 
 fork_joint_controller: # refer to https://github.com/ros-controls/ros2_controllers/blob/master/forward_command_controller/src/forward_command_controller_parameters.yaml
   ros__parameters:
     joints:
       - fork_base_joint
-    interface_name: effort # available options are as follows [effort, position, velocity]
+    interface_name: velocity # available options are as follows [effort, position, velocity]
     # interface_name: velocity
     # write_op_modes:
     #   - fork_base_joint

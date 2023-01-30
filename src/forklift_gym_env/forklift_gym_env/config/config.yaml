@@ -1,5 +1,5 @@
 verbose: True # Whether to print info.
-max_episode_length: 3 # maximum iteration length of an episode.
+max_episode_length: 150000 # maximum iteration length of an episode.
 entity_name: 'forklift_bot' # entity name of the forklift robot in the simulation.
 ros_controller_names:  ['joint_broad', 'fork_joint_controller', 'diff_cont'] # ROS2 controllers that are activated.
 tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state.
@@ -11,5 +11,5 @@ reward_type: "L2_distance" # specifies the reward function being used. Check out
 action_type: "differential_control" # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options.
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
 render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
-step_duration: 5_000_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds.
+step_duration: 1000_000_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds.
 gui: True # Whether to launch gzclient. gzclient is run when it is True.

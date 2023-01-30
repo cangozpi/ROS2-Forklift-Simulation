@@ -33,6 +33,7 @@
             </command_interface>
             <command_interface name="velocity"/>
             <command_interface name="position">
+                <!-- <limit effort="87" lower="-1.7628" upper="1.7628" velocity="2.1750"/>  -->
                 <!-- <limit effort="1000.0" lower="0" upper="0.38" velocity="10"/> -->
             </command_interface>
             <!-- <state_interface name="velocity"/>

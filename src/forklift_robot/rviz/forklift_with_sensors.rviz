@@ -6,11 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /PointCloud21
-        - /Image1
-        - /RobotModel1
         - /RobotModel1/Status1
-        - /LaserScan1
+        - /TF1
       Splitter Ratio: 0.5
     Tree Height: 347
   - Class: rviz_common/Selection
@@ -224,10 +221,81 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz_default_plugins/Axes
+      Enabled: true
+      Length: 1
+      Name: Axes
+      Radius: 0.10000000149011612
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        back_wheel_link:
+          Value: true
+        camera_link:
+          Value: true
+        camera_link_optical:
+          Value: true
+        chassis_bottom_link:
+          Value: true
+        chassis_top_link:
+          Value: true
+        fork_base_link:
+          Value: true
+        laser_frame_link:
+          Value: true
+        left_fork_link:
+          Value: true
+        left_front_wheel_link:
+          Value: true
+        lift_base_link:
+          Value: true
+        lift_body_connector_link:
+          Value: true
+        odom:
+          Value: true
+        right_fork_link:
+          Value: true
+        right_front_wheel_link:
+          Value: true
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        odom:
+          chassis_bottom_link:
+            back_wheel_link:
+              {}
+            chassis_top_link:
+              {}
+            laser_frame_link:
+              {}
+            left_front_wheel_link:
+              {}
+            lift_base_link:
+              fork_base_link:
+                camera_link:
+                  camera_link_optical:
+                    {}
+                left_fork_link:
+                  {}
+                right_fork_link:
+                  {}
+            lift_body_connector_link:
+              {}
+            right_front_wheel_link:
+              {}
+      Update Interval: 0
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: camera_link
+    Fixed Frame: chassis_bottom_link
     Frame Rate: 30
   Name: root
   Tools:
@@ -270,7 +338,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 19.379985809326172
+      Distance: 9.525208473205566
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -285,10 +353,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6103976964950562
+      Pitch: 0.35039788484573364
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.170400142669678
+      Yaw: 2.9803929328918457
     Saved: ~
 Window Geometry:
   Displays:
