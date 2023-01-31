@@ -13,6 +13,21 @@ from multiprocessing import Process
 from enum import Enum
 
 
+def set_GAZEBO_MODEL_PATH():
+    """
+    exports GAZEBO_MODL_PATH environment variable by extending it with forklift_gym_env/models path.
+    """
+    forklift_gym_env_pkg_name = 'forklift_gym_env'
+    # export pallet sdf models path to GAZEBO_MODEL_PATH environment variable so that it can be spawned with mesh files
+    if 'GAZEBO_MODEL_PATH' in os.environ:
+        os.environ['GAZEBO_MODEL_PATH'] = os.environ['GAZEBO_MODEL_PATH'] + \
+            os.path.join(get_package_share_directory(forklift_gym_env_pkg_name), "../../../../", \
+                "src/forklift_gym_env/models")
+    else:
+        os.environ['GAZEBO_MODEL_PATH'] = installDir + "/share"
+
+
+
 def get_robot_description_raw():
     """
     Reads robots xacro files, converts it to xml and returns it.
@@ -25,6 +40,21 @@ def get_robot_description_raw():
     xacro_file = os.path.join(get_package_share_directory(forklift_robot_pkg_name), urdf_file_name)
     robot_description_raw = xacro.process_file(xacro_file).toxml()
     return robot_description_raw
+
+
+def get_pallet_model_description_raw(model_path):
+    """
+    Reads model (sdf) file for the pallet and returns it as string.
+    Input:
+        model_path (str): path of the sdf model file of the pallet model wrt build/forklift_gym_env/models/ .
+    """
+    # specify the name of the package and path to xacro file within the package
+
+    model_file_path = os.path.join('build/forklift_gym_env/models', model_path)
+    with open(model_file_path) as f:
+        pallet_model_description_raw = f.read()
+
+    return pallet_model_description_raw
 
 
 def generateLaunchDescriptionForkliftEnv(config):
@@ -141,9 +171,13 @@ def startLaunchServiceProcess(launchDesc):
     Return:
         started subprocess
     """
+    # extend GAZEBO_MODEL_PATH with forklift_gym_env/models path.
+    set_GAZEBO_MODEL_PATH()
+
     # Create the LauchService and feed the LaunchDescription obj. to it.
     launchService = LaunchService()
     launchService.include_launch_description(launchDesc)
+
     process = Process(target=launchService.run)
     # The daemon process is terminated automatically before the main program exits,
     # to avoid leaving orphaned processes running

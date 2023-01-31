@@ -19,4 +19,4 @@ install_python_deps:
 	pip install -r requirements.txt
 
 kill_gazebo_processes:
-	kill $(shell pidof gzserver) $(shell pidof gzclient) $(shell pidof gazebo)
+	kill -9 $(shell pidof gzserver) $(shell pidof gzclient) $(shell pidof gazebo)

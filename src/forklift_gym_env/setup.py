@@ -13,7 +13,9 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name), glob('worlds/*')), # includes files inside /worlds directory
-        (os.path.join('share', package_name), glob('config/*')), # includes config files inside /config directory
+        # (os.path.join('share', package_name), glob('config/*')), # includes config files inside /config directory
+        (os.path.join('share', package_name), glob('models/pallet/*.sdf')), # includes files inside /models directory (e.g. /pallet).
+        (os.path.join('share', package_name), glob('models/pallet/meshes/*.dae')), # includes files inside /models directory (e.g. /pallet).
     ],
     install_requires=['setuptools'],
     zip_safe=True,

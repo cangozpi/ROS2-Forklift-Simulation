@@ -75,13 +75,14 @@ class ForkliftEnv(gym.Env):
         # Parameters: -------------------- 
         self.cur_iteration = 0
         self.max_episode_length = self.config['max_episode_length']
-        self._entity_name = self.config['entity_name']
-        self._ros_controller_names = self.config['ros_controller_names']
+        self._agent_entity_name = self.config['entity_name'] # entity name of the forklift robot in the simulation.
+        self._pallet_entity_name = "pallet"
+        self._ros_controller_names = self.config['ros_controller_names'] # ROS2 controllers that are activated.
         self._tolerance_x = self.config['tolerance_x'] # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state
-        self._tolerance_y = self.config['tolerance_y']  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state
+        self._tolerance_y = self.config['tolerance_y'] # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state
         # -------------------------------------
 
-        self._target_transform = None 
+        self._target_transform = None # agent's goal state
         
 
 
@@ -203,7 +204,11 @@ class ForkliftEnv(gym.Env):
         self.simulation_controller_node.send_reset_simulation_request()
 
         # Change agent location in the simulation, activate ros_controllers
-        self.simulation_controller_node.change_agent_location(self._entity_name, self._agent_location, self._ros_controller_names, self.config['agent_pose_position_z'])
+        self.simulation_controller_node.change_entity_location(self._agent_entity_name, self._agent_location, self._ros_controller_names, self.config['agent_pose_position_z'])
+        
+        # Change pallet model's location in the simulation
+        self.simulation_controller_node.change_entity_location(self._pallet_entity_name, self._target_transform, [], \
+            0.0, self.config, spawn_pallet=True)
 
         self.ros_clock = self.forklift_robot_tf_subscriber.get_clock().now()
 

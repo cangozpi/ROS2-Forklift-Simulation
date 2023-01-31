@@ -4,7 +4,7 @@ from std_srvs.srv import Empty
 from gazebo_msgs.srv import DeleteEntity, SpawnEntity
 from geometry_msgs.msg import Pose
 from controller_manager.controller_manager_services import LoadController, ConfigureController, SwitchController
-from .utils import get_robot_description_raw
+from .utils import get_robot_description_raw, get_pallet_model_description_raw
 from launch import LaunchDescription, LaunchService
 from launch_ros.actions import Node
 from multiprocessing import Process
@@ -160,12 +160,15 @@ class SimulationController():
     
 
 
-    def change_agent_location(self, entity_name, agent_location, ros_controller_names: list, agent_pose_position_z):
+    def change_entity_location(self, entity_name, entity_location, ros_controller_names: list, pose_position_z, config = None, spawn_pallet = False):
         """
-        Delete agent and respawn it at the self._agent_location coordinates in the simulation. 
+        Delete agent/pallet and respawn it at the entity_location coordinates in the simulation. 
         Loads, Configures, and Activates the given ros2 controllers with the names specified in the controller_names (list).
+        Inputs:
+            spawn_pallet (bool): If False, spawns forklift agent. If True, spawns pallet model.
+            config (dict): self.config in forklify_env.py. Only required for spawning pallet model. Holds config.yaml parameters.
         """
-        # Delete agent from simulation ------------------
+        # Delete entity from simulation ------------------
         cur_node = rclpy.create_node('delete_agent_client')        
         use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
         cur_node.set_parameters([use_sim_time_parameter])
@@ -182,7 +185,7 @@ class SimulationController():
 
         cur_node.destroy_node()
 
-        # Spawn agent ------------------
+        # Spawn entity in the simulation ------------------
         cur_node = rclpy.create_node('spawn_agent_client')        
         use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
         cur_node.set_parameters([use_sim_time_parameter])
@@ -193,13 +196,16 @@ class SimulationController():
         
         spawn_request = SpawnEntity.Request()
         spawn_request.name = entity_name
-        spawn_request.xml = get_robot_description_raw()
+        if spawn_pallet == True: # Spawn pallet model
+            spawn_request.xml = get_pallet_model_description_raw(config["pallet_model_sdf_path"])
+        else: # Spawn Forklift Agent
+            spawn_request.xml = get_robot_description_raw()
         spawn_request.robot_namespace = ""
 
         agent_pose = Pose()
-        agent_pose.position.x = agent_location[0]
-        agent_pose.position.y = agent_location[1]
-        agent_pose.position.z = agent_pose_position_z
+        agent_pose.position.x = entity_location[0]
+        agent_pose.position.y = entity_location[1]
+        agent_pose.position.z = pose_position_z
 
         agent_pose.orientation.x = 0.0
         agent_pose.orientation.y = 0.0
@@ -215,4 +221,5 @@ class SimulationController():
         cur_node.destroy_node()
 
         # Configure, Load, and Activate ROS Controllers ------------------
-        self.activate_ros_controllers(ros_controller_names)
+        if spawn_pallet == False:
+            self.activate_ros_controllers(ros_controller_names)
