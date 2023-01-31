@@ -6,7 +6,9 @@ from tkinter import messagebox
 # ROS Controller Publishers
 import rclpy
 from forklift_gym_env.envs.controller_publishers.diff_cont_cmd_vel_unstamped_publisher import DiffContCmdVelUnstampedPublisher
+from forklift_gym_env.envs.controller_publishers.fork_joint_controller_cmd_publisher import ForkJointContCmdPublisher
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Float64MultiArray
 
 def main(): 
 
@@ -16,6 +18,7 @@ def main():
 
     rclpy.init()
     diff_cont_cmd_vel_unstamped_publisher = DiffContCmdVelUnstampedPublisher()
+    fork_joint_cont_publisher = ForkJointContCmdPublisher()
 
 
 
@@ -60,7 +63,7 @@ def main():
         relief=tk.RAISED,
         borderwidth=1
     )
-    differential_control_keys_frame.grid(row=1, column=0, sticky="nsew", pady=5)
+    differential_control_keys_frame.grid(row=1, column=0, sticky="nsew", pady=13)
     differential_control_keys_frame.grid_rowconfigure([0,1], weight=1)
     differential_control_keys_frame.grid_columnconfigure([0,1,2], weight=1)
 
@@ -113,15 +116,18 @@ def main():
         relief=tk.RAISED,
         borderwidth=1
     )
-    fork_joint_controller_keys_frame.grid(row=1, column=0, sticky="nsew", pady=7.45)
-    fork_joint_controller_keys_frame.grid_rowconfigure([0,1], weight=1)
+    fork_joint_controller_keys_frame.grid(row=1, column=0, sticky="nsew", pady=5)
+    fork_joint_controller_keys_frame.grid_rowconfigure([0,1,2], weight=1)
     fork_joint_controller_keys_frame.grid_columnconfigure([0,1,2], weight=1)
 
-    w_label = tk.Label(master=fork_joint_controller_keys_frame, text="Up_Key")
-    w_label.grid(row=0, column=1, sticky="n")
+    up_key_label = tk.Label(master=fork_joint_controller_keys_frame, text="Up_Key")
+    up_key_label.grid(row=0, column=1, sticky="n")
 
-    a_label = tk.Label(master=fork_joint_controller_keys_frame, text="Down_Key")
-    a_label.grid(row=1, column=1, sticky="s")
+    space_bar_label = tk.Label(master=fork_joint_controller_keys_frame, text="Spacebar")
+    space_bar_label.grid(row=1, column=1, sticky="n")
+
+    down_key_label = tk.Label(master=fork_joint_controller_keys_frame, text="Down_Key")
+    down_key_label.grid(row=2, column=1, sticky="s")
 
 
     # Twist Inputs:
@@ -177,7 +183,7 @@ def main():
 
         # Handle Differential Controller Events -----------
         if event.keysym == 'w' or event.keysym == 'W':
-            # convert diff_cont_action to Twist message
+            # convert to Twist message
             diff_cont_msg = Twist()
             diff_cont_msg.linear.x = float(linear_x) # use this one
             diff_cont_msg.linear.y = 0.0
@@ -190,7 +196,7 @@ def main():
             diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
         elif event.keysym == 'a' or event.keysym == 'A':
-            # convert diff_cont_action to Twist message
+            # convert to Twist message
             diff_cont_msg = Twist()
             diff_cont_msg.linear.x = 0.0 # use this one
             diff_cont_msg.linear.y = 0.0
@@ -203,7 +209,7 @@ def main():
             diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
         elif event.keysym == 's' or event.keysym == 'S':
-            # convert diff_cont_action to Twist message
+            # convert to Twist message
             diff_cont_msg = Twist()
             diff_cont_msg.linear.x = -float(linear_x) # use this one
             diff_cont_msg.linear.y = 0.0
@@ -216,7 +222,7 @@ def main():
             diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
         elif event.keysym == 'd' or event.keysym == 'D':
-            # convert diff_cont_action to Twist message
+            # convert to Twist message
             diff_cont_msg = Twist()
             diff_cont_msg.linear.x = 0.0 # use this one
             diff_cont_msg.linear.y = 0.0
@@ -231,10 +237,28 @@ def main():
 
         # Handle Fork Joint Controller Events -----------
         elif event.keysym == "Up":
-            pass
+            # convert to Float64MultiArray message
+            fork_joint_cont_msg = Float64MultiArray()
+            fork_joint_cont_msg.data = [velocity]
+
+            # Take action
+            fork_joint_cont_publisher.publish_cmd(fork_joint_cont_msg)
+
         elif event.keysym == "Down":
-            pass
+            # convert to Float64MultiArray message
+            fork_joint_cont_msg = Float64MultiArray()
+            fork_joint_cont_msg.data = [-velocity]
+
+            # Take action
+            fork_joint_cont_publisher.publish_cmd(fork_joint_cont_msg)
     
+        elif event.keysym == "space":
+            # convert to Float64MultiArray message
+            fork_joint_cont_msg = Float64MultiArray()
+            fork_joint_cont_msg.data = [0.0]
+
+            # Take action
+            fork_joint_cont_publisher.publish_cmd(fork_joint_cont_msg)
 
 
     # Bind keypress event to handle_keypress()
