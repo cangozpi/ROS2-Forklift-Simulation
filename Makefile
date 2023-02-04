@@ -20,3 +20,6 @@ install_python_deps:
 
 kill_gazebo_processes:
 	kill -9 $(shell pidof gzserver) $(shell pidof gzclient) $(shell pidof gazebo)
+
+try: 
+	export GAZEBO_PLUGIN_PATH=${GAZEBO_PLUGIN_PATH}:"/home/cangozpi/Desktop/forklift_ws/build/ros_gazebo_plugins" && gazebo src/ros_gazebo_plugins/collision_detection.world --verbose
