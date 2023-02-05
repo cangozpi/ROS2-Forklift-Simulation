@@ -15,7 +15,9 @@
   <export>
     <build_type>ament_cmake</build_type>
     <depend>rclcpp</depend>
-    <depend>std_msgs</depend>
+    <depend>gazebo</depend>
+    <depend>gazebo_msgs</depend>
+    <depend>gazebo_ros</depend>
     <gazebo_ros plugin_path="${prefix}/../../lib" gazebo_media_path="${prefix}" /> <!-- Added by me-->
   </export>
 </package>

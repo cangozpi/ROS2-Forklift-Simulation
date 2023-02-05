@@ -15,17 +15,25 @@ from enum import Enum
 
 def set_GAZEBO_MODEL_PATH():
     """
-    exports GAZEBO_MODL_PATH environment variable by extending it with forklift_gym_env/models path.
+    exports GAZEBO_MODEL_PATH environment variable by extending it with forklift_gym_env/models path.
     """
     forklift_gym_env_pkg_name = 'forklift_gym_env'
     # export pallet sdf models path to GAZEBO_MODEL_PATH environment variable so that it can be spawned with mesh files
-    if 'GAZEBO_MODEL_PATH' in os.environ:
-        os.environ['GAZEBO_MODEL_PATH'] = os.environ['GAZEBO_MODEL_PATH'] + \
-            os.path.join(get_package_share_directory(forklift_gym_env_pkg_name), "../../../../", \
-                "src/forklift_gym_env/models")
-    else:
-        os.environ['GAZEBO_MODEL_PATH'] = installDir + "/share"
+    os.environ['GAZEBO_MODEL_PATH'] = os.environ['GAZEBO_MODEL_PATH'] + \
+        os.path.join(get_package_share_directory(forklift_gym_env_pkg_name), "../../../../", \
+            "src/forklift_gym_env/models") + ":"
 
+
+def set_GAZEBO_PLUGIN_PATH():
+    """
+    exports GAZEBO_PLUGIN_PATH environment variable by extending it with build/ros_gazebo_plugins path.
+    """
+    ros_gazebo_plugins_pkg_name = 'ros_gazebo_plugins'
+    # export build/ros_gazebo_plugins path so that custom plugins defined in that pkg can be loaded into gazebo
+    print(os.environ['GAZEBO_PLUGIN_PATH'], "AAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+    os.environ['GAZEBO_PLUGIN_PATH'] = os.environ['GAZEBO_PLUGIN_PATH'] + \
+        os.path.join(get_package_share_directory(ros_gazebo_plugins_pkg_name), "../../../../", \
+            "build/ros_gazebo_plugins") + ":"
 
 
 def get_robot_description_raw():
@@ -173,6 +181,8 @@ def startLaunchServiceProcess(launchDesc):
     """
     # extend GAZEBO_MODEL_PATH with forklift_gym_env/models path.
     set_GAZEBO_MODEL_PATH()
+    # extend GAZEBO_PLUGIN_PATH with ros_gazebo_plugins pkg path.
+    set_GAZEBO_PLUGIN_PATH()
 
     # Create the LauchService and feed the LaunchDescription obj. to it.
     launchService = LaunchService()

@@ -23,3 +23,5 @@ kill_gazebo_processes:
 
 try: 
 	export GAZEBO_PLUGIN_PATH=${GAZEBO_PLUGIN_PATH}:"/home/cangozpi/Desktop/forklift_ws/build/ros_gazebo_plugins" && gazebo src/ros_gazebo_plugins/collision_detection.world --verbose
+exportGZ:
+	export GAZEBO_PLUGIN_PATH=${GAZEBO_PLUGIN_PATH}"/home/cangozpi/Desktop/forklift_ws/build/ros_gazebo_plugins:"

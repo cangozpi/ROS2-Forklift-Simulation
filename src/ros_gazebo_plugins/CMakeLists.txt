@@ -25,7 +25,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
 # <--------------------------------- Added by me 
 
 # Added by me --------------------------------->
-add_library(ros_collision_detection SHARED src/CollisionDetectionPlugin.cc)
+add_library(ros_collision_detection SHARED src/ros_collision_detection_plugin.cpp)
 # add_library(ros_collision_detection SHARED src/CollisionDetectionPlugin.cc)
 ament_target_dependencies(ros_collision_detection gazebo rclcpp gazebo_msgs gazebo_ros) # Added by me
 # target_link_libraries(ros_collision_detection ${GAZEBO_LIBRARIES})

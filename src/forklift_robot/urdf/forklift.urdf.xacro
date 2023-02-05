@@ -87,7 +87,7 @@
                 <color rgba="0.2 1 0.2 1"/>
             </material>
         </visual>
-        <collision>
+        <collision name="chassis_bottom_link_collision">
             <origin xyz="0 0 ${chassis_bottom_height / 2}" rpy="0 0 0"/>
             <geometry>
                 <box size="${chassis_bottom_width} ${chassis_bottom_length} ${chassis_bottom_height}" />
@@ -100,6 +100,18 @@
         </inertial>
     </link>
 
+    <gazebo reference="chassis_bottom_link">
+        <sensor name='my_contact' type='contact'>
+            <plugin name="my_plugin3" filename="libros_collision_detection.so"/>
+            <update_rate> 30.0 </update_rate>
+            <selfCollide>true</selfCollide>
+            <alwaysOn>true</alwaysOn>
+            <material>Gazebo/White</material>
+            <contact>
+                <collision>chassis_bottom_link_collision_collision</collision>
+            </contact>
+        </sensor>
+    </gazebo>
     <!-- top of the chassis -->
     <link name="chassis_top_link">
         <visual>
