@@ -30,7 +30,6 @@ def set_GAZEBO_PLUGIN_PATH():
     """
     ros_gazebo_plugins_pkg_name = 'ros_gazebo_plugins'
     # export build/ros_gazebo_plugins path so that custom plugins defined in that pkg can be loaded into gazebo
-    print(os.environ['GAZEBO_PLUGIN_PATH'], "AAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
     os.environ['GAZEBO_PLUGIN_PATH'] = os.environ['GAZEBO_PLUGIN_PATH'] + \
         os.path.join(get_package_share_directory(ros_gazebo_plugins_pkg_name), "../../../../", \
             "build/ros_gazebo_plugins") + ":"

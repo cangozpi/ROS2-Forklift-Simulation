@@ -3,5 +3,4 @@ build/
 install/
 log/
 __pycache__/
-gazebo_plugin_tutorial/
 

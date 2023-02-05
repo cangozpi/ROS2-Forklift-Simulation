@@ -17,6 +17,8 @@ def main():
             f'Agent_location: {info["agent_location"]}, Target_location: {info["target_location"]}')
 
         if done:
+            print("HOHHOHOHOHO1")
             obs, info = env.reset()
+            print("HOHHOHOHOHO2")
             time.sleep(3)
             cur_episode += 1

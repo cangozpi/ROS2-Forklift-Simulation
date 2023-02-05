@@ -1,5 +1,5 @@
 verbose: True # Whether to print info.
-max_episode_length: 15 # maximum iteration length of an episode.
+max_episode_length: 3 # maximum iteration length of an episode.
 entity_name: 'forklift_bot' # entity name of the forklift robot in the simulation.
 ros_controller_names:  ['joint_broad', 'fork_joint_controller', 'diff_cont'] # ROS2 controllers that are activated.
 tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state.

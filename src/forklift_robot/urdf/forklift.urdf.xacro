@@ -55,6 +55,8 @@
     <xacro:property name="camera_image_clip_near" value="0.05" /> <!-- how close the camera can see -->
     <xacro:property name="camera_image_clip_far" value="8" /> <!-- how far the camera can see -->
 
+    <xacro:property name="collision_detection_plugin_update_rate" value="30.0" /> <!-- how far the camera can see -->
+
     <xacro:include filename="inertial_macros.xacro"/>
     <xacro:include filename="gazebo_colors.xacro"/>
     <!-- <xacro:include filename="lidar.xacro"/> -->
@@ -100,18 +102,6 @@
         </inertial>
     </link>
 
-    <gazebo reference="chassis_bottom_link">
-        <sensor name='my_contact' type='contact'>
-            <plugin name="my_plugin3" filename="libros_collision_detection.so"/>
-            <update_rate> 30.0 </update_rate>
-            <selfCollide>true</selfCollide>
-            <alwaysOn>true</alwaysOn>
-            <material>Gazebo/White</material>
-            <contact>
-                <collision>chassis_bottom_link_collision_collision</collision>
-            </contact>
-        </sensor>
-    </gazebo>
     <!-- top of the chassis -->
     <link name="chassis_top_link">
         <visual>
@@ -473,5 +463,8 @@
     <!-- Setup ROS_CONTROL and transmission tags -->
     <xacro:include filename="ros2_control.xacro"/>
 
+    <!-- Setup Collision Detection Plugin for the forklift robot -->
+    <xacro:include filename="ros_gazebo_collision_detection_plugin.xacro"/>
+    
 
 </robot>
