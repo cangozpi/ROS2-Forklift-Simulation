@@ -19,13 +19,21 @@ ContactPlugin::~ContactPlugin()
 /////////////////////////////////////////////////
 void ContactPlugin::Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf)
 {
-    std::cout << "Loading ros_collision_detection plugin" << "\n";
+    // similar to https://github.com/ros-simulation/gazebo_ros_pkgs/blob/melodic-devel/gazebo_plugins/src/gazebo_ros_bumper.cpp
+
     // Create ROS2 Node to publish collision detections
     try{
         rclcpp::init(0, nullptr);
     }catch(...){}
+
+    // get ros topic name to use from sdf if given
+    std::string ros_topic_name = "collision_detections";
+    if (_sdf->HasElement("rosTopicName")){
+        ros_topic_name = _sdf->GetElement("rosTopicName")->Get<std::string>();
+    }
+
     this->node = rclcpp::Node::make_shared("collision_detection_publisher");
-    this->ros_publisher = node->create_publisher<gazebo_msgs::msg::ContactsState>("collision_detections", 10);
+    this->ros_publisher = node->create_publisher<gazebo_msgs::msg::ContactsState>(ros_topic_name, 10);
 
     // Get the parent sensor.
     this->parentSensor =
@@ -44,6 +52,8 @@ void ContactPlugin::Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf)
 
     // Make sure the parent sensor is active.
     this->parentSensor->SetActive(true);
+
+    RCLCPP_INFO(this->node->get_logger(), "Loaded ros_collision_detection plugin. Publishing to topic: '%s'", (char*)ros_topic_name.c_str());
 }
 
 /////////////////////////////////////////////////

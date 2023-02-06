@@ -7,6 +7,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "gazebo_msgs/msg/contacts_state.hpp"
 #include "gazebo_ros/conversions/gazebo_msgs.hpp"
+#include <string>
 
 
 namespace gazebo

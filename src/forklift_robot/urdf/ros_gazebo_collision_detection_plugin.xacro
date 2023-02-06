@@ -2,31 +2,83 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
 
     <!-- Setup Collision Detection Plugin for the forklift robot -->
+
     <gazebo reference="chassis_bottom_link">
-        <sensor name='my_contact' type='contact'>
-            <plugin name="my_plugin3" filename="libros_collision_detection.so"/>
+        <sensor name='my_contact1' type='contact'>
+            <plugin name="my_plugin1" filename="libros_collision_detection.so">
+                <rosTopicName>collision_detection/chassis_bottom_link</rosTopicName>
+            </plugin>
             <update_rate> ${collision_detection_plugin_update_rate} </update_rate>
-            <selfCollide>true</selfCollide>
-            <!-- <alwaysOn>true</alwaysOn>
-            <material>Gazebo/White</material> -->
             <contact>
                 <collision>
                 chassis_bottom_link_collision_collision 
+                </collision>
+            </contact>
+        </sensor>
+    </gazebo>
+
+    <gazebo reference="chassis_bottom_link">
+        <sensor name='my_contact2' type='contact'>
+            <plugin name="my_plugin2" filename="libros_collision_detection.so">
+                <rosTopicName>collision_detection/back_wheel_link</rosTopicName>
+            </plugin>
+            <update_rate> ${collision_detection_plugin_update_rate} </update_rate>
+            <contact>
+                <collision>
                 chassis_bottom_link_fixed_joint_lump__back_wheel_link_collision_1 
+                </collision>
+            </contact>
+        </sensor>
+    </gazebo>
+
+    <gazebo reference="chassis_bottom_link">
+        <sensor name='my_contact3' type='contact'>
+            <plugin name="my_plugin3" filename="libros_collision_detection.so">
+                <rosTopicName>collision_detection/chassis_top_link</rosTopicName>
+            </plugin>
+            <update_rate> ${collision_detection_plugin_update_rate} </update_rate>
+            <contact>
+                <collision>
                 chassis_bottom_link_fixed_joint_lump__chassis_top_link_collision_2 
+                </collision>
+            </contact>
+        </sensor>
+    </gazebo>
+
+    <gazebo reference="chassis_bottom_link">
+        <sensor name='my_contact4' type='contact'>
+            <plugin name="my_plugin4" filename="libros_collision_detection.so">
+                <rosTopicName>collision_detection/lift_base_link</rosTopicName>
+            </plugin>
+            <update_rate> ${collision_detection_plugin_update_rate} </update_rate>
+            <contact>
+                <collision>
                 chassis_bottom_link_fixed_joint_lump__lift_base_link_collision_3 
+                </collision>
+            </contact>
+        </sensor>
+    </gazebo>
+
+    <gazebo reference="chassis_bottom_link">
+        <sensor name='my_contact5' type='contact'>
+            <plugin name="my_plugin5" filename="libros_collision_detection.so">
+                <rosTopicName>collision_detection/lift_body_connector_link</rosTopicName>
+            </plugin>
+            <update_rate> ${collision_detection_plugin_update_rate} </update_rate>
+            <contact>
+                <collision>
                 chassis_bottom_link_fixed_joint_lump__lift_body_connector_link_collision_4 
                 </collision>
             </contact>
         </sensor>
     </gazebo>
+
     <gazebo reference="left_front_wheel_link">
-        <sensor name='my_contact' type='contact'>
-            <plugin name="my_plugin3" filename="libros_collision_detection.so"/>
+        <sensor name='my_contact6' type='contact'>
+            <plugin name="my_plugin6" filename="libros_collision_detection.so">
+                <rosTopicName>collision_detection/left_front_wheel_link</rosTopicName>
+            </plugin>
             <update_rate> ${collision_detection_plugin_update_rate} </update_rate>
-            <selfCollide>true</selfCollide>
-            <!-- <alwaysOn>true</alwaysOn>
-            <material>Gazebo/White</material> -->
             <contact>
                 <collision>
                 left_front_wheel_link_collision
@@ -34,28 +86,55 @@
             </contact>
         </sensor>
     </gazebo>
+
     <gazebo reference="fork_base_link">
-        <sensor name='my_contact' type='contact'>
-            <plugin name="my_plugin3" filename="libros_collision_detection.so"/>
+        <sensor name='my_contact7' type='contact'>
+            <plugin name="my_plugin7" filename="libros_collision_detection.so">
+                <rosTopicName>collision_detection/fork_base_link</rosTopicName>
+            </plugin>
             <update_rate> ${collision_detection_plugin_update_rate} </update_rate>
-            <selfCollide>true</selfCollide>
-            <!-- <alwaysOn>true</alwaysOn>
-            <material>Gazebo/White</material> -->
             <contact>
                 <collision>
                 fork_base_link_collision 
+                </collision>
+            </contact>
+        </sensor>
+    </gazebo>
+
+    <gazebo reference="fork_base_link">
+        <sensor name='my_contact8' type='contact'>
+            <plugin name="my_plugin8" filename="libros_collision_detection.so">
+                <rosTopicName>collision_detection/left_fork_link</rosTopicName>
+            </plugin>
+            <update_rate> ${collision_detection_plugin_update_rate} </update_rate>
+            <contact>
+                <collision>
                 fork_base_link_fixed_joint_lump__left_fork_link_collision_1 
+                </collision>
+            </contact>
+        </sensor>
+    </gazebo>
+
+    <gazebo reference="fork_base_link">
+        <sensor name='my_contact9' type='contact'>
+            <plugin name="my_plugin9" filename="libros_collision_detection.so">
+                <rosTopicName>collision_detection/right_fork_link</rosTopicName>
+            </plugin>
+            <update_rate> ${collision_detection_plugin_update_rate} </update_rate>
+            <contact>
+                <collision>
                 fork_base_link_fixed_joint_lump__right_fork_link_collision_2
                 </collision>
             </contact>
         </sensor>
     </gazebo>
+
     <gazebo reference="right_front_wheel_link">
-        <sensor name='my_contact' type='contact'>
-            <plugin name="my_plugin3" filename="libros_collision_detection.so"/>
+        <sensor name='my_contact10' type='contact'>
+            <plugin name="my_plugin10" filename="libros_collision_detection.so">
+                <rosTopicName>collision_detection/right_front_wheel_link</rosTopicName>
+            </plugin>
             <update_rate> ${collision_detection_plugin_update_rate} </update_rate>
-            <!-- <selfCollide>true</selfCollide>
-            <alwaysOn>true</alwaysOn> -->
             <contact>
                 <collision>
                 right_front_wheel_link_collision
@@ -63,4 +142,6 @@
             </contact>
         </sensor>
     </gazebo>
+
 </robot>
+

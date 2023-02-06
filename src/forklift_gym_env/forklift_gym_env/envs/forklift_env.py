@@ -14,6 +14,7 @@ from forklift_gym_env.envs.simulation_controller import SimulationController
 # Sensor Subscribers
 from forklift_gym_env.envs.sensor_subscribers.forklift_robot_tf_subscriber import ForkliftRobotTfSubscriber
 from forklift_gym_env.envs.sensor_subscribers.depth_camera_raw_image_subscriber import DepthCameraRawImageSubscriber
+from forklift_gym_env.envs.sensor_subscribers.collision_detection_subscriber import CollisionDetectionSubscriber
 
 # Controller Publishers
 from forklift_gym_env.envs.controller_publishers.diff_cont_cmd_vel_unstamped_publisher import DiffContCmdVelUnstampedPublisher
@@ -58,6 +59,8 @@ class ForkliftEnv(gym.Env):
         # -------------------- /camera/depth/image/raw
         self.depth_camera_raw_image_subscriber = self.initialize_depth_camera_raw_image_subscriber(normalize_img = True)
         # -------------------- 
+        # -------------------- /collision_detections
+        self.collision_detection_subscriber = self.initialize_collision_detection_subscriber()
         # ====================================================
 
         # Create publisher for controlling forklift robot's joints: ============================== 
@@ -160,6 +163,41 @@ class ForkliftEnv(gym.Env):
         }
 
 
+    def _get_obs_collision_detection(self):
+        """
+        Returns collision detection observations that are being published by ros_gazebo_collision_detection_plugin.
+        """
+        rclpy.spin_once(self.collision_detection_subscriber)
+        # cur_collision_msg = pass
+        # print(cur_collision_msg)
+        #####################################hhasdjfşalsjdf
+        # current_forklift_robot_tf_obs = {}
+        # flag = True
+        # while current_forklift_robot_tf_obs == {} or flag:
+        #     # Obtain forklift_robot_tf observation -----
+        #     rclpy.spin_once(self.forklift_robot_tf_subscriber)
+        #     current_forklift_robot_tf_obs = self.forklift_robot_tf_state
+
+        #     flag = False
+        #     for k, v in current_forklift_robot_tf_obs.items():
+        #         if v['time'] < (self.ros_clock.nanoseconds + self.config['step_duration']): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.
+        #             flag = True
+        #             break
+        #     if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
+        #         flag = True
+        # # --------------------------------------------
+
+        # # reset observations for next iteration
+        # self.forklift_robot_tf_state = {}
+
+        # return {
+        #     'forklift_robot_tf_observation': {
+        #         'chassis_bottom_link': current_forklift_robot_tf_obs["chassis_bottom_link"]
+        #         },
+        # }
+
+
+
     def _get_info(self, reward, diff_cont_msg):
         info = {
             "iteration": self.cur_iteration,
@@ -245,6 +283,7 @@ class ForkliftEnv(gym.Env):
         self.ros_clock = self.forklift_robot_tf_subscriber.get_clock().now() # will be used to make sure observation is coming from after the action was taken
 
         observation = self._get_obs()
+        self._get_obs_collision_detection() # TODO: sil bu satırı !!!
 
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
@@ -342,6 +381,52 @@ class ForkliftEnv(gym.Env):
        return ForkliftRobotTfSubscriber(forklift_robot_tf_cb)
     
 
+    def initialize_collision_detection_subscriber(self):
+        self.collision_detection_state = {}
+        def collision_detection_cb(msg):
+            # Extract time information
+            cur_msg_time_sec = msg.header.stamp.sec
+            cur_msg_time_sec = msg.header.stamp.nanosec
+            # Extract contact information
+            for state in msg.states:
+                # find which collision_name is forklift's part and which is the foreign object it contacts
+                if "forklift_bot" in state.collision1_name:
+                    forklift_contact_part_name = state.collision1_name
+                    foreign_contact_part_name = state.collision2_name
+                else:
+                    forklift_contact_part_name = state.collision2_name
+                    foreign_contact_part_name = state.collision1_name
+                # Check for contact
+                if foreign_contact_part_name != "ground_plane::link::collision":
+                    print(f"collision1_name: {forklift_contact_part_name}, collision2_name: {foreign_contact_part_name}")
+
+        return CollisionDetectionSubscriber(collision_detection_cb)
+                 
+        
+
+        # self.forklift_robot_tf_state = {}
+        # for cur_msg in msg.transforms:
+        #     cur_msg_time = int(str(cur_msg.header.stamp.sec) + str(cur_msg.header.stamp.nanosec))
+        #     cur_msg_child_frame_id = cur_msg.child_frame_id
+        #     cur_msg_transform = cur_msg.transform
+        #     if cur_msg_child_frame_id not in self.forklift_robot_tf_state:
+        #         self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
+        #             'time': cur_msg_time,
+        #             'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
+        #                 cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
+        #         }
+        #     else:
+        #         if self.forklift_robot_tf_state[cur_msg_child_frame_id]['time'] < cur_msg_time: # newer information came (update)
+        #             self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
+        #                 'time': cur_msg_time,
+        #                 'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
+        #                     cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
+        #             }
+
+        # return CollisionDetectionSubscriber(collision_detection_cb)
+
+
+
     def observation_space_factory(self, obs_type: ObservationType):
         """
         Returns observation space and corresponding _get_obs method that corresponds to the given obs_type
@@ -349,6 +434,7 @@ class ForkliftEnv(gym.Env):
             obs_type (ObservationType): specificies which observation is being used.
         """
         assert obs_type in ObservationType
+
 
         # Set observation_space according to obs_type 
         if obs_type == ObservationType.TF_ONLY:
@@ -374,6 +460,7 @@ class ForkliftEnv(gym.Env):
                         })
                     }),
             }), self._get_obs_depth_camera_raw_image_and_tf
+
     
     
     def calculate_reward_factory(self, reward_type: RewardType):

@@ -1,0 +1,44 @@
+import rclpy
+from rclpy.node import Node
+from tf2_msgs.msg import TFMessage
+from gazebo_msgs.msg import ContactsState
+from rclpy.qos import qos_profile_sensor_data
+
+class CollisionDetectionSubscriber(Node):
+
+    def __init__(self, cb):
+        """
+        cb is the callback function passed as subscriber callback.
+        """
+        super().__init__('collision_detection_subscriber')
+        # Set ros node's clock to use simulation time (gazebo time)
+        use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
+        self.set_parameters([use_sim_time_parameter])
+
+
+        self.subscription = self.create_subscription(
+            ContactsState,
+            '/collision_detections',
+            cb,
+            qos_profile = qos_profile_sensor_data
+            )
+        self.subscription  # prevent unused variable warning
+
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    collision_detection_subscriber = CollisionDetectionSubscriber()
+
+    rclpy.spin(collision_detection_subscriber)
+
+    # Destroy the node explicitly
+    # (optional - otherwise it will be done automatically
+    # when the garbage collector destroys the node object)
+    collision_detection_subscriber.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
