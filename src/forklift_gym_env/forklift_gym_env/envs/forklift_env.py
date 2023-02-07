@@ -35,7 +35,7 @@ class ForkliftEnv(gym.Env):
         # Set observation_space, _get_obs method, and action_space
         self.observation_space, self._get_obs = self.observation_space_factory(obs_types = [ObservationType(obs_type) for obs_type in self.config["observation_types"]])
         self.action_space = self.action_space_factory(act_type = ActionType(self.config["action_type"]))
-        self.calc_reward = self.calculate_reward_factory(reward_type = RewardType(self.config["reward_type"]))
+        self.calc_reward = self.calculate_reward_factory(reward_types = [RewardType(reward_type) for reward_type in self.config["reward_types"]] )
 
         # Set render_mode
         for x in self.config["render_mode"]:
@@ -240,13 +240,6 @@ class ForkliftEnv(gym.Env):
             # reset observations for next iteration
             self.collision_detection_states = {} 
 
-            # TODO: move this collision check part to reward calculation functions
-            # Check for agents collisions with non-ground objects
-            unique_non_ground_contacts = {} # holds ContactsState msgs for the collisions with objects that are not the ground
-            for state in collision_detection_observations.values():
-                unique_non_ground_contacts = {**unique_non_ground_contacts, **CollisionDetectionSubscriber.get_non_ground_collisions(contactsState_msg = state)}
-                print(unique_non_ground_contacts)
-
             return {
                 'collision_detection_observations': collision_detection_observations,
             }
@@ -351,7 +344,7 @@ class ForkliftEnv(gym.Env):
         self.simulation_controller_node.send_pause_physics_client_request()
 
         # Calculate reward
-        reward = self.calc_reward(observation['forklift_robot_tf_observation'], self._target_transform) 
+        reward = self.calc_reward(observation) 
 
         # Check if episode should terminate 
         done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(observation))
@@ -479,7 +472,6 @@ class ForkliftEnv(gym.Env):
                         np.ones(tuple(self.config['depth_camera_raw_image_dimensions'])), \
                             high = float("inf") * np.ones(tuple(self.config['depth_camera_raw_image_dimensions']), dtype = np.float32))
             
-            # TODO: set spaces.Dict definition for collision observations
             elif obs_type == ObservationType.COLLISION_DETECTION:
                 d = {}
                 for link_name in self.config['collision_detection_link_names']:
@@ -556,36 +548,61 @@ class ForkliftEnv(gym.Env):
 
     
     
-    def calculate_reward_factory(self, reward_type: RewardType):
+    def calculate_reward_factory(self, reward_types):
         """
         Returns a function that calculates reward which corresponds to the given reward_type
         Inputs:
-            reward_type (RewardType): specifies which reward function is used.
+            reward_type (List[RewardType]): specifies which reward function is used.
         """
-        assert reward_type in RewardType
+        for reward_type in reward_types:
+            assert reward_type in RewardType
 
-        # return corresponding reward calculation funciton 
-        if reward_type == RewardType.L2_DIST:
-            def calc_reward_L2_dist(forklift_robot_transform, target_transform):
-                """
-                Returns negative of L2 distance between the (translation_x, translation_y) coordinates 
-                of forklift_robot_transform and target_transform.
-                Inputs:
-                    forklift_robot_transform (dict): has a key "chassis_bottom_link" which holds (translation_x, translation_y) 
-                        in its first two indices. This cooresponds to the current location of the forklift robot
-                    target_transform (list): has (tranlation_x, translation_y) coordinates in its first two indices of the 
-                        target location
-                Returns:
-                    reward: -L2 distance
+        # Return corresponding reward calculation function by accumulating the rewards returned by the functions specified in the reward_types
+        def reward_func(observation):
+            reward = 0
 
-                """
-                # Return negative L2 distance btw chassis_bottom_link and the target location as reward
-                # Note that we are only using translation here, NOT using rotation information
-                robot_transform_translation = forklift_robot_transform['chassis_bottom_link']['transform'][:2] # [translation_x, translation_y]
-                l2_dist = np.linalg.norm(robot_transform_translation - target_transform)
-                return - l2_dist
-            return calc_reward_L2_dist
+            if RewardType.L2_DIST in reward_types:
+                def calc_reward_L2_dist(observation):
+                    """
+                    Returns negative of L2 distance between the (translation_x, translation_y) coordinates 
+                    of forklift_robot_transform and target_transform.
+                    Inputs:
+                        observation: returned by self._get_obs()
+                    Returns:
+                        reward: -L2 distance
+
+                    """
+                    forklift_robot_transform = observation['forklift_robot_tf_observation']
+                    # Return negative L2 distance btw chassis_bottom_link and the target location as reward
+                    # Note that we are only using translation here, NOT using rotation information
+                    robot_transform_translation = forklift_robot_transform['chassis_bottom_link']['transform'][:2] # [translation_x, translation_y]
+                    l2_dist = np.linalg.norm(robot_transform_translation - self._target_transform)
+                    return - l2_dist
+
+                reward += calc_reward_L2_dist(observation)
     
+            if RewardType.COLLISION_PENALTY in reward_types:
+                def calc_reward_collision_penalty(observation):
+                    """
+                    Returns a Reward which penalizes agent's collision with other (non-ground) objects.
+
+                    """
+                    penalty_per_collision = -5 # TODO: fine-tune this value
+                    collision_detection_observations = observation['collision_detection_observations']
+                    # Check for agents collisions with non-ground objects
+                    unique_non_ground_contacts = {} # holds ContactsState msgs for the collisions with objects that are not the ground
+                    for state in collision_detection_observations.values():
+                        unique_non_ground_contacts = {**unique_non_ground_contacts, **CollisionDetectionSubscriber.get_non_ground_collisions(contactsState_msg = state)}
+                    return penalty_per_collision * len(unique_non_ground_contacts)
+
+                reward += calc_reward_collision_penalty(observation)
+            
+
+            return reward
+        
+
+        return reward_func
+
 
     def action_space_factory(self, act_type: ActionType):
         """
