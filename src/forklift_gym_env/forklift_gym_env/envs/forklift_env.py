@@ -33,7 +33,7 @@ class ForkliftEnv(gym.Env):
         self.config = read_yaml_config(config_path)
 
         # Set observation_space, _get_obs method, and action_space
-        self.observation_space, self._get_obs = self.observation_space_factory(obs_type = ObservationType(self.config["observation_type"]))
+        self.observation_space, self._get_obs = self.observation_space_factory(obs_types = [ObservationType(obs_type) for obs_type in self.config["observation_types"]])
         self.action_space = self.action_space_factory(act_type = ActionType(self.config["action_type"]))
         self.calc_reward = self.calculate_reward_factory(reward_type = RewardType(self.config["reward_type"]))
 
@@ -59,8 +59,11 @@ class ForkliftEnv(gym.Env):
         # -------------------- /camera/depth/image/raw
         self.depth_camera_raw_image_subscriber = self.initialize_depth_camera_raw_image_subscriber(normalize_img = True)
         # -------------------- 
-        # -------------------- /collision_detections
-        self.collision_detection_subscriber = self.initialize_collision_detection_subscriber()
+        # -------------------- /collision_detections/*
+        self.collision_detection_states = {}
+        self.collision_detection_subscribers = []
+        for link_name in self.config['collision_detection_link_names']:
+            self.collision_detection_subscribers.append(self.initialize_collision_detection_subscriber(link_name))
         # ====================================================
 
         # Create publisher for controlling forklift robot's joints: ============================== 
@@ -89,113 +92,173 @@ class ForkliftEnv(gym.Env):
         
 
 
-    def _get_obs_tf_only(self):
-        # Obtain a tf observation which belongs to a time after the action was taken
-        current_forklift_robot_tf_obs = {}
-        flag = True
-        while current_forklift_robot_tf_obs == {} or flag:
-            # Obtain forklift_robot_tf observation -----
-            rclpy.spin_once(self.forklift_robot_tf_subscriber)
-            current_forklift_robot_tf_obs = self.forklift_robot_tf_state
+    def _get_obs_tf_decorator(self, func):
+        def _get_obs_tf(self):
+            # Obtain a tf observation which belongs to a time after the action was taken
+            current_forklift_robot_tf_obs = {}
+            flag = True
+            while current_forklift_robot_tf_obs == {} or flag:
+                # Obtain forklift_robot_tf observation -----
+                rclpy.spin_once(self.forklift_robot_tf_subscriber)
+                current_forklift_robot_tf_obs = self.forklift_robot_tf_state
 
-            flag = False
-            for k, v in current_forklift_robot_tf_obs.items():
-                if v['time'] < (self.ros_clock.nanoseconds + self.config['step_duration']): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.
+                flag = False
+                for k, v in current_forklift_robot_tf_obs.items():
+                    if v['time'] < (self.ros_clock.nanoseconds + self.config['step_duration']): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.
+                        flag = True
+                        break
+                if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
                     flag = True
-                    break
-            if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
-                flag = True
-        # --------------------------------------------
+            # --------------------------------------------
 
-        # reset observations for next iteration
-        self.forklift_robot_tf_state = {}
+            # reset observations for next iteration
+            self.forklift_robot_tf_state = {}
 
-        return {
-            'forklift_robot_tf_observation': {
-                'chassis_bottom_link': current_forklift_robot_tf_obs["chassis_bottom_link"]
-                },
-        }
+            return {
+                'forklift_robot_tf_observation': {
+                    'chassis_bottom_link': current_forklift_robot_tf_obs["chassis_bottom_link"]
+                    },
+            }
+        
 
+        def f():
+            return {
+                **(func()),
+                **(_get_obs_tf(self))
+            }
 
-    def _get_obs_depth_camera_raw_image_and_tf(self):
-        # Depth_camera_raw_image observation -----
-        # Check that the observation is from after the action was taken
-        current_depth_camera_raw_image_obs = None
-        while (current_depth_camera_raw_image_obs is None) or \
-            (int(str(current_depth_camera_raw_image_obs["header"].stamp.sec) \
-                + (str(current_depth_camera_raw_image_obs["header"].stamp.nanosec))) \
-                    < (self.ros_clock.nanoseconds + self.config['step_duration'])): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.  
-            # Obtain new depth_camera_raw_image_observation: -----
-            rclpy.spin_once(self.depth_camera_raw_image_subscriber)
-            current_depth_camera_raw_image_obs = self.depth_camera_img_observation
-
-        depth_camera_raw_image_observation = current_depth_camera_raw_image_obs["image"] # get image
-        # --------------------------------------------
+        return f
 
 
-        # Forklift_robot_tf observation -----
-        # Obtain a tf observation which belongs to a time after the action was taken
-        current_forklift_robot_tf_obs = {}
-        flag = True
-        while current_forklift_robot_tf_obs == {} or flag:
-            # Obtain forklift_robot_tf observation -----
-            rclpy.spin_once(self.forklift_robot_tf_subscriber)
-            current_forklift_robot_tf_obs = self.forklift_robot_tf_state
+    def _get_obs_depth_camera_raw_image_decorator(self, func):
+        def _get_obs_depth_camera_raw_image(self):
+            # Depth_camera_raw_image observation -----
+            # Check that the observation is from after the action was taken
+            current_depth_camera_raw_image_obs = None
+            while (current_depth_camera_raw_image_obs is None) or \
+                (int(str(current_depth_camera_raw_image_obs["header"].stamp.sec) \
+                    + (str(current_depth_camera_raw_image_obs["header"].stamp.nanosec))) \
+                        < (self.ros_clock.nanoseconds + self.config['step_duration'])): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.  
+                # Obtain new depth_camera_raw_image_observation: -----
+                rclpy.spin_once(self.depth_camera_raw_image_subscriber)
+                current_depth_camera_raw_image_obs = self.depth_camera_img_observation
 
-            flag = False
-            for k, v in current_forklift_robot_tf_obs.items():
-                if v['time'] < (self.ros_clock.nanoseconds + self.config['step_duration']): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.
-                    flag = True
-                    break
-            if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
-                flag = True
-        # --------------------------------------------
+            depth_camera_raw_image_observation = current_depth_camera_raw_image_obs["image"] # get image
+            # --------------------------------------------
+            # reset observations for next iteration
+            self.depth_camera_img_observation = None 
 
-        # reset observations for next iteration
-        self.forklift_robot_tf_state = {}
-        self.depth_camera_img_observation = None 
-
-        return {
-            'depth_camera_raw_image_observation': depth_camera_raw_image_observation,
-            'forklift_robot_tf_observation': {
-                'chassis_bottom_link': current_forklift_robot_tf_obs["chassis_bottom_link"]
-                },
-        }
+            return {
+                'depth_camera_raw_image_observation': depth_camera_raw_image_observation,
+            }
 
 
-    def _get_obs_collision_detection(self):
-        """
-        Returns collision detection observations that are being published by ros_gazebo_collision_detection_plugin.
-        """
-        rclpy.spin_once(self.collision_detection_subscriber)
-        # cur_collision_msg = pass
-        # print(cur_collision_msg)
-        #####################################hhasdjfşalsjdf
-        # current_forklift_robot_tf_obs = {}
-        # flag = True
-        # while current_forklift_robot_tf_obs == {} or flag:
-        #     # Obtain forklift_robot_tf observation -----
-        #     rclpy.spin_once(self.forklift_robot_tf_subscriber)
-        #     current_forklift_robot_tf_obs = self.forklift_robot_tf_state
+        def f():
+            return {
+                **(func()),
+                **(_get_obs_depth_camera_raw_image(self))
+            }
 
-        #     flag = False
-        #     for k, v in current_forklift_robot_tf_obs.items():
-        #         if v['time'] < (self.ros_clock.nanoseconds + self.config['step_duration']): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.
-        #             flag = True
-        #             break
-        #     if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
-        #         flag = True
-        # # --------------------------------------------
+        return f
 
-        # # reset observations for next iteration
-        # self.forklift_robot_tf_state = {}
 
-        # return {
-        #     'forklift_robot_tf_observation': {
-        #         'chassis_bottom_link': current_forklift_robot_tf_obs["chassis_bottom_link"]
-        #         },
-        # }
+    def _get_obs_collision_detection_decorator(self, func):
+        def _get_obs_collision_detection(self):
+            """
+            Returns collision detection observations that are being published by ros_gazebo_collision_detection_plugin.
+            """
+            collision_detection_observations = {} # holds finalized up to date collision detection information from all contact sensors
+            for subscriber in self.collision_detection_subscribers:
+                # Check that the observation is from after the action was taken
+                cur_collision_msg = None
+                while (cur_collision_msg is None) or \
+                    (int(str(cur_collision_msg.header.stamp.sec) \
+                        + (str(cur_collision_msg.header.stamp.nanosec))) \
+                            < (self.ros_clock.nanoseconds + self.config['step_duration'])): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.  
+                    # Obtain new collision_detection_observation: -----
+                    rclpy.spin_once(subscriber)
+                    if subscriber.link_name in self.collision_detection_states:
+                        cur_collision_msg = self.collision_detection_states[subscriber.link_name]
 
+                collision_detection_observations[subscriber.link_name] = cur_collision_msg # record obs
+
+                # Get obs by converting ROS msg to dict (This conversion is required for observation_spaces of gym)
+                collision_detection_observations[subscriber.link_name] = {
+                    "header": {
+                        "stamp": {
+                            "sec": cur_collision_msg.header.stamp.sec,
+                            "nanosec": cur_collision_msg.header.stamp.nanosec
+                        },
+                        "frame_id": cur_collision_msg.header.frame_id
+                    },
+                    "states": [{
+                        "info": contactState.info,
+                        "collision1_name": contactState.collision1_name,
+                        "collision2_name": contactState.collision2_name,
+                        "wrenches": [{
+                            "force": {
+                                "x": wrench.force.x,
+                                "y": wrench.force.y,
+                                "z": wrench.force.z,
+                            },
+                            "torque": {
+                                "x": wrench.torque.x,
+                                "y": wrench.torque.y,
+                                "z": wrench.torque.z,
+                            },
+
+                        } for wrench in contactState.wrenches],
+                        "total_wrench": {
+                            "force": {
+                                "x": contactState.total_wrench.force.x,
+                                "y": contactState.total_wrench.force.y,
+                                "z": contactState.total_wrench.force.z,
+                            },
+                            "torque": {
+                                "x": contactState.total_wrench.torque.x,
+                                "y": contactState.total_wrench.torque.y,
+                                "z": contactState.total_wrench.torque.z,
+                            },
+                        },
+                        "contact_positions": [{
+                                "x": contact_position.x,
+                                "y": contact_position.y,
+                                "z": contact_position.z,
+
+                        } for contact_position in contactState.contact_positions],
+
+                        "contact_normals": [{
+                                "x": contact_normal.x,
+                                "y": contact_normal.y,
+                                "z": contact_normal.z,
+
+                        } for contact_normal in contactState.contact_normals],
+                        "depths": contactState.depths
+                    } for contactState in cur_collision_msg.states]
+                }
+
+            # reset observations for next iteration
+            self.collision_detection_states = {} 
+
+            # TODO: move this collision check part to reward calculation functions
+            # Check for agents collisions with non-ground objects
+            unique_non_ground_contacts = {} # holds ContactsState msgs for the collisions with objects that are not the ground
+            for state in collision_detection_observations.values():
+                unique_non_ground_contacts = {**unique_non_ground_contacts, **CollisionDetectionSubscriber.get_non_ground_collisions(contactsState_msg = state)}
+                print(unique_non_ground_contacts)
+
+            return {
+                'collision_detection_observations': collision_detection_observations,
+            }
+
+
+        def f():
+            return {
+                **(func()),
+                **(_get_obs_collision_detection(self))
+            }
+
+        return f
 
 
     def _get_info(self, reward, diff_cont_msg):
@@ -283,7 +346,6 @@ class ForkliftEnv(gym.Env):
         self.ros_clock = self.forklift_robot_tf_subscriber.get_clock().now() # will be used to make sure observation is coming from after the action was taken
 
         observation = self._get_obs()
-        self._get_obs_collision_detection() # TODO: sil bu satırı !!!
 
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
@@ -381,85 +443,116 @@ class ForkliftEnv(gym.Env):
        return ForkliftRobotTfSubscriber(forklift_robot_tf_cb)
     
 
-    def initialize_collision_detection_subscriber(self):
-        self.collision_detection_state = {}
+    def initialize_collision_detection_subscriber(self, link_name):
+        """
+        Inputs:
+            link_name (str): name of the link that contacts msgs are being published for. For example for a given link_name
+                of 'chassis_bottom_link', this will subscribe to ros topic: '/collision_detections/link_name'
+        """
         def collision_detection_cb(msg):
-            # Extract time information
-            cur_msg_time_sec = msg.header.stamp.sec
-            cur_msg_time_sec = msg.header.stamp.nanosec
-            # Extract contact information
-            for state in msg.states:
-                # find which collision_name is forklift's part and which is the foreign object it contacts
-                if "forklift_bot" in state.collision1_name:
-                    forklift_contact_part_name = state.collision1_name
-                    foreign_contact_part_name = state.collision2_name
-                else:
-                    forklift_contact_part_name = state.collision2_name
-                    foreign_contact_part_name = state.collision1_name
-                # Check for contact
-                if foreign_contact_part_name != "ground_plane::link::collision":
-                    print(f"collision1_name: {forklift_contact_part_name}, collision2_name: {foreign_contact_part_name}")
+            self.collision_detection_states[link_name] = msg
 
-        return CollisionDetectionSubscriber(collision_detection_cb)
-                 
-        
-
-        # self.forklift_robot_tf_state = {}
-        # for cur_msg in msg.transforms:
-        #     cur_msg_time = int(str(cur_msg.header.stamp.sec) + str(cur_msg.header.stamp.nanosec))
-        #     cur_msg_child_frame_id = cur_msg.child_frame_id
-        #     cur_msg_transform = cur_msg.transform
-        #     if cur_msg_child_frame_id not in self.forklift_robot_tf_state:
-        #         self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
-        #             'time': cur_msg_time,
-        #             'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
-        #                 cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
-        #         }
-        #     else:
-        #         if self.forklift_robot_tf_state[cur_msg_child_frame_id]['time'] < cur_msg_time: # newer information came (update)
-        #             self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
-        #                 'time': cur_msg_time,
-        #                 'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
-        #                     cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
-        #             }
-
-        # return CollisionDetectionSubscriber(collision_detection_cb)
+        return CollisionDetectionSubscriber(collision_detection_cb, link_name)
 
 
-
-    def observation_space_factory(self, obs_type: ObservationType):
+    def observation_space_factory(self, obs_types):
         """
         Returns observation space and corresponding _get_obs method that corresponds to the given obs_type
         Inputs:
-            obs_type (ObservationType): specificies which observation is being used.
+            obs_type (List[ObservationType]): specificies which observations are being used.
         """
-        assert obs_type in ObservationType
+        obs_space_dict = {}
+        for obs_type in obs_types:
+            assert obs_type in ObservationType
 
-
-        # Set observation_space according to obs_type 
-        if obs_type == ObservationType.TF_ONLY:
-            return spaces.Dict({ 
-                "forklift_robot_tf_observation": spaces.Dict({
-                    "chassis_bottom_link": spaces.Dict({
-                        "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
-                        "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = float) # TODO: set these values to min and max from ros diff_controller
+            # Extend observation_space according to obs_type 
+            if obs_type == ObservationType.TF:
+               obs_space_dict["forklift_robot_tf_observation"] = spaces.Dict({
+                        "chassis_bottom_link": spaces.Dict({
+                            "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
+                            "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = float) # TODO: set these values to min and max from ros diff_controller
+                            })
                         })
-                    }),
-            }), self._get_obs_tf_only
 
-        elif obs_type == ObservationType.TF_AND_DEPTH_CAMERA_RAW:
-            return spaces.Dict({ 
-                "depth_camera_raw_image_observation": spaces.Box(low = -float("inf") * \
-                    np.ones(tuple(self.config['depth_camera_raw_image_dimensions'])), \
-                        high = float("inf") * np.ones(tuple(self.config['depth_camera_raw_image_dimensions']), dtype = np.float32)),
-
-                "forklift_robot_tf_observation": spaces.Dict({
-                    "chassis_bottom_link": spaces.Dict({
-                        "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
-                        "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = float)
-                        })
+            elif obs_type == ObservationType.DEPTH_CAMERA_RAW_IMAGE:
+                obs_space_dict['depth_camera_raw_image_observation'] = spaces.Box(low = -float("inf") * \
+                        np.ones(tuple(self.config['depth_camera_raw_image_dimensions'])), \
+                            high = float("inf") * np.ones(tuple(self.config['depth_camera_raw_image_dimensions']), dtype = np.float32))
+            
+            # TODO: set spaces.Dict definition for collision observations
+            elif obs_type == ObservationType.COLLISION_DETECTION:
+                d = {}
+                for link_name in self.config['collision_detection_link_names']:
+                    d[link_name] = spaces.Dict({
+                    "header": spaces.Dict({
+                        "stamp": spaces.Dict({
+                            "sec": spaces.Box(low = 0.0, high = float("inf"), shape = (1, ), dtype = np.int32),
+                            "nanosec": spaces.Box(low = 0.0, high = float("inf"), shape = (1, ), dtype = np.int32)
+                        }),
+                        "frame_id": spaces.Text(max_length = 500),
                     }),
-            }), self._get_obs_depth_camera_raw_image_and_tf
+                    "states": spaces.Sequence(spaces.Dict({
+                        "info": spaces.Text(max_length = 1000),
+                        "collision1_name": spaces.Text(max_length = 500),
+                        "collision2_name": spaces.Text(max_length = 500),
+                        "wrenches": spaces.Sequence(spaces.Dict({
+                            "force": spaces.Dict({
+                                "x": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "y": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "z": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64)
+                            }),
+                            "torque": spaces.Dict({
+                                "x": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "y": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "z": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64)
+                            })
+                        })),
+                        "total_wrench": spaces.Dict({
+                            "force": spaces.Dict({
+                                "x": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "y": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "z": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64)
+                            }),
+                            "torque": spaces.Dict({
+                                "x": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "y": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "z": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64)
+                            })
+                        }),
+                        "contact_positions": spaces.Sequence(spaces.Dict({
+                                "x": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "y": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "z": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64)
+                            })),
+                        "contact_normals": spaces.Sequence(spaces.Dict({
+                                "x": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "y": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64),
+                                "z": spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64)
+                            })),
+                        "depths": spaces.Sequence(spaces.Box(low = -float("inf"), high = float("inf"), shape = (1, ), dtype = np.float64))
+                    }))
+                })
+
+
+                obs_space_dict['collision_detection_observations'] = spaces.Dict(d)
+        
+        def func():
+            return {}
+
+        _get_obs = func
+        
+        # Extend _get_obs function according to obs_types
+        for obs_type in obs_types:
+            if obs_type == ObservationType.TF:
+                _get_obs = self._get_obs_tf_decorator(_get_obs)
+
+            elif obs_type == ObservationType.DEPTH_CAMERA_RAW_IMAGE:
+                _get_obs = self._get_obs_depth_camera_raw_image_decorator(_get_obs)
+
+            elif obs_type == ObservationType.COLLISION_DETECTION:
+                _get_obs = self._get_obs_collision_detection_decorator(_get_obs)
+
+        return spaces.Dict(obs_space_dict), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
 
     
     

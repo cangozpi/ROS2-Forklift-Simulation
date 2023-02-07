@@ -6,7 +6,7 @@ tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance 
 tolerance_y: 1.59  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state.
 agent_pose_position_z: 0.30 # agent's z coordinate when spawned in the world.
 world_file_name: 'collision_detection.world' # specifies world used for gazebo simulation. These worlds are available in /world folder.
-observation_type: "tf_only" # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['tf_only', 'tf and depth_camera_raw']
+observation_types: ["tf", "depth_camera_raw_image", "collision_detection"] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['tf', 'depth_camera_raw_image', 'collision_detecion']
 reward_type: "L2_distance" # specifies the reward function being used. Check out RewardType Enum inside utils.py for available options.
 action_type: "differential_control" # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options.
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
@@ -14,3 +14,6 @@ render_mode: ['no_render'] # specifies which sensory informations to visualize. 
 step_duration: 2_000_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds.
 gui: True # Whether to launch gzclient. gzclient is run when it is True.
 pallet_model_sdf_path: "pallet/model.sdf" # path to the model sdf file which will be used as the pallet model wrt build/forklift_gym_env/models/ path. (e.g. "pallet/model.sdf")
+collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chassis_top_link', 'fork_base_link',  
+'left_fork_link', 'left_front_wheel_link', 'lift_base_link', 'lift_body_connector_link', 
+'right_fork_link', 'right_front_wheel_link'] # names of the links that has a corresponding ros topic: /collision_detection/<link_name> , where ros_gazebo_collision_detection_plugin publishes to.

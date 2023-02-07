@@ -223,8 +223,9 @@ class ObservationType(Enum):
     """
     Specifies the observation space that is being used. Used in config.yaml
     """
-    TF_ONLY = "tf_only"
-    TF_AND_DEPTH_CAMERA_RAW = "tf and depth_camera_raw"
+    TF = "tf"
+    DEPTH_CAMERA_RAW_IMAGE = "depth_camera_raw_image"
+    COLLISION_DETECTION = "collision_detection"
 
 
 class RewardType(Enum):
