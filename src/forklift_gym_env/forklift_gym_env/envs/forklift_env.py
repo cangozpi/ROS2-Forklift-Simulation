@@ -6,6 +6,7 @@ from cv_bridge import CvBridge
 import time
 import rclpy
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Float64MultiArray
 
 from forklift_gym_env.envs.utils import generate_and_launch_ros_description_as_new_process, read_yaml_config, \
     ObservationType, RewardType, ActionType
@@ -18,6 +19,7 @@ from forklift_gym_env.envs.sensor_subscribers.collision_detection_subscriber imp
 
 # Controller Publishers
 from forklift_gym_env.envs.controller_publishers.diff_cont_cmd_vel_unstamped_publisher import DiffContCmdVelUnstampedPublisher
+from forklift_gym_env.envs.controller_publishers.fork_joint_controller_cmd_publisher import ForkJointContCmdPublisher
 
 
 
@@ -69,6 +71,9 @@ class ForkliftEnv(gym.Env):
         # Create publisher for controlling forklift robot's joints: ============================== 
         # --------------------  /diff_cont/cmd_vel_unstamped
         self.diff_cont_cmd_vel_unstamped_publisher = DiffContCmdVelUnstampedPublisher()
+        # -------------------- 
+        # --------------------  /fork_joint_controller/commands
+        self.fork_joint_cont_cmd_publisher = ForkJointContCmdPublisher()
         # -------------------- 
         # ====================================================
 
@@ -283,7 +288,7 @@ class ForkliftEnv(gym.Env):
         # Unpause sim so that simulation can be reset
         self.simulation_controller_node.send_unpause_physics_client_request()
 
-        # Send 'no action' action to forklift robot
+        # Send 'no action' action to diff_cmd_cont of forklift robot
         diff_cont_msg = Twist()
         diff_cont_msg.linear.x = 0.0 # use this one
         diff_cont_msg.linear.y = 0.0
@@ -293,6 +298,15 @@ class ForkliftEnv(gym.Env):
         diff_cont_msg.angular.y = 0.0
         diff_cont_msg.angular.z = 0.0 # use this one
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
+
+
+        # send 'no action' action to fork_joint_cont of forklift robot
+        # convert fork_joint_cont_action to Float64MultiArray message
+        fork_joint_cont_msg = Float64MultiArray()
+        fork_joint_cont_msg.data = [0.0]
+        # Take fork_joint_cont action
+        self.fork_joint_cont_cmd_publisher.publish_cmd(fork_joint_cont_msg)
+
 
         # Reset the simulation & world (gazebo)
         self.simulation_controller_node.send_reset_simulation_request()
@@ -321,7 +335,7 @@ class ForkliftEnv(gym.Env):
         # Unpause simulation so that action can be taken
         self.simulation_controller_node.send_unpause_physics_client_request()
 
-        # Set action
+        # Set diff_cont action
         diff_cont_action = action['diff_cont_action'] 
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
@@ -332,8 +346,18 @@ class ForkliftEnv(gym.Env):
         diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
         diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
-        # Take action
+        # Take diff_cont action
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
+
+
+        # set fork_joint_cont action
+        fork_joint_cont_action = action['fork_joint_cont_action']
+        # convert fork_joint_cont_action to Float64MultiArray message
+        fork_joint_cont_msg = Float64MultiArray()
+        fork_joint_cont_msg.data = fork_joint_cont_action.tolist()
+        # Take fork_joint_cont action
+        self.fork_joint_cont_cmd_publisher.publish_cmd(fork_joint_cont_msg)
+
 
         # Get observation after taking the action
         self.ros_clock = self.forklift_robot_tf_subscriber.get_clock().now() # will be used to make sure observation is coming from after the action was taken
@@ -373,7 +397,10 @@ class ForkliftEnv(gym.Env):
         # delete ros nodes
         self.depth_camera_raw_image_subscriber.destroy_node()
         self.diff_cont_cmd_vel_unstamped_publisher.destroy_node()
+        self.fork_joint_cont_cmd_publisher.destroy_node()
         self.forklift_robot_tf_subscriber.destroy_node()
+        for subscriber in self.collision_detection_subscribers:
+            subscriber.destroy_node()
         rclpy.shutdown()
 
         # Stop gazebo launch process
@@ -615,7 +642,8 @@ class ForkliftEnv(gym.Env):
         # Set action space according to act_type 
         if act_type == ActionType.DIFF_CONT:
             return spaces.Dict({
-                "diff_cont_action": spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32) #TODO: set this to limits from config file
+                "diff_cont_action": spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32), #TODO: set this to limits from config file
+                "fork_joint_cont_action": spaces.Box(low = -2.0, high = 2.0, shape = (1,), dtype = np.float64) # TODO: set its high and low limits correctly
             })
 
 

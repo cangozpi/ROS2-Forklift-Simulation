@@ -14,7 +14,7 @@ def main():
 
         if info["verbose"]:
             print(f'Episode: {cur_episode}, Iteration: {info["iteration"]}/{info["max_episode_length"]},', 
-            f'Agent_location: {info["agent_location"]}, Target_location: {info["target_location"]}')
+            f'Agent_location: {info["agent_location"]}, Target_location: {info["target_location"]}, Reward: {info["reward"]}')
 
         if done:
             obs, info = env.reset()
