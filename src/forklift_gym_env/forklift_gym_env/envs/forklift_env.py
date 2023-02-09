@@ -450,7 +450,7 @@ class ForkliftEnv(gym.Env):
 
     def observation_space_factory(self, obs_types):
         """
-        Returns observation space and corresponding _get_obs method that corresponds to the given obs_type
+        Returns observation space and corresponding _get_obs method that corresponds to the given obs_type.
         Inputs:
             obs_type (List[ObservationType]): specificies which observations are being used.
         """

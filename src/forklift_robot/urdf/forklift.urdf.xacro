@@ -63,8 +63,6 @@
     <!-- <xacro:include filename="camera.xacro"/> --> <!-- Uncomment this line, and comment the line below to switch between Depth Camera and a Regular Camera -->
     <xacro:include filename="depth_camera.xacro"/>
     <!-- <xacro:include filename="gazebo.xacro"/> -->
-    
-    
 
 
     <!-- This first link called "world" is empty -->
@@ -460,11 +458,14 @@
 
     
     
-    <!-- Setup ROS_CONTROL and transmission tags -->
+    <!-- Setup ROS_CONTROL and transmission tags for the forklift robot-->
     <xacro:include filename="ros2_control.xacro"/>
 
     <!-- Setup Collision Detection Plugin for the forklift robot -->
     <xacro:include filename="ros_gazebo_collision_detection_plugin.xacro"/>
+    
+    <!-- Setup Gazebo Gravity Compensation Plugin for the forklift robot -->
+    <!-- <xacro:include filename="gazebo_gravity_compensation_plugin.xacro"/> -->
     
 
 </robot>

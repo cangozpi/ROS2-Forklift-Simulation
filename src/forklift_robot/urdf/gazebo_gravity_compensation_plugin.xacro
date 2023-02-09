@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+    <gazebo>
+        <plugin name="gravity_compensation" filename="libGravityCompensationPlugin.so"/>
+    </gazebo>
+
+</robot>

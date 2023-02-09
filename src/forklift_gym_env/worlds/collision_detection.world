@@ -37,5 +37,11 @@
         </sensor> -->
       </link>
     </model>
+    <!-- <include>
+      <uri>model://mass_on_rails</uri>
+      <plugin name="gravity_compensation" filename="libGravityCompensationPlugin.so">
+        <uri>model://mass_on_rails</uri>
+      </plugin>
+    </include> -->
   </world>
 </sdf>

@@ -22,7 +22,6 @@ kill_gazebo_processes:
 	kill -9 $(shell pidof gzserver) $(shell pidof gzclient) $(shell pidof gazebo)
 
 manual_launch: 
+	source install/setup.bash && ros2 run forklift_gym_env gui_controller & \
 	export GAZEBO_PLUGIN_PATH=${GAZEBO_PLUGIN_PATH}"/home/cangozpi/Desktop/forklift_ws/build/ros_gazebo_plugins:" && \
-	source install/setup.bash && \
-	ros2 launch forklift_robot demo_launch.launch.py &\
-	ros2 run forklift_gym_env gui_controller
+	source install/setup.bash && ros2 launch forklift_robot demo_launch.launch.py 
