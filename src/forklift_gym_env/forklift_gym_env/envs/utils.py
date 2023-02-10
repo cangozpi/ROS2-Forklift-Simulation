@@ -241,3 +241,4 @@ class ActionType(Enum):
     Specifies the action space for the actions that will be taken by the agent. Used in config.yaml
     """
     DIFF_CONT = "differential_control"
+    FORK_JOINT_CONT = "jork_joint_control"

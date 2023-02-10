@@ -125,14 +125,14 @@ class Actor(nn.Module):
         self.action_dim = action_dim
 
         layers = []
-        prev_dim = sum(self.obs_dim) # shape of the flattened input to the network
+        prev_dim = self.obs_dim # shape of the flattened input to the network
         for i, hidden_dim in enumerate(hidden_dims):
             if i == 0:
                 layers.append(torch.nn.Flatten())
             layers.append(torch.nn.Linear(prev_dim, hidden_dim))
             layers.append(torch.nn.ReLU())
             prev_dim = hidden_dim
-        layers.append(torch.nn.Linear(prev_dim, sum(action_dim)))
+        layers.append(torch.nn.Linear(prev_dim, action_dim))
         layers.append(torch.nn.Tanh()) 
                 
         self.model_layers = torch.nn.ModuleList(layers)
@@ -161,7 +161,7 @@ class Critic(nn.Module):
                 and the input and the output dimensions.
         """
         super().__init__()
-        self.obs_dim = (*obs_dim, *action_dim) 
+        self.obs_dim = (obs_dim, action_dim) 
         self.output_dim = 1 # Q(s,a) is of shape (1,)
 
         layers = []

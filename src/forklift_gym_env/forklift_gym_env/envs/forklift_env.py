@@ -35,9 +35,12 @@ class ForkliftEnv(gym.Env):
         self.config = read_yaml_config(config_path)
 
         # Set observation_space, _get_obs method, and action_space
-        self.observation_space, self._get_obs = self.observation_space_factory(obs_types = [ObservationType(obs_type) for obs_type in self.config["observation_types"]])
-        self.action_space = self.action_space_factory(act_type = ActionType(self.config["action_type"]))
-        self.calc_reward = self.calculate_reward_factory(reward_types = [RewardType(reward_type) for reward_type in self.config["reward_types"]] )
+        self.obs_types = [ObservationType(obs_type) for obs_type in self.config["observation_types"]]
+        self.observation_space, self._get_obs = self.observation_space_factory(obs_types = self.obs_types)
+        self.act_types = [ActionType(act_type) for act_type in self.config["action_types"]]
+        self.action_space = self.action_space_factory(act_types = self.act_types)
+        self.reward_types = [RewardType(reward_type) for reward_type in self.config["reward_types"]]
+        self.calc_reward = self.calculate_reward_factory(reward_types = self.reward_types)
 
         # Set render_mode
         for x in self.config["render_mode"]:
@@ -632,20 +635,23 @@ class ForkliftEnv(gym.Env):
         return reward_func
 
 
-    def action_space_factory(self, act_type: ActionType):
+    def action_space_factory(self, act_types):
         """
         Returns observation space that corresponds to obs_type
         Inputs:
-            act_type (ActionType): specifies which actions can be taken by the agent.
+            act_type (List(ActionType)): specifies which actions can be taken by the agent.
         """
-        assert act_type in ActionType
+        for act_type in act_types:
+            assert act_type in ActionType
 
         # Set action space according to act_type 
-        if act_type == ActionType.DIFF_CONT:
-            return spaces.Dict({
+        d =  {
                 "diff_cont_action": spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32), #TODO: set this to limits from config file
                 "fork_joint_cont_action": spaces.Box(low = -2.0, high = 2.0, shape = (1,), dtype = np.float64) # TODO: set its high and low limits correctly
-            })
+        }
+
+        return spaces.Dict(d)
+
 
 
     def check_goal_achieved(self, observation):
