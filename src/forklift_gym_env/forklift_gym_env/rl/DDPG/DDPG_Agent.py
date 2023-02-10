@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from copy import deepcopy
 
 
 class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call its super().__init__()
@@ -52,7 +53,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         """
         # Compute Q_targets
         Q_targets = reward_batch + \
-            ((1 - terminal_batch) * self.gamma * self.critic_target(next_state_batch, self.actor_target(next_state_batch)))
+            ((1 - terminal_batch.int()) * self.gamma * self.critic_target(next_state_batch, self.actor_target(next_state_batch)))
 
         # Update Q function (Critic)
         self.critic.zero_grad()
@@ -128,10 +129,11 @@ class Actor(nn.Module):
         for i, hidden_dim in enumerate(hidden_dims):
             if i == 0:
                 layers.append(torch.nn.Flatten())
-            layers.append(prev_dim, hidden_dim)
+            layers.append(torch.nn.Linear(prev_dim, hidden_dim))
             layers.append(torch.nn.ReLU())
             prev_dim = hidden_dim
         layers.append(torch.nn.Linear(prev_dim, sum(action_dim)))
+        layers.append(torch.nn.Tanh()) 
                 
         self.model_layers = torch.nn.ModuleList(layers)
     
@@ -144,10 +146,8 @@ class Actor(nn.Module):
         # pass input through the layers of the model
         out = x # --> [B, (*self.obs_dim)]
         for layer in self.model_layers:
-            out = layer(out)
+            out = layer(out.float())
         
-        # reshape flattened output to action_dim
-        out = out.reshape(-1, self.action_dim) # --> [B, (*self.action_dim)]
         return out
 
 
@@ -169,7 +169,7 @@ class Critic(nn.Module):
         for i, hidden_dim in enumerate(hidden_dims):
             if i == 0:
                 layers.append(torch.nn.Flatten())
-            layers.append(prev_dim, hidden_dim)
+            layers.append(torch.nn.Linear(prev_dim, hidden_dim))
             layers.append(torch.nn.ReLU())
             prev_dim = hidden_dim
         layers.append(torch.nn.Linear(prev_dim, self.output_dim))
@@ -190,8 +190,6 @@ class Critic(nn.Module):
         out = torch.concat((state_batch, action_batch), dim=1) # --> [B, (*self.obs_dim)]
 
         for layer in self.model_layers:
-            out = layer(out)
+            out = layer(out.float())
         
-        # reshape flattened output to action_dim
-        out = out.reshape(-1, self.output_dim) # --> [B, (*self.output_dim)] = [B, 1]
         return out

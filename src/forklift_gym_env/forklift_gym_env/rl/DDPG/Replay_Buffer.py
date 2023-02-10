@@ -14,12 +14,12 @@ class ReplayBuffer:
         self.terminal_buffer = torch.zeros(replay_buffer_size, 1, dtype=torch.bool)
 
 
-    def append(self, obs, action, reward, next_obs, term):
-        self.state_buffer[index, :] = obs
-        self.action_buffer[index, :] = action
-        self.reward_buffer[index, :] = reward
-        self.next_state_buffer[index, :] = next_obs
-        self.terminal_buffer[index, :] = term
+    def append(self, obs, action, reward, next_obs, term): #TODO: maek sure inputs are torch Tensors and numpy objects
+        self.state_buffer[self.index, :] = obs.reshape(-1)
+        self.action_buffer[self.index, :] = action.reshape(-1)
+        self.reward_buffer[self.index, :] = reward
+        self.next_state_buffer[self.index, :] = next_obs.reshape(-1)
+        self.terminal_buffer[self.index, :] = term
 
         self.index = (self.index + 1) % self.replay_buffer_size
 

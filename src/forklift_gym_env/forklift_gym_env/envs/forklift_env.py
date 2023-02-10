@@ -354,7 +354,8 @@ class ForkliftEnv(gym.Env):
         fork_joint_cont_action = action['fork_joint_cont_action']
         # convert fork_joint_cont_action to Float64MultiArray message
         fork_joint_cont_msg = Float64MultiArray()
-        fork_joint_cont_msg.data = fork_joint_cont_action.tolist()
+        # fork_joint_cont_msg.data = fork_joint_cont_action.tolist()
+        fork_joint_cont_msg.data = [fork_joint_cont_action[0].item()]
         # Take fork_joint_cont action
         self.fork_joint_cont_cmd_publisher.publish_cmd(fork_joint_cont_msg)
 
@@ -490,7 +491,7 @@ class ForkliftEnv(gym.Env):
                obs_space_dict["forklift_robot_tf_observation"] = spaces.Dict({
                         "chassis_bottom_link": spaces.Dict({
                             "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
-                            "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = float) # TODO: set these values to min and max from ros diff_controller
+                            "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = np.float32) # TODO: set these values to min and max from ros diff_controller
                             })
                         })
 
