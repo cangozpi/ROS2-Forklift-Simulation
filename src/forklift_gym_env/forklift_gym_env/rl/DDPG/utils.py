@@ -5,11 +5,22 @@ from functools import reduce
 from forklift_gym_env.envs.utils import ObservationType, ActionType
 
 
-def flatten_and_concatenate_observation(obs):
-    tf_obs = torch.tensor(obs['forklift_robot_tf_observation']['chassis_bottom_link']['transform'])
-    depth_camera_raw_image_obs = torch.tensor(obs['depth_camera_raw_image_observation'])
-    obs = torch.concat((tf_obs.reshape(-1), depth_camera_raw_image_obs.reshape(-1)), dim=0)
-    return obs
+def flatten_and_concatenate_observation(obs, env):
+    obs_flattened = torch.tensor([])
+
+    if ObservationType.TARGET_TRANSFORM in env.obs_types:
+        target_tf_obs = torch.tensor(obs['target_transform_observation'])
+        obs_flattened = torch.concat((obs_flattened.reshape(-1), target_tf_obs.reshape(-1)), dim=0)
+
+    if ObservationType.TF in env.obs_types:
+        tf_obs = torch.tensor(obs['forklift_robot_tf_observation']['chassis_bottom_link']['transform'])
+        obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
+
+    if ObservationType.DEPTH_CAMERA_RAW_IMAGE in env.obs_types:
+        depth_camera_raw_image_obs = torch.tensor(obs['depth_camera_raw_image_observation'])
+        obs_flattened = torch.concat((obs_flattened.reshape(-1), depth_camera_raw_image_obs.reshape(-1)), dim=0)
+
+    return obs_flattened
 
 
 def flatten_and_concatenate_action(action):
@@ -57,6 +68,9 @@ def convert_agent_action_to_dict(action, env):
 
 def get_concatenated_obs_and_act_dims(env):
     concatenated_obs_dim = 0
+    if ObservationType.TARGET_TRANSFORM in env.obs_types:
+        target_tf_obs_dim = env.observation_space['target_transform_observation'].shape # --> [2,]
+        concatenated_obs_dim += reduce(lambda a,b: a * b, target_tf_obs_dim)
     if ObservationType.TF in env.obs_types:
         tf_obs_dim = env.observation_space['forklift_robot_tf_observation']['chassis_bottom_link']['transform'].shape # --> [7,]
         concatenated_obs_dim += reduce(lambda a,b: a * b, tf_obs_dim)

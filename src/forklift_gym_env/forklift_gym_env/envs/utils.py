@@ -224,6 +224,7 @@ class ObservationType(Enum):
     Specifies the observation space that is being used. Used in config.yaml
     """
     TF = "tf"
+    TARGET_TRANSFORM = "target_tf"
     DEPTH_CAMERA_RAW_IMAGE = "depth_camera_raw_image"
     COLLISION_DETECTION = "collision_detection"
 

@@ -8,9 +8,8 @@ from forklift_gym_env.rl.DDPG.utils import *
 from torch.utils.tensorboard import SummaryWriter
 import datetime
 
-# ============================== 
+# ==============================  TODO: move to config.yaml or make it save upon higher eval score performance
 save_every = 2
-save_path = "hehehe.pkl"
 # ============================== 
 
 def main():
@@ -34,7 +33,7 @@ def main():
     replay_buffer = ReplayBuffer(env.config["replay_buffer_size"], concatenated_obs_dim, concatenated_action_dim, env.config["batch_size"])
 
     obs, info = env.reset(seed=env.config["seed"])
-    obs = flatten_and_concatenate_observation(obs)
+    obs = flatten_and_concatenate_observation(obs, env)
     while cur_episode < env.config["total_episodes"]: # simulate action taking of an agent for debugging the env
         # For warmup_steps many iterations take random actions to explore better
         if env.cur_iteration < env.config["warmup_steps"]: # take random actions
@@ -51,7 +50,7 @@ def main():
             next_obs, reward, done, _, info = env.step(action)
 
         # Take action
-        next_obs = flatten_and_concatenate_observation(next_obs)
+        next_obs = flatten_and_concatenate_observation(next_obs, env)
 
         cum_episode_rewards += reward
 
@@ -95,7 +94,7 @@ def main():
 
             # Reset env
             obs, info = env.reset(seed=env.config["seed"])
-            obs = flatten_and_concatenate_observation(obs)
+            obs = flatten_and_concatenate_observation(obs, env)
             time.sleep(3)
             # Reset episode parameters for a new episode
             cur_episode += 1

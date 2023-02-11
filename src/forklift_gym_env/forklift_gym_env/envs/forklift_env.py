@@ -99,6 +99,22 @@ class ForkliftEnv(gym.Env):
         self._target_transform = None # agent's goal state
         
 
+    def _get_obs_target_transform_decorator(self, func):
+        def _get_obs_target_transform(self):
+            return {
+                'target_transform_observation': self._target_transform,
+            }
+        
+
+        def f():
+            return {
+                **(func()),
+                **(_get_obs_target_transform(self))
+            }
+            # do NOT reset observations for next iteration because target_transform_observation does not change through an episode
+
+        return f
+
 
     def _get_obs_tf_decorator(self, func):
         def _get_obs_tf(self):
@@ -490,7 +506,10 @@ class ForkliftEnv(gym.Env):
             assert obs_type in ObservationType
 
             # Extend observation_space according to obs_type 
-            if obs_type == ObservationType.TF:
+            if obs_type == ObservationType.TARGET_TRANSFORM:
+               obs_space_dict["target_transform_observation"] = spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float32) # TODO: set these values to min and max from ros diff_controller
+
+            elif obs_type == ObservationType.TF:
                obs_space_dict["forklift_robot_tf_observation"] = spaces.Dict({
                         "chassis_bottom_link": spaces.Dict({
                             "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
@@ -566,8 +585,11 @@ class ForkliftEnv(gym.Env):
         
         # Extend _get_obs function according to obs_types
         for obs_type in obs_types:
-            if obs_type == ObservationType.TF:
-                _get_obs = self._get_obs_tf_decorator(_get_obs)
+            if obs_type == ObservationType.TARGET_TRANSFORM:
+                _get_obs = self._get_obs_target_transform_decorator(_get_obs) # get target transformation
+
+            elif obs_type == ObservationType.TF:
+                _get_obs = self._get_obs_tf_decorator(_get_obs) # get forklift's target transformation
 
             elif obs_type == ObservationType.DEPTH_CAMERA_RAW_IMAGE:
                 _get_obs = self._get_obs_depth_camera_raw_image_decorator(_get_obs)
