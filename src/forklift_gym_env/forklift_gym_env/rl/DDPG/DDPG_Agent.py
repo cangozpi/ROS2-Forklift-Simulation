@@ -109,6 +109,34 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         self.critic_target.eval() 
 
     
+    def save_model(self):
+        """
+        Saves the current state of the neural network models of the actor and the critic of the DDPG agent.
+        """
+        torch.save(
+            self.actor.state_dict(),
+            'actor.pkl'
+        )
+        torch.save(
+            self.critic.state_dict(),
+            'critic.pkl'
+        )
+    
+
+    def load_model(self):
+        """
+        Loads the previously saved states of the actor and critic models to the current DDPG agent.
+        """
+        self.actor.load_state_dict(
+            torch.load('actor.pkl')
+        )
+
+        self.critic.load_state_dict(
+            torch.load('critic.pkl')
+        )
+
+
+    
 
 
 class Actor(nn.Module):

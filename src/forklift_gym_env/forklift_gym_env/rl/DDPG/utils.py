@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import random
 from functools import reduce
 from forklift_gym_env.envs.utils import ObservationType, ActionType
 
@@ -70,3 +71,13 @@ def get_concatenated_obs_and_act_dims(env):
     concatenated_action_dim += reduce(lambda a,b: a * b, fork_joint_cont_action_dim)
     
     return concatenated_obs_dim, concatenated_action_dim
+
+
+def seed_everything(seed):
+    """
+    Set seed to random, numpy, torch, gym environment
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    # torch.use_deterministic_algorithms(True)
+    torch.manual_seed(seed)

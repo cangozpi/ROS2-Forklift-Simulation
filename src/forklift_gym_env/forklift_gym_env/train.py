@@ -5,10 +5,22 @@ from forklift_gym_env.rl.DDPG.DDPG_Agent import DDPG_Agent
 from forklift_gym_env.rl.DDPG.Replay_Buffer import ReplayBuffer 
 from forklift_gym_env.rl.DDPG.utils import *
 
+from torch.utils.tensorboard import SummaryWriter
+import datetime
+
+# ============================== 
+save_every = 2
+save_path = "hehehe.pkl"
+# ============================== 
 
 def main():
+    # Initialize Tensorboard
+    log_dir, run_name = "logs_tensorboard/", "DDPG_agent_" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tb_summaryWriter = SummaryWriter(log_dir + run_name)
+
     # Start Env
     env = gym.make('forklift_gym_env/ForkliftWorld-v0')
+    seed_everything(env.config["seed"]) # set seed
     time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
     cur_episode = 0
     cum_episode_rewards = 0
@@ -21,7 +33,7 @@ def main():
     agent.train() # TODO: handle .eval() case for testing the model too.
     replay_buffer = ReplayBuffer(env.config["replay_buffer_size"], concatenated_obs_dim, concatenated_action_dim, env.config["batch_size"])
 
-    obs, info = env.reset()
+    obs, info = env.reset(seed=env.config["seed"])
     obs = flatten_and_concatenate_observation(obs)
     while cur_episode < env.config["total_episodes"]: # simulate action taking of an agent for debugging the env
         # For warmup_steps many iterations take random actions to explore better
@@ -53,7 +65,7 @@ def main():
         action = flatten_and_concatenate_action(action) 
         replay_buffer.append(obs, action, reward, next_obs, term) 
 
-        # Update current staarray(-0.9692238, dtype=float32)]te
+        # Update current state
         obs = next_obs
 
         # Update model if its time
@@ -63,17 +75,30 @@ def main():
                 state_batch, action_batch, reward_batch, next_state_batch, terminal_batch = replay_buffer.sample_batch() 
                 agent.update(state_batch, action_batch, reward_batch, next_state_batch, terminal_batch)
 
+        
+        # Save the model
+        if (info["iteration"] > env.config["warmup_steps"]) and (info["iteration"] % save_every == 0):
+            print("Saving the model ...")
+            agent.save_model()
 
 
 
         if info["verbose"]:
             print(f'Episode: {cur_episode}, Iteration: {info["iteration"]}/{info["max_episode_length"]},', 
             f'Agent_location: {info["agent_location"]}, Target_location: {info["target_location"]}, Reward: {info["reward"]}')
+        
+
 
         if done:
-            obs, info = env.reset()
+            # Log to Tensorboard
+            tb_summaryWriter.add_scalar("Training Reward", reward, cur_episode)
+
+            # Reset env
+            obs, info = env.reset(seed=env.config["seed"])
             obs = flatten_and_concatenate_observation(obs)
             time.sleep(3)
+            # Reset episode parameters for a new episode
             cur_episode += 1
             cum_episode_rewards = 0
+
 

@@ -1,5 +1,5 @@
 verbose: True # Whether to print info.
-max_episode_length: 3000 # maximum iteration length of an episode.
+max_episode_length: 10 # maximum iteration length of an episode.
 entity_name: 'forklift_bot' # entity name of the forklift robot in the simulation.
 ros_controller_names:  ['joint_broad', 'diff_cont', 'fork_joint_controller'] # ROS2 controllers that are activated. (Check out forklift_robot pkg my_controllers.yaml)
 tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state.
@@ -32,4 +32,5 @@ gamma: 0.09 # next state discount rate
 tau: 0.1 # tau value used in updating the target networks using polyak averaging (i.e. targ_net = tau*targ_net + (1-tau) * net).
 replay_buffer_size: 100 # size of the replay buffer
 batch_size: 32
+seed: 42 # used to set seed for reproducibility
 # =======================================
