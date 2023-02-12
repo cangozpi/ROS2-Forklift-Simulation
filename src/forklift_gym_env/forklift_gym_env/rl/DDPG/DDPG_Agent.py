@@ -7,7 +7,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
     """
     Refer to https://spinningup.openai.com/en/latest/algorithms/ddpg.html for implementation details.
     """
-    def __init__(self, obs_dim, action_dim, actor_hidden_dims, critic_hidden_dims, epsilon, epsilon_decay, gamma, tau):
+    def __init__(self, obs_dim, action_dim, actor_hidden_dims, critic_hidden_dims, lr, epsilon, epsilon_decay, gamma, tau):
         self.mode = "train"
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
@@ -20,8 +20,8 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         self.actor_target = deepcopy(self.actor)
         self.critic_target = deepcopy(self.critic)
 
-        self.optim_actor = torch.optim.Adam(self.actor.parameters())
-        self.optim_critic = torch.optim.Adam(self.critic.parameters())
+        self.optim_actor = torch.optim.Adam(self.actor.parameters(), lr)
+        self.optim_critic = torch.optim.Adam(self.critic.parameters(), lr)
 
         self.critic_loss_func = torch.nn.MSELoss()
 
@@ -80,6 +80,8 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
             target_param.data.copy_(
                 (target_param.data * self.tau) + (param.data * (1.0 - self.tau)) 
                     )
+        
+        return critic_loss, actor_loss
 
 
     def train(self):

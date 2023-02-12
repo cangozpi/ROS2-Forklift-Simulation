@@ -31,12 +31,16 @@ def flatten_and_concatenate_action(action):
 
 
 def convert_agent_action_to_dict(action, env):
+    """
+    scales [-1,1] range predicted actions to [env.action_space['...'].high, env.action_space['...'].high] range, and 
+    sets actions which are not predicted by the agent with zeros.
+    """
     action_dict = {}
     if ActionType.DIFF_CONT in env.act_types:
         action_dict = {
             **action_dict,
             **{
-                "diff_cont_action": action[0:2].cpu().detach().numpy()
+                "diff_cont_action": action[0:2].cpu().detach().numpy() * abs(env.action_space['diff_cont_action'].high)
             }
         }
     else:
@@ -52,7 +56,7 @@ def convert_agent_action_to_dict(action, env):
         action_dict = {
             **action_dict,
             **{
-                "fork_joint_cont_action": np.asarray([action[2].cpu().detach().numpy()])
+                "fork_joint_cont_action": np.asarray([action[2].cpu().detach().numpy()]) * abs(env.action_space['fork_joint_cont_action'].high)
             }
         }
     else:

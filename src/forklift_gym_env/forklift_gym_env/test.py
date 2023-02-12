@@ -26,26 +26,23 @@ def main():
     agent = DDPG_Agent(concatenated_obs_dim, concatenated_action_dim, \
         env.config["actor_hidden_dims"], env.config["critic_hidden_dims"], float(env.config["lr"]), \
             env.config["epsilon"], env.config["epsilon_decay"], env.config["gamma"], env.config["tau"])
-    agent.train() # TODO: handle .eval() case for testing the model too.
-    replay_buffer = ReplayBuffer(env.config["replay_buffer_size"], concatenated_obs_dim, concatenated_action_dim, env.config["batch_size"])
+    # Load a pre-trained agent_model
+    agent.load_model()
+    if env.config["verbose"]:
+        print("Loaded a pre-trained agent...")
+
+    agent.eval() # TODO: handle .eval() case for testing the model too.
 
     obs, info = env.reset(seed=env.config["seed"])
     obs = flatten_and_concatenate_observation(obs, env)
     while cur_episode < env.config["total_episodes"]: # simulate action taking of an agent for debugging the env
-        # For warmup_steps many iterations take random actions to explore better
-        if env.cur_iteration < env.config["warmup_steps"]: # take random actions
-            action = env.action_space.sample()
-            # Take action
-            next_obs, reward, done, _, info = env.step(action)
-        else: # agent's policy takes action
-            with torch.no_grad():
-                obs = torch.unsqueeze(obs, dim=0)
-                action = agent.choose_action(obs) # predict action in the range of [-1,1]
-                action = torch.squeeze(action, dim=0)
-            action = convert_agent_action_to_dict(action, env) # convert agent action to action dict so that env.step() can parse it
-            # Take action
-            next_obs, reward, done, _, info = env.step(action)
-
+        with torch.no_grad():
+            obs = torch.unsqueeze(obs, dim=0)
+            action = agent.choose_action(obs) # predict action in the range of [-1,1]
+            action = torch.squeeze(action, dim=0)
+        action = convert_agent_action_to_dict(action, env) # convert agent action to action dict so that env.step() can parse it
+        # Take action
+        next_obs, reward, done, _, info = env.step(action)
         next_obs = flatten_and_concatenate_observation(next_obs, env)
 
         cum_episode_rewards += reward
@@ -58,25 +55,9 @@ def main():
         
         # Store experience in replay buffer
         action = flatten_and_concatenate_action(action) 
-        replay_buffer.append(obs, action, reward, next_obs, term) 
 
         # Update current state
         obs = next_obs
-
-        # Update model if its time
-        if (info["iteration"] % env.config["update_every"]== 0) and (info["iteration"] > env.config["warmup_steps"]):
-            print(f"Updating the agent with {env.config['num_updates']} sampled batches.")
-            for _ in range(env.config["num_updates"]):
-                state_batch, action_batch, reward_batch, next_state_batch, terminal_batch = replay_buffer.sample_batch() 
-                critic_loss, actor_loss = agent.update(state_batch, action_batch, reward_batch, next_state_batch, terminal_batch)
-
-        
-        # Save the model
-        if (info["iteration"] > env.config["warmup_steps"]) and (info["iteration"] % env.config["save_every"]== 0):
-            print("Saving the model ...")
-            agent.save_model()
-
-
 
         if info["verbose"]:
             print(f'Episode: {cur_episode}, Iteration: {info["iteration"]}/{info["max_episode_length"]},', 
@@ -86,9 +67,7 @@ def main():
 
         if done:
             # Log to Tensorboard
-            tb_summaryWriter.add_scalar("Training Reward", reward, cur_episode)
-            tb_summaryWriter.add_scalar("Critic Loss", critic_loss, cur_episode)
-            tb_summaryWriter.add_scalar("Actor Loss", actor_loss, cur_episode)
+            tb_summaryWriter.add_scalar("Test Reward", reward, cur_episode)
 
             # Reset env
             obs, info = env.reset(seed=env.config["seed"])
