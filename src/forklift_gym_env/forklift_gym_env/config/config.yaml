@@ -1,13 +1,13 @@
 verbose: True # Whether to print info.
-max_episode_length: 40 # maximum iteration length of an episode.
+max_episode_length: 200 # maximum iteration length of an episode.
 entity_name: 'forklift_bot' # entity name of the forklift robot in the simulation.
 ros_controller_names:  ['joint_broad', 'diff_cont', 'fork_joint_controller'] # ROS2 controllers that are activated. (Check out forklift_robot pkg my_controllers.yaml)
 tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state.
 tolerance_y: 1.59  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state.
 agent_pose_position_z: 0.30 # agent's z coordinate when spawned in the world.
 world_file_name: 'collision_detection.world' # specifies world used for gazebo simulation. These worlds are available in /world folder.
-observation_types: ["target_tf", "tf", "depth_camera_raw_image", "collision_detection"] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['tf', 'depth_camera_raw_image', 'collision_detecion']
-reward_types: ["L2_distance", "collision_penalty"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options.
+observation_types: ["target_tf", "tf"] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['target_tf', 'tf', 'depth_camera_raw_image', 'collision_detecion']
+reward_types: ["L2_distance"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty"])
 action_types: ["differential_control"] # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options. (e.g. ["differential_control", "jork_joint_control"])
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
 render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.

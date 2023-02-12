@@ -86,6 +86,7 @@ class SimulationController():
 
         cur_node.destroy_node()
 
+
     def send_unpause_physics_client_request(self):
         cur_node = rclpy.create_node('unpause_physics_client')        
         use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)

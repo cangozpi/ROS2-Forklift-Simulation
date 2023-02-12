@@ -95,7 +95,7 @@
         </collision>
         <inertial>
             <origin xyz="0 0 0" rpy="0 0 0"/>
-            <mass value="12" />
+            <mass value="120" />
             <inertia ixx="2.26" ixy="0.0" ixz="0.0" iyy="6.26" iyz="0.0" izz="8.5" />
         </inertial>
     </link>
@@ -181,11 +181,22 @@
         </xacro:inertial_cylinder>
     </link>
 
-    <joint name="back_wheel_joint" type="fixed">
+    <!-- <joint name="back_wheel_joint" type="fixed">
         <parent link="chassis_bottom_link"/>
         <child link="back_wheel_link"/>
         <origin xyz=" 0 -${back_wheel_length_offset} 0" rpy="0 -${pi/2} 0" />
+    </joint> -->
+
+    <joint name="back_wheel_joint" type="fixed">
+        <parent link="chassis_bottom_link"/>
+        <child link="back_wheel_link"/>
+        <origin xyz=" 0 -${back_wheel_length_offset} 0" />
     </joint>
+    <gazebo reference="back_wheel_link">
+        <material>Gazebo/White</material>
+        <mu1 value="0.001"/>
+        <mu2 value="0.001"/>
+    </gazebo>
     <!-- <joint name="back_wheel_joint" type="continuous">
         <parent link="chassis_bottom_link"/>
         <child link="back_wheel_link"/>
