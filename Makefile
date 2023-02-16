@@ -12,6 +12,9 @@ clean_build: clean build
 train:
 	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_training
 
+train_HER:
+	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_HER_training
+
 test:
 	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_testing
 

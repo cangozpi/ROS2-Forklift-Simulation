@@ -1,5 +1,4 @@
 verbose: True # Whether to print info.
-max_episode_length: 200 # maximum iteration length of an episode.
 entity_name: 'forklift_bot' # entity name of the forklift robot in the simulation.
 ros_controller_names:  ['joint_broad', 'diff_cont', 'fork_joint_controller'] # ROS2 controllers that are activated. (Check out forklift_robot pkg my_controllers.yaml)
 tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state.
@@ -21,11 +20,12 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 
 # ========== HYPERPARAMTERS ============= 
 total_episodes: 200 # total number of episodes to train
+max_episode_length: 5 # maximum iteration length of an episode.
 warmup_steps: 20 # number of steps to take random actions before using the agents policy
 update_every: 20 # update model after every update_every steps.
 num_updates: 2 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
-actor_hidden_dims: [400, 300] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
-critic_hidden_dims: [400, 300] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
+actor_hidden_dims: [64, 64, 64] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
+critic_hidden_dims: [64, 64, 64] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
 lr: 1e-3 # learning rate
 epsilon: 1.0 # epsilon used for multiplying the gaussian distribution sample to obtain the noise to add to the agent's action (exploration).
 epsilon_decay: 0.001 # every time an action is taken epsilon is reduced by this amount (i.e. epsilon -= epsilon_decay).
