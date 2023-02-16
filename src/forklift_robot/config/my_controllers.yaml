@@ -46,8 +46,8 @@ diff_cont: # refer to https://github.com/ros-controls/ros2_controllers/blob/mast
     right_wheel_names: [right_front_wheel_joint]
     left_wheel_names: [left_front_wheel_joint]
     # wheel_separation: 0.655
-    wheel_separation: 1.115 # equals $chassis_bottom_width
-    wheel_radius: 0.30 # equals front_wheel_radius
+    wheel_separation: 1.115 # equals $chassis_bottom_width in forklift.urdf.xacro
+    wheel_radius: 0.30 # equals front_wheel_radius in forklift.urdf.xacro
 
     use_stamped_vel: false
 

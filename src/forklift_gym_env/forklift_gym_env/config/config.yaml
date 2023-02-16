@@ -11,7 +11,7 @@ reward_types: ["L2_distance"] # specifies the reward functions being used (accum
 action_types: ["differential_control"] # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options. (e.g. ["differential_control", "jork_joint_control"])
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
 render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
-step_duration: 0_500_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds.
+step_duration: 0_050_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds.
 gui: True # Whether to launch gzclient. gzclient is run when it is True.
 pallet_model_sdf_path: "pallet/model.sdf" # path to the model sdf file which will be used as the pallet model wrt build/forklift_gym_env/models/ path. (e.g. "pallet/model.sdf")
 collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chassis_top_link', 'fork_base_link',  
@@ -31,7 +31,7 @@ epsilon: 1.0 # epsilon used for multiplying the gaussian distribution sample to 
 epsilon_decay: 0.001 # every time an action is taken epsilon is reduced by this amount (i.e. epsilon -= epsilon_decay).
 gamma: 0.09 # next state discount rate
 tau: 0.1 # tau value used in updating the target networks using polyak averaging (i.e. targ_net = tau*targ_net + (1-tau) * net).
-replay_buffer_size: 200 # size of the replay buffer
+replay_buffer_size: 1000 # size of the replay buffer
 batch_size: 32
 seed: 42 # used to set seed for reproducibility
 save_every: 20 # specifies after every how many iterations the agent model is saved
