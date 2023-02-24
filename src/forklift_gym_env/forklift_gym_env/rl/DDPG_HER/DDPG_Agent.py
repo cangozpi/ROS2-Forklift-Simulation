@@ -56,7 +56,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         """
         # Compute Q_targets
         Q_targets = reward_batch + \
-            ((1 - terminal_batch.int()) * self.gamma * self.critic_target(next_state_batch, self.actor_target(next_state_batch, goal_state_batch)), goal_state_batch)
+            ((1 - terminal_batch.int()) * self.gamma * self.critic_target(next_state_batch, self.actor_target(next_state_batch, goal_state_batch), goal_state_batch))
 
         # Update Q function (Critic)
         self.critic.zero_grad()
@@ -68,7 +68,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
 
         # Update policy (Actor)
         self.actor.zero_grad()
-        actor_loss = - torch.mean(self.critic(state_batch, self.actor(state_batch, goal_state_batch)), goal_state_batch)
+        actor_loss = - torch.mean(self.critic(state_batch, self.actor(state_batch, goal_state_batch), goal_state_batch))
         actor_loss.backward()
         self.optim_actor.step()
 

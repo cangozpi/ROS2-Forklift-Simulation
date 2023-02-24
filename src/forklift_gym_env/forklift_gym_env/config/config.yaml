@@ -5,9 +5,9 @@ tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance 
 tolerance_y: 1.59  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state.
 agent_pose_position_z: 0.30 # agent's z coordinate when spawned in the world.
 world_file_name: 'collision_detection.world' # specifies world used for gazebo simulation. These worlds are available in /world folder.
-observation_types: ["target_tf", "tf"] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['target_tf', 'tf', 'depth_camera_raw_image', 'collision_detecion']
+observation_types: ["position", "target_tf"] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['position', 'target_tf', 'tf', 'depth_camera_raw_image', 'collision_detecion']
 reward_types: ["L2_distance"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty"])
-action_types: ["differential_control"] # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options. (e.g. ["differential_control", "jork_joint_control"])
+action_types: ["differential_control"] # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options. (e.g. ["differential_control", "fork_joint_control"])
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
 render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
 step_duration: 0_050_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds.
@@ -20,19 +20,20 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 
 # ========== HYPERPARAMTERS ============= 
 total_episodes: 200 # total number of episodes to train
-max_episode_length: 5 # maximum iteration length of an episode.
-warmup_steps: 20 # number of steps to take random actions before using the agents policy
-update_every: 20 # update model after every update_every steps.
+max_episode_length: 500 # maximum iteration length of an episode.
+warmup_steps: 100 # number of steps to take random actions before using the agents policy
+update_every: 200 # update model after every update_every steps.
 num_updates: 2 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
 actor_hidden_dims: [64, 64, 64] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
 critic_hidden_dims: [64, 64, 64] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
 lr: 1e-3 # learning rate
 epsilon: 1.0 # epsilon used for multiplying the gaussian distribution sample to obtain the noise to add to the agent's action (exploration).
 epsilon_decay: 0.001 # every time an action is taken epsilon is reduced by this amount (i.e. epsilon -= epsilon_decay).
-gamma: 0.09 # next state discount rate
+gamma: 0.98 # next state discount rate
 tau: 0.1 # tau value used in updating the target networks using polyak averaging (i.e. targ_net = tau*targ_net + (1-tau) * net).
 replay_buffer_size: 1000 # size of the replay buffer
-batch_size: 32
+batch_size: 64
 seed: 42 # used to set seed for reproducibility
-save_every: 20 # specifies after every how many iterations the agent model is saved
-# =======================================
+save_every: 2000 # specifies after every how many updates to the model the agent model is saved
+# ======================================= HER 
+k: 4 # Number of goals (k) used in HER (Hindsight Experience Replay)

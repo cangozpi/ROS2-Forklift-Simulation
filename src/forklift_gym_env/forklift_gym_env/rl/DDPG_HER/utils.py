@@ -13,11 +13,29 @@ def flatten_and_concatenate_observation(obs, env):
     #     target_tf_obs = torch.tensor(obs['target_transform_observation'])
     #     obs_flattened = torch.concat((obs_flattened.reshape(-1), target_tf_obs.reshape(-1)), dim=0)
 
+    if ObservationType.POSITION in env.obs_types:
+        tf_obs = torch.tensor([
+            # Add transformations:
+            obs['forklift_robot_position_observation']['chassis_bottom_link']['translation'].x, 
+            obs['forklift_robot_position_observation']['chassis_bottom_link']['translation'].y, 
+            obs['forklift_robot_position_observation']['chassis_bottom_link']['translation'].z,
+            # Add rotations:
+            obs['forklift_robot_position_observation']['chassis_bottom_link']['rotation'].x, 
+            obs['forklift_robot_position_observation']['chassis_bottom_link']['rotation'].y, 
+            obs['forklift_robot_position_observation']['chassis_bottom_link']['rotation'].z, 
+            obs['forklift_robot_position_observation']['chassis_bottom_link']['rotation'].w, 
+            ])
+        obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
+        
+        # Goal state for HER buffer is [translation_x, translation_y] of the forklift robot
+        goal_state = np.array([
+            obs['forklift_robot_position_observation']['chassis_bottom_link']['translation'].x, 
+            obs['forklift_robot_position_observation']['chassis_bottom_link']['translation'].y, 
+        ])
+
     if ObservationType.TF in env.obs_types:
         tf_obs = torch.tensor(obs['forklift_robot_tf_observation']['chassis_bottom_link']['transform'])
         obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
-        
-        goal_state = tf_obs = obs['forklift_robot_tf_observation']['chassis_bottom_link']['transform'][:2] # [translation_x, translation_y]
 
     if ObservationType.DEPTH_CAMERA_RAW_IMAGE in env.obs_types:
         depth_camera_raw_image_obs = torch.tensor(obs['depth_camera_raw_image_observation'])
@@ -79,6 +97,10 @@ def get_concatenated_obs_and_act_dims(env):
     if ObservationType.TARGET_TRANSFORM in env.obs_types: # This functions as the goal state
         target_tf_obs_dim = env.observation_space['target_transform_observation'].shape # --> [2,]
         goal_state_dim += reduce(lambda a,b: a * b, target_tf_obs_dim)
+    if ObservationType.POSITION in env.obs_types:
+        tf_obs_dim = [env.observation_space['forklift_robot_position_observation']['chassis_bottom_link']['translation'].shape[0] + \
+            env.observation_space['forklift_robot_position_observation']['chassis_bottom_link']['rotation'].shape[0], ] # --> [7,]
+        concatenated_obs_dim += reduce(lambda a,b: a * b, tf_obs_dim)
     if ObservationType.TF in env.obs_types:
         tf_obs_dim = env.observation_space['forklift_robot_tf_observation']['chassis_bottom_link']['transform'].shape # --> [7,]
         concatenated_obs_dim += reduce(lambda a,b: a * b, tf_obs_dim)

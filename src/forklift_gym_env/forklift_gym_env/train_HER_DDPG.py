@@ -20,6 +20,7 @@ def main():
     time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
     cur_episode = 0
     cum_episode_rewards = 0
+    cur_num_updates = 0 # total number of updates including all the episodes
 
     concatenated_obs_dim, concatenated_action_dim, goal_state_dim = get_concatenated_obs_and_act_dims(env)
 
@@ -67,13 +68,25 @@ def main():
         # Update model if its time
         if (info["iteration"] % env.config["update_every"]== 0) and (info["iteration"] > env.config["warmup_steps"]):
             print(f"Updating the agent with {env.config['num_updates']} sampled batches.")
+            critic_loss = 0
+            actor_loss = 0
             for _ in range(env.config["num_updates"]):
                 state_batch, action_batch, reward_batch, next_state_batch, terminal_batch, goal_state_batch = replay_buffer.sample_batch() 
-                critic_loss, actor_loss = agent.update(state_batch, action_batch, reward_batch, next_state_batch, terminal_batch, goal_state_batch)
+                cur_critic_loss, cur_actor_loss = agent.update(state_batch, action_batch, reward_batch, next_state_batch, terminal_batch, goal_state_batch)
+
+                # Accumulate loss for logging
+                critic_loss += cur_critic_loss
+                actor_loss += cur_actor_loss
+
+            # Log to Tensorboard
+            tb_summaryWriter.add_scalar("Critic Loss", critic_loss, cur_num_updates)
+            tb_summaryWriter.add_scalar("Actor Loss", actor_loss, cur_num_updates)
+
+            cur_num_updates += 1
 
         
         # Save the model
-        if (info["iteration"] > env.config["warmup_steps"]) and (info["iteration"] % env.config["save_every"]== 0):
+        if (cur_num_updates % env.config["save_every"]== 0):
             print("Saving the model ...")
             agent.save_model()
 
@@ -88,11 +101,10 @@ def main():
         if done:
             # Log to Tensorboard
             tb_summaryWriter.add_scalar("Training Reward", reward, cur_episode)
-            # tb_summaryWriter.add_scalar("Critic Loss", critic_loss, cur_episode)
-            # tb_summaryWriter.add_scalar("Actor Loss", actor_loss, cur_episode)
+            tb_summaryWriter.add_scalar("Training epsilon", agent.epsilon, cur_episode)
 
             # Commit HER experiences to replay_bufferj
-            replay_buffer.commit_append(k=4, calc_reward_func=env.calc_reward, check_goal_achieved_func=env.check_goal_achieved) # TODO: set k from config.yaml
+            replay_buffer.commit_append(k=env.config["k"], calc_reward_func=env.calc_reward, check_goal_achieved_func=env.check_goal_achieved) # TODO: set k from config.yaml
 
             # Reset env
             obs, info = env.reset(seed=env.config["seed"])

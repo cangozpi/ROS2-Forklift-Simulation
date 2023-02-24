@@ -9,7 +9,7 @@ build:
 
 clean_build: clean build
 
-train:
+train_DDPG:
 	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_training
 
 train_HER:
