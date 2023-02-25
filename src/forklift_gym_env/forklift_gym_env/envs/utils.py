@@ -225,6 +225,8 @@ class ObservationType(Enum):
     """
     TF = "tf"
     POSITION = "position"
+    FORK_POSITION = "fork_position"
+    PALLET_POSITION = "pallet_position"
     TARGET_TRANSFORM = "target_tf"
     DEPTH_CAMERA_RAW_IMAGE = "depth_camera_raw_image"
     COLLISION_DETECTION = "collision_detection"

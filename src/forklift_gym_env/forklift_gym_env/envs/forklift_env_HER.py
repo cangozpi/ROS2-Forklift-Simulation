@@ -15,6 +15,7 @@ from forklift_gym_env.envs.simulation_controller import SimulationController
 # Sensor Subscribers
 from forklift_gym_env.envs.sensor_subscribers.forklift_robot_tf_subscriber import ForkliftRobotTfSubscriber
 from forklift_gym_env.envs.sensor_subscribers.forklift_robot_frame_listener import FrameListener
+from forklift_gym_env.envs.sensor_subscribers.get_entity_state_client import GetEntityStateClient
 from forklift_gym_env.envs.sensor_subscribers.depth_camera_raw_image_subscriber import DepthCameraRawImageSubscriber
 from forklift_gym_env.envs.sensor_subscribers.collision_detection_subscriber import CollisionDetectionSubscriber
 
@@ -62,6 +63,8 @@ class ForkliftEnv(gym.Env):
         # -------------------- /tf
         self.forklift_robot_tf_subscriber = self.initialize_forklift_robot_tf_subscriber()
         self.forklift_robot_frame_listener = FrameListener()
+        # -------------------- /gazebo/get_entity_state
+        self.get_entity_state_client = GetEntityStateClient()
         # -------------------- 
         # -------------------- /camera/depth/image/raw
         self.depth_camera_raw_image_subscriber = self.initialize_depth_camera_raw_image_subscriber(normalize_img = True)
@@ -196,6 +199,96 @@ class ForkliftEnv(gym.Env):
         return f
 
 
+    def _get_obs_forklift_position_decorator(self, func):
+        def _get_obs_position(self):
+            # Obtain a tf observation which belongs to a time after the action was taken
+            current_forklift_robot_position_obs = None
+            flag = True
+            while (current_forklift_robot_position_obs is None) or flag:
+                # Obtain forklift_robot frame observation -----
+                t = self.get_entity_state_client.get_entity_state("fork_base_link", "world")
+                if t is not None and (t.success == True):
+                    current_forklift_robot_position_obs = t
+                    flag = False
+
+                    # Make sure that observation was obtained after the action was taken at least 'step_duration' time later
+                    if (int(str(t.header.stamp.sec) \
+                        + (str(t.header.stamp.nanosec))) \
+                            < (self.ros_clock.nanoseconds + self.config['step_duration'])):
+                            flag = True
+                            break
+
+            # --------------------------------------------
+            return {
+                'forklift_position_observation': {
+                    'chassis_bottom_link': {
+                        'pose': {
+                            'position': current_forklift_robot_position_obs.state.pose.position,
+                            'orientation': current_forklift_robot_position_obs.state.pose.orientation
+                        },
+                        'twist': {
+                            'linear': current_forklift_robot_position_obs.state.twist.linear,
+                            'angular': current_forklift_robot_position_obs.state.twist.angular
+                        }
+                    } 
+                },
+            }
+        
+
+        def f():
+            return {
+                **(func()),
+                **(_get_obs_position(self))
+            }
+
+        return f
+
+
+    def _get_obs_pallet_position_decorator(self, func):
+        def _get_obs_position(self):
+            # Obtain a tf observation which belongs to a time after the action was taken
+            current_pallet_position_obs = None
+            flag = True
+            while (current_pallet_position_obs is None) or flag:
+                # Obtain forklift_robot frame observation -----
+                t = self.get_entity_state_client.get_entity_state("pallet", "world")
+                if t is not None and (t.success == True):
+                    current_pallet_position_obs = t
+                    flag = False
+
+                    # Make sure that observation was obtained after the action was taken at least 'step_duration' time later
+                    if (int(str(t.header.stamp.sec) \
+                        + (str(t.header.stamp.nanosec))) \
+                            < (self.ros_clock.nanoseconds + self.config['step_duration'])):
+                            flag = True
+                            break
+
+            # --------------------------------------------
+            return {
+                'pallet_position_observation': {
+                    'pallet_model': {
+                        'pose': {
+                            'position': current_pallet_position_obs.state.pose.position,
+                            'orientation': current_pallet_position_obs.state.pose.orientation
+                        },
+                        'twist': {
+                            'linear': current_pallet_position_obs.state.twist.linear,
+                            'angular': current_pallet_position_obs.state.twist.angular
+                        }
+                    } 
+                },
+            }
+        
+
+        def f():
+            return {
+                **(func()),
+                **(_get_obs_position(self))
+            }
+
+        return f
+
+
     def _get_obs_depth_camera_raw_image_decorator(self, func):
         def _get_obs_depth_camera_raw_image(self):
             # Depth_camera_raw_image observation -----
@@ -325,8 +418,8 @@ class ForkliftEnv(gym.Env):
             "iteration": self.cur_iteration,
             "max_episode_length": self.max_episode_length,
             "reward": reward,
-            "agent_location": observation['forklift_robot_position_observation']['chassis_bottom_link']['translation'], # [translation_x, translation_y]
-            "target_location": self._target_transform,
+            "agent_location": observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'], # [translation_x, translation_y]
+            "target_location": self._target_transform, # can be changed with observation['pallet_position']['pallet_model']['pose']['position']
             "verbose": self.config["verbose"]
         }
         return info
@@ -344,7 +437,7 @@ class ForkliftEnv(gym.Env):
         self._target_transform = self._agent_location
         while np.array_equal(self._target_transform, self._agent_location):
             self._target_transform = np.random.random(size=2) * 40 - 20 # in the range [-20, 20]
-
+ 
 
         # Unpause sim so that simulation can be reset
         self.simulation_controller_node.send_unpause_physics_client_request()
@@ -383,7 +476,8 @@ class ForkliftEnv(gym.Env):
 
         # Get observation
         observation = self._get_obs()
-        print(observation['forklift_robot_position_observation'])
+        print(observation['forklift_position_observation'])
+        print(observation['pallet_position_observation'])
 
         # Render
         self.render(observation)
@@ -426,7 +520,8 @@ class ForkliftEnv(gym.Env):
         self.ros_clock = self.forklift_robot_frame_listener.get_clock().now() # will be used to make sure observation is coming from after the action was taken
 
         observation = self._get_obs()
-        print(observation['forklift_robot_position_observation'])
+        print(observation['forklift_position_observation'])
+        print(observation['pallet_position_observation'])
 
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
@@ -551,13 +646,42 @@ class ForkliftEnv(gym.Env):
             assert obs_type in ObservationType
 
             # Extend observation_space according to obs_type 
-            if obs_type == ObservationType.POSITION:
+            if obs_type == ObservationType.FORK_POSITION:
+               obs_space_dict["forklift_position_observation"] = spaces.Dict({
+                        "chassis_bottom_link": spaces.Dict({
+                            "pose": spaces.Dict({
+                                "position": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32),
+                                "orientation": spaces.Box(low = -float("inf") * np.ones((4,)), high = float("inf") * np.ones((4,)), dtype = np.float32)
+                            }),
+                            "twist": spaces.Dict({
+                                "linear": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32),
+                                "angular": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32)
+                            })
+                        })
+               })
+
+            elif obs_type == ObservationType.PALLET_POSITION:
+               obs_space_dict["pallet_position_observation"] = spaces.Dict({
+                        "pallet_model": spaces.Dict({
+                            "pose": spaces.Dict({
+                                "position": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32),
+                                "orientation": spaces.Box(low = -float("inf") * np.ones((4,)), high = float("inf") * np.ones((4,)), dtype = np.float32)
+                            }),
+                            "twist": spaces.Dict({
+                                "linear": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32),
+                                "angular": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32)
+                            })
+                        })
+               })
+
+            elif obs_type == ObservationType.POSITION:
                obs_space_dict["forklift_robot_position_observation"] = spaces.Dict({
                         "chassis_bottom_link": spaces.Dict({
                             "translation": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32), # TODO: set these values to min and max from ros diff_controller
                             "rotation": spaces.Box(low = -float("inf") * np.ones((4,)), high = float("inf") * np.ones((4,)), dtype = np.float32), # TODO: set these values to min and max from ros diff_controller
                             })
                         })
+
             elif obs_type == ObservationType.TARGET_TRANSFORM:
                obs_space_dict["target_transform_observation"] = spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float32) # TODO: set these values to min and max from ros diff_controller
 
@@ -637,7 +761,13 @@ class ForkliftEnv(gym.Env):
         
         # Extend _get_obs function according to obs_types
         for obs_type in obs_types:
-            if obs_type == ObservationType.POSITION:
+            if obs_type == ObservationType.FORK_POSITION:
+                _get_obs = self._get_obs_forklift_position_decorator(_get_obs) # get absolute position of the forklift_robot's links
+
+            elif obs_type == ObservationType.PALLET_POSITION:
+                _get_obs = self._get_obs_pallet_position_decorator(_get_obs) # get absolute position of the pallet model 
+
+            elif obs_type == ObservationType.POSITION:
                 _get_obs = self._get_obs_frame_decorator(_get_obs) # get target transformation
 
             elif obs_type == ObservationType.TARGET_TRANSFORM:
@@ -680,10 +810,11 @@ class ForkliftEnv(gym.Env):
                         reward: -L2 distance
 
                     """
-                    forklift_robot_transform = observation['forklift_robot_position_observation']
+                    forklift_robot_transform = observation['forklift_position_observation']
                     # Return negative L2 distance btw chassis_bottom_link and the target location as reward
                     # Note that we are only using translation here, NOT using rotation information
-                    robot_transform_translation = [forklift_robot_transform['chassis_bottom_link']['translation'].x, forklift_robot_transform['chassis_bottom_link']['translation'].y] # [translation_x, translation_y]
+                    robot_transform_translation = [forklift_robot_transform['chassis_bottom_link']['pose']['position'].x, \
+                        forklift_robot_transform['chassis_bottom_link']['pose']['position'].y] # [translation_x, translation_y]
                     if goal_state is None:
                         l2_dist = np.linalg.norm(robot_transform_translation - self._target_transform)
                     else:
@@ -741,7 +872,8 @@ class ForkliftEnv(gym.Env):
         if goal state is reached by the agent.
         """
         # Get (translation_x, translation_y) of forklift robot
-        agent_location = [observation["forklift_robot_position_observation"]["chassis_bottom_link"]["translation"].x, observation["forklift_robot_position_observation"]["chassis_bottom_link"]["translation"].y]
+        agent_location = [observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x, \
+            observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y]
 
         # Check if agent is withing the tolerance of target_location
         if goal_state is None:
