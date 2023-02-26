@@ -9,29 +9,36 @@ def flatten_and_concatenate_observation(obs, env):
     obs_flattened = torch.tensor([])
     goal_state = None
 
-    # if ObservationType.TARGET_TRANSFORM in env.obs_types:
-    #     target_tf_obs = torch.tensor(obs['target_transform_observation'])
-    #     obs_flattened = torch.concat((obs_flattened.reshape(-1), target_tf_obs.reshape(-1)), dim=0)
+    if ObservationType.TARGET_TRANSFORM in env.obs_types:
+        # target_tf_obs = torch.tensor(obs['target_transform_observation']) # [translation_x, translation_y] of the initial absolute position of the target
+        # obs_flattened = torch.concat((obs_flattened.reshape(-1), target_tf_obs.reshape(-1)), dim=0)
+
+        # Goal state for HER buffer is [translation_x, translation_y] of the target_transform (pallet)
+        target_tf_obs = np.array(obs['target_transform_observation']) # [translation_x, translation_y] of the initial absolute position of the target (pallet)
+        goal_state = target_tf_obs
 
     if ObservationType.FORK_POSITION in env.obs_types:
         tf_obs = torch.tensor([
-            # Add transformations:
+            # Add Pose/transformations:
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y, 
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].z,
-            # Add rotations:
+            # Add Pose/rotations:
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].x,
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].y, 
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].z, 
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].w, 
+            
+            # Add Twist/linear
+            obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].x, 
+            obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].y, 
+            obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].z,
+            # Add Twist/angular
+            obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].x, 
+            obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].y, 
+            obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z,
             ])
         obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
-        
-        # Goal state for HER buffer is [translation_x, translation_y] of the forklift robot
-        goal_state = np.array([
-            obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 
-            obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y, 
-        ])
 
     if ObservationType.PALLET_POSITION in env.obs_types:
         tf_obs = torch.tensor([
@@ -47,29 +54,7 @@ def flatten_and_concatenate_observation(obs, env):
             ])
         obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
 
-    if ObservationType.POSITION in env.obs_types:
-        tf_obs = torch.tensor([
-            # Add transformations:
-            obs['forklift_robot_position_observation']['chassis_bottom_link']['translation'].x, 
-            obs['forklift_robot_position_observation']['chassis_bottom_link']['translation'].y, 
-            obs['forklift_robot_position_observation']['chassis_bottom_link']['translation'].z,
-            # Add rotations:
-            obs['forklift_robot_position_observation']['chassis_bottom_link']['rotation'].x, 
-            obs['forklift_robot_position_observation']['chassis_bottom_link']['rotation'].y, 
-            obs['forklift_robot_position_observation']['chassis_bottom_link']['rotation'].z, 
-            obs['forklift_robot_position_observation']['chassis_bottom_link']['rotation'].w, 
-            ])
-        obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
-        
-        # Goal state for HER buffer is [translation_x, translation_y] of the forklift robot
-        goal_state = np.array([
-            obs['forklift_robot_position_observation']['chassis_bottom_link']['translation'].x, 
-            obs['forklift_robot_position_observation']['chassis_bottom_link']['translation'].y, 
-        ])
-
-    if ObservationType.TF in env.obs_types:
-        tf_obs = torch.tensor(obs['forklift_robot_tf_observation']['chassis_bottom_link']['transform'])
-        obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
+    # TODO: collision detection case is missing here
 
     if ObservationType.DEPTH_CAMERA_RAW_IMAGE in env.obs_types:
         depth_camera_raw_image_obs = torch.tensor(obs['depth_camera_raw_image_observation'])
@@ -135,7 +120,9 @@ def get_concatenated_obs_and_act_dims(env):
 
     if ObservationType.FORK_POSITION in env.obs_types:
         tf_obs_dim = [env.observation_space['forklift_position_observation']['chassis_bottom_link']['pose']['position'].shape[0] + \
-            env.observation_space['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].shape[0], ] # --> [7,]
+            env.observation_space['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].shape[0] + \
+                env.observation_space['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].shape[0] + \
+                    env.observation_space['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].shape[0], ] # --> [13,]
         concatenated_obs_dim += reduce(lambda a,b: a * b, tf_obs_dim)
 
     if ObservationType.PALLET_POSITION in env.obs_types:
@@ -143,18 +130,11 @@ def get_concatenated_obs_and_act_dims(env):
             env.observation_space['pallet_position_observation']['pallet_model']['pose']['orientation'].shape[0], ] # --> [7,]
         concatenated_obs_dim += reduce(lambda a,b: a * b, tf_obs_dim)
 
-    if ObservationType.POSITION in env.obs_types:
-        tf_obs_dim = [env.observation_space['forklift_robot_position_observation']['chassis_bottom_link']['translation'].shape[0] + \
-            env.observation_space['forklift_robot_position_observation']['chassis_bottom_link']['rotation'].shape[0], ] # --> [7,]
-        concatenated_obs_dim += reduce(lambda a,b: a * b, tf_obs_dim)
-
-    if ObservationType.TF in env.obs_types:
-        tf_obs_dim = env.observation_space['forklift_robot_tf_observation']['chassis_bottom_link']['transform'].shape # --> [7,]
-        concatenated_obs_dim += reduce(lambda a,b: a * b, tf_obs_dim)
-
     if ObservationType.DEPTH_CAMERA_RAW_IMAGE in env.obs_types:
         depth_camera_raw_img_obs_dim =  env.observation_space['depth_camera_raw_image_observation'].shape # --> [480, 640]
         concatenated_obs_dim += reduce(lambda a,b: a * b, depth_camera_raw_img_obs_dim)
+    
+    # TODO: collision detection case is missing here
 
     concatenated_action_dim = 0
     diff_cont_action_dim = env.action_space['diff_cont_action'].shape

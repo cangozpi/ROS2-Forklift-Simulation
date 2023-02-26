@@ -223,8 +223,6 @@ class ObservationType(Enum):
     """
     Specifies the observation space that is being used. Used in config.yaml
     """
-    TF = "tf"
-    POSITION = "position"
     FORK_POSITION = "fork_position"
     PALLET_POSITION = "pallet_position"
     TARGET_TRANSFORM = "target_tf"

@@ -57,12 +57,9 @@ class ForkliftEnv(gym.Env):
         self.gazebo_launch_subp = generate_and_launch_ros_description_as_new_process(self.config) # Reference to subprocess that runs these things
 
         # -------------------- 
-        # Subscribe to sensors: ============================== 
+        # Listen to sensors: ============================== 
         rclpy.init()
 
-        # -------------------- /tf
-        self.forklift_robot_tf_subscriber = self.initialize_forklift_robot_tf_subscriber()
-        self.forklift_robot_frame_listener = FrameListener()
         # -------------------- /gazebo/get_entity_state
         self.get_entity_state_client = GetEntityStateClient()
         # -------------------- 
@@ -85,7 +82,7 @@ class ForkliftEnv(gym.Env):
         # -------------------- 
         # ====================================================
 
-        # Create Clients for Services: ============================== 
+        # Create Clients for Simulation Services: ============================== 
         # --------------------  /reset_simulation, /pause_physics, /unpause_physics, /controller_manager/*
         self.simulation_controller_node = SimulationController()
         # -------------------- 
@@ -117,84 +114,6 @@ class ForkliftEnv(gym.Env):
                 **(_get_obs_target_transform(self))
             }
             # do NOT reset observations for next iteration because target_transform_observation does not change through an episode
-
-        return f
-
-
-    def _get_obs_tf_decorator(self, func):
-        def _get_obs_tf(self):
-            # Obtain a tf observation which belongs to a time after the action was taken
-            current_forklift_robot_tf_obs = {}
-            flag = True
-            while current_forklift_robot_tf_obs == {} or flag:
-                # Obtain forklift_robot_tf observation -----
-                rclpy.spin_once(self.forklift_robot_tf_subscriber)
-                current_forklift_robot_tf_obs = self.forklift_robot_tf_state
-
-                flag = False
-                for k, v in current_forklift_robot_tf_obs.items():
-                    if v['time'] < (self.ros_clock.nanoseconds + self.config['step_duration']): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.
-                        flag = True
-                        break
-                if "chassis_bottom_link" not in current_forklift_robot_tf_obs:
-                    flag = True
-            # --------------------------------------------
-
-            # reset observations for next iteration
-            self.forklift_robot_tf_state = {}
-
-            return {
-                'forklift_robot_tf_observation': {
-                    'chassis_bottom_link': current_forklift_robot_tf_obs["chassis_bottom_link"]
-                    },
-            }
-        
-
-        def f():
-            return {
-                **(func()),
-                **(_get_obs_tf(self))
-            }
-
-        return f
-
-
-    def _get_obs_frame_decorator(self, func):
-        def _get_obs_frame(self):
-            # Obtain a tf observation which belongs to a time after the action was taken
-            current_forklift_robot_position_obs = None
-            flag = True
-            while (current_forklift_robot_position_obs is None) or flag:
-                # Obtain forklift_robot frame observation -----
-                rclpy.spin_once(self.forklift_robot_frame_listener)
-                t = self.forklift_robot_frame_listener.get_transforms()
-                if t is not None:
-                    current_forklift_robot_position_obs = t
-                    flag = False
-
-                    # Make sure that observation was obtained after the action was taken at least 'step_duration' time later
-                    if (int(str(t.header.stamp.sec) \
-                        + (str(t.header.stamp.nanosec))) \
-                            < (self.ros_clock.nanoseconds + self.config['step_duration'])):
-                            flag = True
-                            break
-
-            # --------------------------------------------
-            return {
-                'forklift_robot_position_observation': {
-                    'chassis_bottom_link': {
-                        'translation': t.transform.translation,
-                        'rotation': t.transform.rotation
-                    } 
-                },
-            }
-        
-
-        def f():
-            return {
-                **(func()),
-                **(_get_obs_frame(self))
-            }
 
         return f
 
@@ -557,8 +476,6 @@ class ForkliftEnv(gym.Env):
         self.depth_camera_raw_image_subscriber.destroy_node()
         self.diff_cont_cmd_vel_unstamped_publisher.destroy_node()
         self.fork_joint_cont_cmd_publisher.destroy_node()
-        self.forklift_robot_tf_subscriber.destroy_node()
-        self.forklift_robot_frame_listener.destroy_node()
         for subscriber in self.collision_detection_subscribers:
             subscriber.destroy_node()
         rclpy.shutdown()
@@ -597,31 +514,6 @@ class ForkliftEnv(gym.Env):
 
         return DepthCameraRawImageSubscriber(depth_camera_raw_image_subscriber_cb)
     
-
-
-    def initialize_forklift_robot_tf_subscriber(self):
-       self.forklift_robot_tf_state = {}
-       def forklift_robot_tf_cb(msg):
-        for cur_msg in msg.transforms:
-            cur_msg_time = int(str(cur_msg.header.stamp.sec) + str(cur_msg.header.stamp.nanosec))
-            cur_msg_child_frame_id = cur_msg.child_frame_id
-            cur_msg_transform = cur_msg.transform
-            if cur_msg_child_frame_id not in self.forklift_robot_tf_state:
-                self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
-                    'time': cur_msg_time,
-                    'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
-                        cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
-                }
-            else:
-                if self.forklift_robot_tf_state[cur_msg_child_frame_id]['time'] < cur_msg_time: # newer information came (update)
-                    self.forklift_robot_tf_state[cur_msg_child_frame_id] = {
-                        'time': cur_msg_time,
-                        'transform': np.asarray([cur_msg_transform.translation.x, cur_msg_transform.translation.y, cur_msg_transform.translation.z, \
-                            cur_msg_transform.rotation.x, cur_msg_transform.rotation.y, cur_msg_transform.rotation.z, cur_msg_transform.rotation.w])
-                    }
-
-       return ForkliftRobotTfSubscriber(forklift_robot_tf_cb)
-
 
     def initialize_collision_detection_subscriber(self, link_name):
         """
@@ -674,24 +566,8 @@ class ForkliftEnv(gym.Env):
                         })
                })
 
-            elif obs_type == ObservationType.POSITION:
-               obs_space_dict["forklift_robot_position_observation"] = spaces.Dict({
-                        "chassis_bottom_link": spaces.Dict({
-                            "translation": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32), # TODO: set these values to min and max from ros diff_controller
-                            "rotation": spaces.Box(low = -float("inf") * np.ones((4,)), high = float("inf") * np.ones((4,)), dtype = np.float32), # TODO: set these values to min and max from ros diff_controller
-                            })
-                        })
-
             elif obs_type == ObservationType.TARGET_TRANSFORM:
                obs_space_dict["target_transform_observation"] = spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float32) # TODO: set these values to min and max from ros diff_controller
-
-            elif obs_type == ObservationType.TF:
-               obs_space_dict["forklift_robot_tf_observation"] = spaces.Dict({
-                        "chassis_bottom_link": spaces.Dict({
-                            "time": spaces.Box(low = 0.0, high = float("inf"), dtype = int),
-                            "transform": spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = np.float32) # TODO: set these values to min and max from ros diff_controller
-                            })
-                        })
 
             elif obs_type == ObservationType.DEPTH_CAMERA_RAW_IMAGE:
                 obs_space_dict['depth_camera_raw_image_observation'] = spaces.Box(low = -float("inf") * \
@@ -767,14 +643,8 @@ class ForkliftEnv(gym.Env):
             elif obs_type == ObservationType.PALLET_POSITION:
                 _get_obs = self._get_obs_pallet_position_decorator(_get_obs) # get absolute position of the pallet model 
 
-            elif obs_type == ObservationType.POSITION:
-                _get_obs = self._get_obs_frame_decorator(_get_obs) # get target transformation
-
             elif obs_type == ObservationType.TARGET_TRANSFORM:
-                _get_obs = self._get_obs_target_transform_decorator(_get_obs) # get target transformation
-
-            elif obs_type == ObservationType.TF:
-                _get_obs = self._get_obs_tf_decorator(_get_obs) # get forklift's target transformation
+                _get_obs = self._get_obs_target_transform_decorator(_get_obs) # get initial absolute position of the target/pallet 
 
             elif obs_type == ObservationType.DEPTH_CAMERA_RAW_IMAGE:
                 _get_obs = self._get_obs_depth_camera_raw_image_decorator(_get_obs)
@@ -862,7 +732,6 @@ class ForkliftEnv(gym.Env):
         }
 
         return spaces.Dict(d)
-
 
 
     def check_goal_achieved(self, observation, goal_state = None):

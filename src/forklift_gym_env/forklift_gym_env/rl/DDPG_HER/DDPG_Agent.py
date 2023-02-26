@@ -60,7 +60,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
 
         # Update Q function (Critic)
         self.critic.zero_grad()
-        Q_value_preds = self.critic(next_state_batch, action_batch, goal_state_batch)
+        Q_value_preds = self.critic(state_batch, action_batch, goal_state_batch)
         critic_loss = self.critic_loss_func(Q_value_preds, Q_targets)
         critic_loss.backward()
         self.optim_critic.step()

@@ -76,7 +76,11 @@ class ReplayBuffer:
         # Generate k many goals from the last states of the current episode
         for cur_k in range(k):
             cur_goal_obs_index = len(self.staged_obs_flattened) - 1 - cur_k
-            cur_goal = self.staged_goal_state[cur_goal_obs_index] # [translation_x, translation_y] of the goal state
+            cur_goal_state = self.staged_next_obs[cur_goal_obs_index] 
+            cur_goal = np.array([ 
+                cur_goal_state['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 
+                cur_goal_state['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y, 
+            ]) # [translation_x, translation_y] of the forklift (goal state)
             for i in range(len(self.staged_obs_flattened)):
                 # Obtain reward for the current goal
                 cur_HER_goal_reward = calc_reward_func(self.staged_next_obs[i], cur_goal)
