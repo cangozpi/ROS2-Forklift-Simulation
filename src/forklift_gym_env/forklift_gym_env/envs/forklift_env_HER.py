@@ -418,8 +418,9 @@ class ForkliftEnv(gym.Env):
             "iteration": self.cur_iteration,
             "max_episode_length": self.max_episode_length,
             "reward": reward,
-            "agent_location": observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'], # [translation_x, translation_y]
-            "target_location": self._target_transform, # can be changed with observation['pallet_position']['pallet_model']['pose']['position']
+            "agent_location": [observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x,\
+                 observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y], # [translation_x, translation_y]
+            "target_location": self._target_transform, # can be changed with: observation['pallet_position']['pallet_model']['pose']['position']
             "verbose": self.config["verbose"]
         }
         return info
@@ -472,12 +473,13 @@ class ForkliftEnv(gym.Env):
         self.simulation_controller_node.change_entity_location(self._pallet_entity_name, self._target_transform, [], \
             0.0, self.config, spawn_pallet=True)
 
-        self.ros_clock = self.forklift_robot_frame_listener.get_clock().now()
+        self.ros_clock = self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now()
 
         # Get observation
         observation = self._get_obs()
-        print(observation['forklift_position_observation'])
-        print(observation['pallet_position_observation'])
+
+        # Pause simuation so that obseration does not change until another action is taken
+        self.simulation_controller_node.send_pause_physics_client_request()
 
         # Render
         self.render(observation)
@@ -517,11 +519,9 @@ class ForkliftEnv(gym.Env):
 
 
         # Get observation after taking the action
-        self.ros_clock = self.forklift_robot_frame_listener.get_clock().now() # will be used to make sure observation is coming from after the action was taken
+        self.ros_clock = self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now() # will be used to make sure observation is coming from after the action was taken
 
         observation = self._get_obs()
-        print(observation['forklift_position_observation'])
-        print(observation['pallet_position_observation'])
 
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()

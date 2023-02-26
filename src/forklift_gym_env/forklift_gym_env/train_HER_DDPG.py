@@ -64,6 +64,7 @@ def main():
 
         # Update current state
         obs = next_obs
+        obs_flattened = next_obs_flattened #TODO: add this to DDPG only training too @bugfix !
 
         # Update model if its time
         if (info["iteration"] % env.config["update_every"]== 0) and (info["iteration"] > env.config["warmup_steps"]):
@@ -86,7 +87,7 @@ def main():
 
         
         # Save the model
-        if (cur_num_updates % env.config["save_every"]== 0):
+        if (cur_num_updates % env.config["save_every"] == 0) and (cur_num_updates > 0 ):
             print("Saving the model ...")
             agent.save_model()
 
@@ -94,7 +95,7 @@ def main():
 
         if info["verbose"]:
             print(f'Episode: {cur_episode}, Iteration: {info["iteration"]}/{info["max_episode_length"]},', 
-            f'Agent_location: {info["agent_location"]}, Target_location: {info["target_location"]}, Reward: {info["reward"]}')
+            f'Agent_location: ({info["agent_location"][0]:.2f}, {info["agent_location"][1]:.2f}), Target_location: ({info["target_location"][0]:.2f}, {info["target_location"][1]:.2f}), Reward: {info["reward"]:.3f}')
         
 
 

@@ -8,6 +8,7 @@ from .utils import get_robot_description_raw, get_pallet_model_description_raw
 from launch import LaunchDescription, LaunchService
 from launch_ros.actions import Node
 from multiprocessing import Process
+from time import sleep
 
 
 class SimulationController():
@@ -120,6 +121,11 @@ class SimulationController():
             req.name = controller_name
             self.future = cli.call_async(req)
             rclpy.spin_until_future_complete(cur_node, self.future)
+            # Check that LoadController Request was successfull
+            while self.future.result().ok != True:
+                cur_node.get_logger().warn("/controller_manager/load_controller request was not successfull. Reattempting ...")
+                self.future = cli.call_async(req)
+                rclpy.spin_until_future_complete(cur_node, self.future)
 
             cur_node.destroy_node()
 
@@ -138,6 +144,11 @@ class SimulationController():
             req.name = controller_name
             self.future = cli.call_async(req)
             rclpy.spin_until_future_complete(cur_node, self.future)
+            # Check that ConfigureController Request was successfull
+            while self.future.result().ok != True:
+                cur_node.get_logger().warn("/controller_manager/configure_controller request was not successfull. Reattempting ...")
+                self.future = cli.call_async(req)
+                rclpy.spin_until_future_complete(cur_node, self.future)
 
             cur_node.destroy_node()
 
@@ -156,6 +167,11 @@ class SimulationController():
         req.strictness = 2
         self.future = cli.call_async(req)
         rclpy.spin_until_future_complete(cur_node, self.future)
+        # Check that SwitchController Request was successfull
+        while self.future.result().ok != True:
+            cur_node.get_logger().warn("/controller_manager/switch_controller request was not successfull. Reattempting ...")
+            self.future = cli.call_async(req)
+            rclpy.spin_until_future_complete(cur_node, self.future)
 
         cur_node.destroy_node()
     
@@ -183,8 +199,18 @@ class SimulationController():
         
         self.future = cli.call_async(delete_request)
         rclpy.spin_until_future_complete(cur_node, self.future)
+        # DO NOT check successful request because during first call to reset models are not present in the world so they cannot be deleted
+        # Check that Delete Request was successfull
+        # while self.future.result().success != True:
+        #     cur_node.get_logger().warn("delete entity request was not successfull. Reattempting ...")
+        #     print(entity_name)
+        #     self.future = cli.call_async(delete_request)
+        #     rclpy.spin_until_future_complete(cur_node, self.future)
 
         cur_node.destroy_node()
+
+        sleep(3) # sleep to make sure that DeleteEntity request is finished before SpawnEntity Request is processed #TODO: find a better fix than sleep
+        
 
         # Spawn entity in the simulation ------------------
         cur_node = rclpy.create_node('spawn_agent_client')        
@@ -218,6 +244,13 @@ class SimulationController():
         
         self.future = cli.call_async(spawn_request)
         rclpy.spin_until_future_complete(cur_node, self.future)
+        # Check that Spawn Request was successfull
+        while self.future.result().success != True:
+            cur_node.get_logger().warn("spawn entity request was not successfull. Reattempting ...")
+            self.future = cli.call_async(spawn_request)
+            rclpy.spin_until_future_complete(cur_node, self.future)
+
+            
 
         cur_node.destroy_node()
 
