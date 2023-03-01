@@ -24,6 +24,7 @@ from forklift_gym_env.envs.controller_publishers.diff_cont_cmd_vel_unstamped_pub
 from forklift_gym_env.envs.controller_publishers.fork_joint_controller_cmd_publisher import ForkJointContCmdPublisher
 
 
+from forklift_gym_env.rl.DDPG_HER.utils import flatten_and_concatenate_observation
 
 class ForkliftEnv(gym.Env):
     metadata = {
@@ -345,8 +346,9 @@ class ForkliftEnv(gym.Env):
         return info
     
 
-    def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
+    def reset(self):
+        seed = self.config["seed"]
+        # super().reset()
 
         self.cur_iteration = 0
 
@@ -397,13 +399,17 @@ class ForkliftEnv(gym.Env):
         # Get observation
         observation = self._get_obs()
 
+        # Convert nested Dict obs to flat obs array for SB3
+        observation_flat, goal_state, observation = flatten_and_concatenate_observation(observation, self)
+
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
 
         # Render
         self.render(observation)
 
-        return observation, self._get_info(None, diff_cont_msg, observation)
+        # return observation_flat, self._get_info(None, diff_cont_msg, observation)
+        return observation_flat.numpy()
 
     
     def step(self, action):
@@ -442,6 +448,9 @@ class ForkliftEnv(gym.Env):
 
         observation = self._get_obs()
 
+        # Convert nested Dict obs to flat obs array for SB3
+        observation_flat, goal_state, observation = flatten_and_concatenate_observation(observation, self)
+
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
 
@@ -457,7 +466,7 @@ class ForkliftEnv(gym.Env):
         # Render
         self.render(observation)
 
-        return observation, reward, done, False, info # (observation, reward, done, truncated, info)
+        return observation_flat, reward, done, False, info # (observation, reward, done, truncated, info)
 
 
     def render(self, observation): 
@@ -652,7 +661,8 @@ class ForkliftEnv(gym.Env):
             elif obs_type == ObservationType.COLLISION_DETECTION:
                 _get_obs = self._get_obs_collision_detection_decorator(_get_obs)
 
-        return spaces.Dict(obs_space_dict), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
+        # return spaces.Dict(obs_space_dict), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
+        return spaces.Box(low=-float("inf") * np.ones((16)), high= -float("inf") * np.ones((16)), dtype=np.float32), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
 
     
     
@@ -731,7 +741,11 @@ class ForkliftEnv(gym.Env):
                 "fork_joint_cont_action": spaces.Box(low = -2.0, high = 2.0, shape = (1,), dtype = np.float64) # TODO: set its high and low limits correctly
         }
 
-        return spaces.Dict(d)
+        # return spaces.Dict(d)
+
+        # Flatten action_space for SB3
+        return spaces.Box(low= -1 * np.ones((2)), high = 1 * np.ones((2)), dtype=np.float32)
+
 
 
     def check_goal_achieved(self, observation, goal_state = None):
