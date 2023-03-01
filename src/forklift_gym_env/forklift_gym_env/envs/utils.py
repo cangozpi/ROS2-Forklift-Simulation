@@ -108,11 +108,13 @@ def generateLaunchDescriptionForkliftEnv(config):
     description = 'Whether to launch gzclient. gzclient is run when it is True.')
     assert type(config['gui']) == bool
 
+    assert config['gazebo_verbose'] in ['true', 'false']
+
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [FindPackageShare('gazebo_ros'), '/launch', '/gazebo.launch.py']
         ),
-        launch_arguments={'world': world, 'gui': gui}.items(),
+        launch_arguments={'world': world, 'gui': gui, 'verbose': config['gazebo_verbose']}.items(),
     )
 
 

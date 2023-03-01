@@ -12,6 +12,7 @@ depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensi
 render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
 step_duration: 0_050_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds.
 gui: True # Whether to launch gzclient. gzclient is run when it is True.
+gazebo_verbose: 'false' # (str ['true', 'false']) Whether to launch launch.gazebo.py with verbose:true
 pallet_model_sdf_path: "pallet/model.sdf" # path to the model sdf file which will be used as the pallet model wrt build/forklift_gym_env/models/ path. (e.g. "pallet/model.sdf")
 collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chassis_top_link', 'fork_base_link',  
 'left_fork_link', 'left_front_wheel_link', 'lift_base_link', 'lift_body_connector_link', 
