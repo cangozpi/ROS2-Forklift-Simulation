@@ -26,7 +26,7 @@ def main():
 
     agent = DDPG_Agent(concatenated_obs_dim, concatenated_action_dim, goal_state_dim, \
         env.config["actor_hidden_dims"], env.config["critic_hidden_dims"], float(env.config["lr"]), \
-            env.config["epsilon"], env.config["epsilon_decay"], env.config["gamma"], env.config["tau"])
+            env.config["initial_epsilon"], env.config["epsilon_decay"], env.config['min_epsilon'], env.config["gamma"], env.config["tau"])
     agent.train() # TODO: handle .eval() case for testing the model too.
     replay_buffer = ReplayBuffer(env.config["replay_buffer_size"], concatenated_obs_dim, concatenated_action_dim, goal_state_dim, env.config["batch_size"])
 
@@ -101,7 +101,7 @@ def main():
 
         if done:
             # Log to Tensorboard
-            tb_summaryWriter.add_scalar("Training Reward", reward, cur_episode)
+            tb_summaryWriter.add_scalar("Training Reward", cum_episode_rewards/info["iteration"], cur_episode)
             tb_summaryWriter.add_scalar("Training epsilon", agent.epsilon, cur_episode)
 
             # Commit HER experiences to replay_bufferj

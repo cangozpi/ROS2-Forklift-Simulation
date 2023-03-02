@@ -30,13 +30,13 @@ def flatten_and_concatenate_observation(obs, env):
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].w, 
             
             # Add Twist/linear
-            obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].x, 
-            obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].y, 
-            obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].z,
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].x, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].y, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].z,
             # Add Twist/angular
-            obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].x, 
-            obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].y, 
-            obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z,
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].x, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].y, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z,
             ])
         obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
 
@@ -120,9 +120,10 @@ def get_concatenated_obs_and_act_dims(env):
 
     if ObservationType.FORK_POSITION in env.obs_types:
         tf_obs_dim = [env.observation_space['forklift_position_observation']['chassis_bottom_link']['pose']['position'].shape[0] + \
-            env.observation_space['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].shape[0] + \
-                env.observation_space['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].shape[0] + \
-                    env.observation_space['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].shape[0], ] # --> [13,]
+            env.observation_space['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].shape[0] #+ \
+                # env.observation_space['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].shape[0] + \
+                #     env.observation_space['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].shape[0], \
+                         ] # --> [13,]
         concatenated_obs_dim += reduce(lambda a,b: a * b, tf_obs_dim)
 
     if ObservationType.PALLET_POSITION in env.obs_types:

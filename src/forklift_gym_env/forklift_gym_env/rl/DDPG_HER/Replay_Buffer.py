@@ -76,6 +76,9 @@ class ReplayBuffer:
         # Generate k many goals from the last states of the current episode
         for cur_k in range(k):
             cur_goal_obs_index = len(self.staged_obs_flattened) - 1 - cur_k
+            if cur_goal_obs_index < 0:
+                print("not enough staged in Replay buffer. Skipping goal generation !")
+                continue
             cur_goal_state = self.staged_next_obs[cur_goal_obs_index] 
             cur_goal = np.array([ 
                 cur_goal_state['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 

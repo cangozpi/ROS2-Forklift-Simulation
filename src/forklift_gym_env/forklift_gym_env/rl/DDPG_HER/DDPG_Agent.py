@@ -7,10 +7,11 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
     """
     Refer to https://spinningup.openai.com/en/latest/algorithms/ddpg.html for implementation details.
     """
-    def __init__(self, obs_dim, action_dim, goal_state_dim, actor_hidden_dims, critic_hidden_dims, lr, epsilon, epsilon_decay, gamma, tau):
+    def __init__(self, obs_dim, action_dim, goal_state_dim, actor_hidden_dims, critic_hidden_dims, lr, initial_epsilon, epsilon_decay, min_epsilon, gamma, tau):
         self.mode = "train"
-        self.epsilon = epsilon
+        self.epsilon = initial_epsilon
         self.epsilon_decay = epsilon_decay
+        self.min_epsilon = min_epsilon
         self.gamma = gamma
         self.tau = tau
 
@@ -41,8 +42,10 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
             noise = self.epsilon * torch.normal(mean=torch.tensor(0.0),std=torch.tensor(1.0))
             action += noise
 
-            # decay epsilon
-            self.epsilon -= self.epsilon_decay
+            # Decay epsilon
+            self.epsilon *= self.epsilon_decay
+            if self.epsilon < self.min_epsilon:
+                self.epsilon = self.min_epsilon
         
         # clip action [-1, 1]
         action = torch.clip(action, -1.0, 1.0)

@@ -351,12 +351,12 @@ class ForkliftEnv(gym.Env):
         self.cur_iteration = 0
 
         # Choose the agent's location uniformly at random
-        self._agent_location = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
+        self._agent_location = np.random.random(size=2) * 10 - 5 # in the range [-5, 5]
 
         # Sample the target's location randomly until it does not coincide with the agent's location
         self._target_transform = self._agent_location
         while np.array_equal(self._target_transform, self._agent_location):
-            self._target_transform = np.random.random(size=2) * 40 - 20 # in the range [-20, 20]
+            self._target_transform = np.random.random(size=2) * 10 - 5 # in the range [-5, 5]
  
 
         # Unpause sim so that simulation can be reset
@@ -709,9 +709,23 @@ class ForkliftEnv(gym.Env):
 
                 reward += calc_reward_collision_penalty(observation)
             
+            if RewardType.BINARY in reward_types:
+                def calc_reward_binary(observation, goal_state):
+                    """
+                    Returns 1 if the agent is near the target_location within the specified threshold values, 0 otherwise.
+                    Inputs:
+                        observation: returned by self._get_obs()
+                    Returns:
+                        reward: Binary (1 or 0)
+
+                    """
+                    goal_reached = self.check_goal_achieved(observation)
+                    return int(goal_reached)
+
+                reward += calc_reward_binary(observation, goal_state)
+            
 
             return reward
-        
 
         return reward_func
 

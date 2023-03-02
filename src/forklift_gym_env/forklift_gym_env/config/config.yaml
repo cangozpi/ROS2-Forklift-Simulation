@@ -6,7 +6,7 @@ tolerance_y: 1.59  # chassis_bottom_transform's y location's tolerable distance 
 agent_pose_position_z: 0.30 # agent's z coordinate when spawned in the world.
 world_file_name: 'collision_detection.world' # specifies world used for gazebo simulation. These worlds are available in /world folder.
 observation_types: ["fork_position", "target_tf"] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['fork_position', 'pallet_position', 'target_tf', 'tf', 'depth_camera_raw_image', 'collision_detecion']
-reward_types: ["L2_distance"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty"])
+reward_types: ["binary"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty"])
 action_types: ["differential_control"] # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options. (e.g. ["differential_control", "fork_joint_control"])
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
 render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
@@ -28,8 +28,9 @@ num_updates: 2 # at every update_every steps while updating the model perform nu
 actor_hidden_dims: [64, 64, 64] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
 critic_hidden_dims: [64, 64, 64] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
 lr: 1e-3 # learning rate
-epsilon: 1.0 # epsilon used for multiplying the gaussian distribution sample to obtain the noise to add to the agent's action (exploration).
-epsilon_decay: 0.001 # every time an action is taken epsilon is reduced by this amount (i.e. epsilon -= epsilon_decay).
+initial_epsilon: 1.0 # epsilon used for multiplying the gaussian distribution sample to obtain the noise to add to the agent's action (exploration).
+epsilon_decay: 0.999 # every time an action is taken epsilon is reduced by this amount (i.e. epsilon *= epsilon_decay).
+min_epsilon: 0.1 # minimum value that epsilon can decay to
 gamma: 0.98 # next state discount rate
 tau: 0.1 # tau value used in updating the target networks using polyak averaging (i.e. targ_net = tau*targ_net + (1-tau) * net).
 replay_buffer_size: 10000 # size of the replay buffer
