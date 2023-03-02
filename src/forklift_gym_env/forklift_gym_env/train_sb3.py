@@ -11,14 +11,84 @@ import datetime
 from stable_baselines3.common.env_checker import check_env
 from forklift_gym_env.envs.forklift_env_HER import ForkliftEnv
 
+
+
+import numpy as np
+
+from stable_baselines3 import DDPG, PPO, HerReplayBuffer 
+from stable_baselines3.her.goal_selection_strategy import GoalSelectionStrategy
+from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
+from stable_baselines3.common.vec_env import DummyVecEnv
+
+
+mode = "test"
+assert mode in ["train", "test"]
+
 def main():
-    # env = CustomEnv(arg1, ...)
-    # env = gym.make('forklift_gym_env/ForkliftWorld-v1')
-    env = ForkliftEnv()
+
+
+    env = gym.make('forklift_gym_env/ForkliftWorld-v1')
     # It will check your custom environment and output additional warnings if needed
-    check_env(env)
+    # check_env(env)
+
+    seed_everything(env.config["seed"]) # set seed
+    time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
+
+    if mode == "train":
+        # Available strategies (cf paper): future, final, episode
+        goal_selection_strategy = "future" # equivalent to GoalSelectionStrategy.FUTURE
+
+        # The noise objects for DDPG
+        n_actions = env.action_space.shape[-1]
+        action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+
+        # Initialize the model
+        model = DDPG(
+            "MultiInputPolicy",
+            env,
+            action_noise=action_noise,
+            replay_buffer_class=HerReplayBuffer,
+            # Parameters for HER
+            replay_buffer_kwargs=dict(
+                n_sampled_goal=4,
+                goal_selection_strategy=goal_selection_strategy,
+                online_sampling=True,
+                max_episode_length=1000,
+            ),
+            verbose=1,
+            tensorboard_log="sb3_tensorboard/"
+        )
 
 
+        # model = DDPG("MlpPolicy", env, action_noise=action_noise, verbose=1, tensorboard_log="sb3_tensorboard/")
+        model.learn(total_timesteps=30_000, tb_log_name="first run", reset_num_timesteps=False) # log_interval=10
+        model.save("sb3_saved_model")
+        print("Finished training the agent !")
+
+        # env = model.get_env()
+
+        # del model # remove to demonstrate saving and loading
+
+    if mode == "test":
+        # model = DDPG.load("sb3_saved_model") # Non-HER models can use this to load model
+        model = DDPG.load("sb3_saved_model", env=env) # HER requires env passed in
+
+        # Testing the agent
+        print("Testing the model:")
+        obs = env.reset()
+        while True: 
+            # action, _states = model.predict(obs)
+            action, _ = model.predict(obs, deterministic=True)
+            obs, reward, done, info = env.step(action)
+            print("action: ", action, "obs:", obs, "reward:", reward)
+            env.render()
+
+            if done:
+                print("Resetting the env !")
+                env.reset()
+
+
+    # MY CODE BELOW -----------------------------
     # Initialize Tensorboard
     # log_dir, run_name = "logs_tensorboard/", "DDPG_HER_agent_" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     # tb_summaryWriter = SummaryWriter(log_dir + run_name)

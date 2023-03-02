@@ -26,7 +26,7 @@ from forklift_gym_env.envs.controller_publishers.fork_joint_controller_cmd_publi
 
 from forklift_gym_env.rl.DDPG_HER.utils import flatten_and_concatenate_observation
 
-class ForkliftEnv(gym.Env):
+class ForkliftEnv(gym.GoalEnv):
     metadata = {
         "render_modes": ["no_render", "show_depth_camera_img_raw"], 
         # "render_fps": 4 #TODO: set this
@@ -400,8 +400,16 @@ class ForkliftEnv(gym.Env):
         observation = self._get_obs()
 
         # Convert nested Dict obs to flat obs array for SB3
-        observation_flat, goal_state, observation = flatten_and_concatenate_observation(observation, self)
+        observation_flat, achieved_state, goal_state, observation = flatten_and_concatenate_observation(observation, self)
+        # Concat observation_flat with goal_state for sb3
+        # import torch
+        # observation_flat = torch.concat([observation_flat, torch.tensor(goal_state)], dim=-1)
 
+        obs_dict = {
+            'observation': observation_flat.numpy(),
+            'achieved_goal': achieved_state.numpy(),
+            'desired_goal': goal_state
+        }
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
 
@@ -409,7 +417,7 @@ class ForkliftEnv(gym.Env):
         self.render(observation)
 
         # return observation_flat, self._get_info(None, diff_cont_msg, observation)
-        return observation_flat.numpy()
+        return obs_dict
 
     
     def step(self, action):
@@ -419,7 +427,9 @@ class ForkliftEnv(gym.Env):
         self.simulation_controller_node.send_unpause_physics_client_request()
 
         # Set diff_cont action
-        diff_cont_action = action['diff_cont_action'] 
+        # diff_cont_action = action['diff_cont_action'] 
+        diff_cont_action = action
+
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
         diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
@@ -434,11 +444,11 @@ class ForkliftEnv(gym.Env):
 
 
         # set fork_joint_cont action
-        fork_joint_cont_action = action['fork_joint_cont_action']
+        # fork_joint_cont_action = action['fork_joint_cont_action']
         # convert fork_joint_cont_action to Float64MultiArray message
         fork_joint_cont_msg = Float64MultiArray()
         # fork_joint_cont_msg.data = fork_joint_cont_action.tolist()
-        fork_joint_cont_msg.data = [fork_joint_cont_action[0].item()]
+        fork_joint_cont_msg.data = [0.0]
         # Take fork_joint_cont action
         self.fork_joint_cont_cmd_publisher.publish_cmd(fork_joint_cont_msg)
 
@@ -449,16 +459,25 @@ class ForkliftEnv(gym.Env):
         observation = self._get_obs()
 
         # Convert nested Dict obs to flat obs array for SB3
-        observation_flat, goal_state, observation = flatten_and_concatenate_observation(observation, self)
+        observation_flat, achieved_state, goal_state, observation = flatten_and_concatenate_observation(observation, self)
+        # Concat observation_flat with goal_state for sb3
+        # import torch
+        # observation_flat = torch.concat([observation_flat, torch.tensor(goal_state)], dim=-1).numpy()
+
+        obs_dict = {
+            'observation': observation_flat.numpy(),
+            'achieved_goal': achieved_state.numpy(),
+            'desired_goal': goal_state
+        }
 
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
 
         # Calculate reward
-        reward = self.calc_reward(observation) 
+        reward = self.calc_reward(obs_dict['achieved_goal'], obs_dict['desired_goal']) 
 
         # Check if episode should terminate 
-        done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(observation))
+        done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(obs_dict['achieved_goal'], full_obs=False))
 
         # Get info
         info = self._get_info(reward, diff_cont_msg, observation) 
@@ -466,7 +485,8 @@ class ForkliftEnv(gym.Env):
         # Render
         self.render(observation)
 
-        return observation_flat, reward, done, False, info # (observation, reward, done, truncated, info)
+        # return observation_flat, reward, done, False, info # (observation, reward, done, truncated, info)
+        return obs_dict, reward, done, info # (observation, reward, done, truncated, info)
 
 
     def render(self, observation): 
@@ -662,7 +682,12 @@ class ForkliftEnv(gym.Env):
                 _get_obs = self._get_obs_collision_detection_decorator(_get_obs)
 
         # return spaces.Dict(obs_space_dict), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
-        return spaces.Box(low=-float("inf") * np.ones((16)), high= -float("inf") * np.ones((16)), dtype=np.float32), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
+        # return spaces.Box(low = -float("inf") * np.ones((15,)), high = float("inf") * np.ones((15,)), dtype = np.float64), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
+        return spaces.Dict({
+            'observation': spaces.Box(low = -float("inf") * np.ones((13,)), high = float("inf") * np.ones((13,)), dtype = np.float64),
+            'achieved_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64),
+            'desired_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64)
+        }), _get_obs
 
     
     
@@ -710,7 +735,7 @@ class ForkliftEnv(gym.Env):
 
                     """
                     penalty_per_collision = -5 # TODO: fine-tune this value
-                    collision_detection_observations = observation['collision_detection_observations']
+                    collision_detection_observations = observation['observation']['collision_detection_observations']
                     # Check for agents collisions with non-ground objects
                     unique_non_ground_contacts = {} # holds ContactsState msgs for the collisions with objects that are not the ground
                     for state in collision_detection_observations.values():
@@ -719,6 +744,18 @@ class ForkliftEnv(gym.Env):
 
                 reward += calc_reward_collision_penalty(observation)
             
+            if RewardType.BINARY in reward_types:
+                def calc_reward_binary(observation, goal_state):
+                    """
+                    Returns 1 if goal_achieved else 0.
+                    Inputs:
+                        observation: returned by self._get_obs()
+                    Returns:
+                        reward: 1 or 0 (binary reward).
+                    """
+                    return int(self.check_goal_achieved(observation, goal_state, full_obs=False))
+
+                reward += calc_reward_binary(observation, goal_state)
 
             return reward
         
@@ -744,32 +781,95 @@ class ForkliftEnv(gym.Env):
         # return spaces.Dict(d)
 
         # Flatten action_space for SB3
-        return spaces.Box(low= -1 * np.ones((2)), high = 1 * np.ones((2)), dtype=np.float32)
+        return spaces.Box(low= -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32)
 
 
 
-    def check_goal_achieved(self, observation, goal_state = None):
+    def check_goal_achieved(self, observation, goal_state = None, full_obs = True):
         """
         Returns True if "chassis_bottom_link" is withing the (self._tolerance_x, self._tolerance_y) 
         distance from the self_target_transform. In other words, checks if goal state is reached by the agent In other words, checks 
         if goal state is reached by the agent.
         """
-        # Get (translation_x, translation_y) of forklift robot
-        agent_location = [observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x, \
-            observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y]
+        goal_achieved_list = []
+        # Vectorized implementation -->
+        if len(observation.shape) > 1: # Batch inputs
+            for i in range(len(observation)):
+                cur_observation = observation[i, :]
+            
+                # Get (translation_x, translation_y) of forklift robot
+                if full_obs:
+                    agent_location = [cur_observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x, \
+                        cur_observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y]
+                else:
+                    agent_location = cur_observation
 
-        # Check if agent is withing the tolerance of target_location
-        if goal_state is None:
-            if (abs(agent_location[0] - self._target_transform[0]) <= self._tolerance_x) and \
-                (abs(agent_location[1] - self._target_transform[1]) <= self._tolerance_y):
-                return True
-            else:
-                return False
-        else:
-            if (abs(agent_location[0] - goal_state[0]) <= self._tolerance_x) and \
-                (abs(agent_location[1] - goal_state[1]) <= self._tolerance_y):
-                return True
-            else:
-                return False
+                # Check if agent is withing the tolerance of target_location
+                if goal_state is None:
+                    if (abs(agent_location[0] - self._target_transform[0]) <= self._tolerance_x) and \
+                        (abs(agent_location[1] - self._target_transform[1]) <= self._tolerance_y):
+                        goal_achieved_list.append(True)
+                    else:
+                        goal_achieved_list.append(False)
+                else:
+                    cur_goal_state = goal_state[i, :]
+                    if (abs(agent_location[0] - cur_goal_state[0]) <= self._tolerance_x) and \
+                        (abs(agent_location[1] - cur_goal_state[1]) <= self._tolerance_y):
+                        goal_achieved_list.append(True)
+                    else:
+                        goal_achieved_list.append(False)
+        
+            return goal_achieved_list
+
+        else: # Non-vectorized implementation:
+                # Get (translation_x, translation_y) of forklift robot
+                if full_obs:
+                    agent_location = [observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x, \
+                        observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y]
+                else:
+                    agent_location = observation
+        
+                # Check if agent is withing the tolerance of target_location
+                if goal_state is None:
+                    if (abs(agent_location[0] - self._target_transform[0]) <= self._tolerance_x) and \
+                        (abs(agent_location[1] - self._target_transform[1]) <= self._tolerance_y):
+                        return True
+                    else:
+                        return False
+                else:
+                    cur_goal_state = goal_state
+                    if (abs(agent_location[0] - cur_goal_state[0]) <= self._tolerance_x) and \
+                        (abs(agent_location[1] - cur_goal_state[1]) <= self._tolerance_y):
+                        return True
+                    else:
+                        return False
+            
+        
+    
+
+    def compute_reward(self, achieved_goal, desired_goal, info):
+        """Compute the step reward. This externalizes the reward function and makes
+        it dependent on a desired goal and the one that was achieved. If you wish to include
+        additional rewards that are independent of the goal, you can include the necessary values
+        to derive it in 'info' and compute it accordingly.
+
+        Args:
+            achieved_goal (object): the goal that was achieved during execution
+            desired_goal (object): the desired goal that we asked the agent to attempt to achieve
+            info (dict): an info dictionary with additional information
+
+        Returns:
+            float: The reward that corresponds to the provided achieved goal w.r.t. to the desired
+            goal. Note that the following should always hold true:
+
+                ob, reward, done, info = env.step()
+                assert reward == env.compute_reward(ob['achieved_goal'], ob['desired_goal'], info)
+        """
+        g = self.check_goal_achieved(achieved_goal, desired_goal, full_obs=False)
+        if type(g) == list:
+            return np.array([int(success) for success in g])
+        elif type(g) == bool:
+            return g
+        # return self.calc_reward(achieved_goal, desired_goal)
 
     

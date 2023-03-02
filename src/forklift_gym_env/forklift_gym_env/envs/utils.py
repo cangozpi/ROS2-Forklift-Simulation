@@ -236,7 +236,7 @@ class RewardType(Enum):
     """
     L2_DIST = "L2_distance"
     COLLISION_PENALTY = "collision_penalty"
-
+    BINARY = "binary"
 
 class ActionType(Enum):
     """

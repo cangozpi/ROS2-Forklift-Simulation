@@ -6,3 +6,5 @@ __pycache__/
 actor.pkl
 critic.pkl
 logs_tensorboard/
+*.zip
+sb3_tensorboard/
