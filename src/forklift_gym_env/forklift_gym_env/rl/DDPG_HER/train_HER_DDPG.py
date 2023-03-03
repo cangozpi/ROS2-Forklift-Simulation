@@ -1,6 +1,6 @@
 import gym
 import time
-from forklift_gym_env.envs.forklift_env_HER import ForkliftEnv
+from forklift_gym_env.envs.forklift_env_HER import ForkliftEnvHER
 from forklift_gym_env.rl.DDPG_HER.DDPG_Agent import DDPG_Agent
 from forklift_gym_env.rl.DDPG_HER.Replay_Buffer import ReplayBuffer 
 from forklift_gym_env.rl.DDPG_HER.utils import *
@@ -15,9 +15,10 @@ def main():
     tb_summaryWriter = SummaryWriter(log_dir + run_name)
 
     # Start Env
-    env = gym.make('forklift_gym_env/ForkliftWorld-v1')
+    # env = gym.make('forklift_gym_env/ForkliftWorld-v0')
+    env = ForkliftEnvHER()
     seed_everything(env.config["seed"]) # set seed
-    time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
+    # time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
     cur_episode = 0
     cum_episode_rewards = 0
     cur_num_updates = 0 # total number of updates including all the episodes
@@ -30,24 +31,24 @@ def main():
     agent.train() # TODO: handle .eval() case for testing the model too.
     replay_buffer = ReplayBuffer(env.config["replay_buffer_size"], concatenated_obs_dim, concatenated_action_dim, goal_state_dim, env.config["batch_size"])
 
-    obs, info = env.reset(seed=env.config["seed"])
-    obs_flattened, goal_state, obs = flatten_and_concatenate_observation(obs, env)
+    obs_dict = env.reset()
+    # obs_flattened, goal_state, obs = flatten_and_concatenate_observation(obs, env)
     replay_buffer.clear_staged_for_append()
     while cur_episode < env.config["total_episodes"]: # simulate action taking of an agent for debugging the env
         # For warmup_steps many iterations take random actions to explore better
         if env.cur_iteration < env.config["warmup_steps"]: # take random actions
             action = env.action_space.sample()
             # Take action
-            next_obs, reward, done, _, info = env.step(action)
+            next_obs_dict, reward, done, info = env.step(action)
         else: # agent's policy takes action
             with torch.no_grad():
-                action = agent.choose_action(obs_flattened, torch.tensor(goal_state)) # predict action in the range of [-1,1]
+                action = agent.choose_action(torch.tensor(obs_dict['observation']), torch.tensor(obs_dict['desired_goal'])) # predict action in the range of [-1,1]
                 action = torch.squeeze(action, dim=0)
             action = convert_agent_action_to_dict(action, env) # convert agent action to action dict so that env.step() can parse it
             # Take action
-            next_obs, reward, done, _, info = env.step(action)
+            next_obs_dict, reward, done, info = env.step(action)
 
-        next_obs_flattened, goal_state, next_obs = flatten_and_concatenate_observation(next_obs, env)
+        # next_obs_flattened, goal_state, next_obs = flatten_and_concatenate_observation(next_obs, env)
 
         cum_episode_rewards += reward
 
@@ -58,13 +59,15 @@ def main():
             term = True
         
         # Store experience in replay buffer
-        action = flatten_and_concatenate_action(action) 
+        action = flatten_and_concatenate_action(env, action) 
         # Stage current (s,a,s') to replay buffer to be appended using HER at the end of the current episode
-        replay_buffer.stage_for_append(obs_flattened, action, reward, next_obs_flattened, term, goal_state, next_obs)
+        replay_buffer.stage_for_append(torch.tensor(obs_dict['observation']), action, reward, \
+            torch.tensor(next_obs_dict['observation']), term, torch.tensor(next_obs_dict['desired_goal']), \
+                torch.tensor(next_obs_dict['observation']))
 
         # Update current state
-        obs = next_obs
-        obs_flattened = next_obs_flattened #TODO: add this to DDPG only training too @bugfix !
+        obs_dict = next_obs_dict
+        # obs_flattened = next_obs_flattened #TODO: add this to DDPG only training too @bugfix !
 
         # Update model if its time
         if (info["iteration"] % env.config["update_every"]== 0) and (info["iteration"] > env.config["warmup_steps"]):
@@ -104,12 +107,13 @@ def main():
             tb_summaryWriter.add_scalar("Training Reward", cum_episode_rewards/info["iteration"], cur_episode)
             tb_summaryWriter.add_scalar("Training epsilon", agent.epsilon, cur_episode)
 
-            # Commit HER experiences to replay_bufferj
+            # Commit HER experiences to replay_buffer
             replay_buffer.commit_append(k=env.config["k"], calc_reward_func=env.calc_reward, check_goal_achieved_func=env.check_goal_achieved) # TODO: set k from config.yaml
+            # replay_buffer.commit_append(k=env.config["k"], calc_reward_func=env.compute_reward, check_goal_achieved_func=env.check_goal_achieved) # TODO: set k from config.yaml
 
             # Reset env
-            obs, info = env.reset(seed=env.config["seed"])
-            obs_flattened, goal_state, obs = flatten_and_concatenate_observation(obs, env)
+            obs_dict = env.reset()
+            # obs_flattened, goal_state, obs = flatten_and_concatenate_observation(obs, env)
             replay_buffer.clear_staged_for_append()
             time.sleep(3)
             # Reset episode parameters for a new episode

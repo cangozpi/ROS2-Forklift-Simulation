@@ -106,7 +106,7 @@ gast==0.5.2
 gazebo-msgs==3.7.0
 generate-parameter-library-py==0.3.0
 geometry-msgs==4.2.2
-gym==0.26.1
+gym==0.21.0
 gym-notices==0.0.8
 html5lib==1.1
 httplib2==0.20.2

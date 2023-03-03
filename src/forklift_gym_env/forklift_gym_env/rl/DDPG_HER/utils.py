@@ -19,6 +19,7 @@ def flatten_and_concatenate_observation(obs, env):
         target_tf_obs = np.array(obs['target_transform_observation']) # [translation_x, translation_y] of the initial absolute position of the target (pallet)
         goal_state = target_tf_obs
 
+    # NOTE: FORK_POSITION's if statement should be the first to be appended to obs_flattened since it is used in other functions in this order !
     if ObservationType.FORK_POSITION in env.obs_types:
         # achieved_state of the agent
         achieved_state = torch.tensor([
@@ -71,10 +72,15 @@ def flatten_and_concatenate_observation(obs, env):
     return obs_flattened, achieved_state, goal_state, obs
 
 
-def flatten_and_concatenate_action(action):
-    diff_cont_act = torch.tensor(action['diff_cont_action'])
-    fork_joint_cont_act = torch.tensor(action['fork_joint_cont_action'])
-    act = torch.concat((diff_cont_act.reshape(-1), fork_joint_cont_act.reshape(-1)), dim=0)
+def flatten_and_concatenate_action(env, action):
+    act = torch.tensor([])
+    if ActionType.DIFF_CONT in env.act_types:
+        diff_cont_act = torch.tensor(action['diff_cont_action'])
+        act = torch.concat((act.reshape(-1), diff_cont_act.reshape(-1)), dim=0)
+        
+    if ActionType.FORK_JOINT_CONT in env.act_types:
+        fork_joint_cont_act = torch.tensor(action['fork_joint_cont_action'])
+        act = torch.concat((act.reshape(-1), fork_joint_cont_act.reshape(-1)), dim=0)
     return act
 
 
@@ -121,6 +127,7 @@ def convert_agent_action_to_dict(action, env):
 def get_concatenated_obs_and_act_dims(env):
     concatenated_obs_dim = 0
     goal_state_dim = 0
+    concatenated_action_dim = 0
 
     # if ObservationType.TARGET_TRANSFORM in env.obs_types: # This functions as the goal state
     #     target_tf_obs_dim = env.observation_space['target_transform_observation'].shape # --> [2,]
@@ -147,13 +154,15 @@ def get_concatenated_obs_and_act_dims(env):
     
     # TODO: collision detection case is missing here
 
-    # concatenated_action_dim = 0
-    # diff_cont_action_dim = env.action_space['diff_cont_action'].shape
-    # concatenated_action_dim += reduce(lambda a,b: a * b, diff_cont_action_dim)
-    # fork_joint_cont_action_dim = env.action_space['fork_joint_cont_action'].shape
-    # concatenated_action_dim += reduce(lambda a,b: a * b, fork_joint_cont_action_dim)
+    if ActionType.DIFF_CONT in env.act_types:
+        diff_cont_action_dim = env.action_space['diff_cont_action'].shape
+        concatenated_action_dim += reduce(lambda a,b: a * b, diff_cont_action_dim)
+        
+    if ActionType.FORK_JOINT_CONT in env.act_types:
+        fork_joint_cont_action_dim = env.action_space['fork_joint_cont_action'].shape
+        concatenated_action_dim += reduce(lambda a,b: a * b, fork_joint_cont_action_dim)
 
-    concatenated_action_dim = env.action_space.shape[-1]
+    # concatenated_action_dim = env.action_space.shape[-1]
     
     return concatenated_obs_dim, concatenated_action_dim, goal_state_dim
 

@@ -3,7 +3,7 @@ from gym.envs.registration import register
 # DDPG environment
 register(
     id='forklift_gym_env/ForkliftWorld-v0',
-    entry_point='forklift_gym_env.envs:ForkliftEnv',
+    entry_point='forklift_gym_env.envs.forklift_env_HER:ForkliftEnvHER',
     # max_episode_steps=300, # TODO: set this maybe
 )
 

@@ -26,7 +26,7 @@ from forklift_gym_env.envs.controller_publishers.fork_joint_controller_cmd_publi
 
 from forklift_gym_env.rl.sb3_HER.utils import flatten_and_concatenate_observation
 
-class ForkliftEnvSb3HER(gym.GoalEnv):
+class ForkliftEnvHER(gym.GoalEnv):
     metadata = {
         "render_modes": ["no_render", "show_depth_camera_img_raw"], 
         # "render_fps": 4 #TODO: set this
@@ -47,7 +47,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # Set render_mode
         for x in self.config["render_mode"]:
-            assert x in ForkliftEnvSb3HER.metadata['render_modes'] 
+            assert x in ForkliftEnvHER.metadata['render_modes'] 
         self.render_mode = self.config['render_mode']
 
         # self.ros_clock will be used to check that observations are obtained after the actions are taken
@@ -347,7 +347,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
     
 
     def reset(self):
-        seed = self.config["seed"]
+        seed = self.config["seed"] # TODO: seed the env
         # super().reset()
 
         self.cur_iteration = 0
@@ -408,9 +408,6 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # Convert nested Dict obs to flat obs array for SB3
         observation_flat, achieved_state, goal_state, observation = flatten_and_concatenate_observation(observation, self)
-        # Concat observation_flat with goal_state for sb3
-        # import torch
-        # observation_flat = torch.concat([observation_flat, torch.tensor(goal_state)], dim=-1)
 
         obs_dict = {
             'observation': observation_flat.numpy(),
@@ -434,28 +431,35 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         self.simulation_controller_node.send_unpause_physics_client_request()
 
         # Set diff_cont action
-        # diff_cont_action = action['diff_cont_action'] 
-        diff_cont_action = action
+        if ActionType.DIFF_CONT in self.act_types:
+            diff_cont_action = action['diff_cont_action'] 
+            lin_x_vel = float(diff_cont_action[0])
+            ang_z_vel = float(diff_cont_action[1])
+        else:
+            lin_x_vel = 0.0
+            ang_z_vel = 0.0
 
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
-        diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
+        diff_cont_msg.linear.x = lin_x_vel # use this one
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 
         diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
-        diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
+        diff_cont_msg.angular.z = ang_z_vel # use this one
         # Take diff_cont action
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
 
         # set fork_joint_cont action
-        # fork_joint_cont_action = action['fork_joint_cont_action']
-        # convert fork_joint_cont_action to Float64MultiArray message
         fork_joint_cont_msg = Float64MultiArray()
-        # fork_joint_cont_msg.data = fork_joint_cont_action.tolist()
-        fork_joint_cont_msg.data = [0.0]
+        if ActionType.FORK_JOINT_CONT in self.act_types:
+            fork_joint_cont_action = action['fork_joint_cont_action']
+            # convert fork_joint_cont_action to Float64MultiArray message
+            fork_joint_cont_msg.data = fork_joint_cont_action.tolist()
+        else:
+            fork_joint_cont_msg.data = [0.0]
         # Take fork_joint_cont action
         self.fork_joint_cont_cmd_publisher.publish_cmd(fork_joint_cont_msg)
 
@@ -467,9 +471,6 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # Convert nested Dict obs to flat obs array for SB3
         observation_flat, achieved_state, goal_state, observation = flatten_and_concatenate_observation(observation, self)
-        # Concat observation_flat with goal_state for sb3
-        # import torch
-        # observation_flat = torch.concat([observation_flat, torch.tensor(goal_state)], dim=-1).numpy()
 
         obs_dict = {
             'observation': observation_flat.numpy(),
@@ -578,12 +579,12 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                obs_space_dict["forklift_position_observation"] = spaces.Dict({
                         "chassis_bottom_link": spaces.Dict({
                             "pose": spaces.Dict({
-                                "position": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32),
-                                "orientation": spaces.Box(low = -float("inf") * np.ones((4,)), high = float("inf") * np.ones((4,)), dtype = np.float32)
+                                "position": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float64),
+                                "orientation": spaces.Box(low = -float("inf") * np.ones((4,)), high = float("inf") * np.ones((4,)), dtype = np.float64)
                             }),
                             "twist": spaces.Dict({
-                                "linear": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32),
-                                "angular": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32)
+                                "linear": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float64),
+                                "angular": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float64)
                             })
                         })
                })
@@ -592,23 +593,23 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                obs_space_dict["pallet_position_observation"] = spaces.Dict({
                         "pallet_model": spaces.Dict({
                             "pose": spaces.Dict({
-                                "position": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32),
-                                "orientation": spaces.Box(low = -float("inf") * np.ones((4,)), high = float("inf") * np.ones((4,)), dtype = np.float32)
+                                "position": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float64),
+                                "orientation": spaces.Box(low = -float("inf") * np.ones((4,)), high = float("inf") * np.ones((4,)), dtype = np.float64)
                             }),
                             "twist": spaces.Dict({
-                                "linear": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32),
-                                "angular": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float32)
+                                "linear": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float64),
+                                "angular": spaces.Box(low = -float("inf") * np.ones((3,)), high = float("inf") * np.ones((3,)), dtype = np.float64)
                             })
                         })
                })
 
             elif obs_type == ObservationType.TARGET_TRANSFORM:
-               obs_space_dict["target_transform_observation"] = spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float32) # TODO: set these values to min and max from ros diff_controller
+               obs_space_dict["target_transform_observation"] = spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64) # TODO: set these values to min and max from ros diff_controller
 
             elif obs_type == ObservationType.DEPTH_CAMERA_RAW_IMAGE:
                 obs_space_dict['depth_camera_raw_image_observation'] = spaces.Box(low = -float("inf") * \
                         np.ones(tuple(self.config['depth_camera_raw_image_dimensions'])), \
-                            high = float("inf") * np.ones(tuple(self.config['depth_camera_raw_image_dimensions']), dtype = np.float32))
+                            high = float("inf") * np.ones(tuple(self.config['depth_camera_raw_image_dimensions']), dtype = np.float64))
             
             elif obs_type == ObservationType.COLLISION_DETECTION:
                 d = {}
@@ -778,16 +779,18 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         for act_type in act_types:
             assert act_type in ActionType
 
+        d = {}
         # Set action space according to act_type 
-        d =  {
-                "diff_cont_action": spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32), #TODO: set this to limits from config file
-                "fork_joint_cont_action": spaces.Box(low = -2.0, high = 2.0, shape = (1,), dtype = np.float64) # TODO: set its high and low limits correctly
-        }
+        if ActionType.DIFF_CONT in act_types:
+            d["diff_cont_action"] = spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float64) #TODO: set this to limits from config file
+        
+        if ActionType.FORK_JOINT_CONT in act_types:
+            d["fork_joint_cont_action"] =  spaces.Box(low = -2.0, high = 2.0, shape = (1,), dtype = np.float64) # TODO: set its high and low limits correctly
 
-        # return spaces.Dict(d)
 
+        return spaces.Dict(d)
         # Flatten action_space for SB3
-        return spaces.Box(low= -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32)
+        # return spaces.Box(low= -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32)
 
 
 
@@ -805,8 +808,10 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
             
                 # Get (translation_x, translation_y) of forklift robot
                 if full_obs:
-                    agent_location = [cur_observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x, \
-                        cur_observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y]
+                    agent_location = [
+                        cur_observation[0], # = ["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x 
+                        cur_observation[1] # = ["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y
+                    ]
                 else:
                     agent_location = cur_observation
 
@@ -830,8 +835,10 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         else: # Non-vectorized implementation:
                 # Get (translation_x, translation_y) of forklift robot
                 if full_obs:
-                    agent_location = [observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x, \
-                        observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y]
+                    agent_location = [
+                        observation[0], # = ["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x 
+                        observation[1] # = ["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y
+                    ]
                 else:
                     agent_location = observation
         

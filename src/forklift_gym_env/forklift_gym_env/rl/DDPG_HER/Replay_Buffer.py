@@ -77,12 +77,12 @@ class ReplayBuffer:
         for cur_k in range(k):
             cur_goal_obs_index = len(self.staged_obs_flattened) - 1 - cur_k
             if cur_goal_obs_index < 0:
-                print("not enough staged in Replay buffer. Skipping goal generation !")
+                print(f'Not enough staged in Replay buffer. Skipping goal generation for k >= {cur_k} after !')
                 continue
-            cur_goal_state = self.staged_next_obs[cur_goal_obs_index] 
+            cur_achieved_goal_state = self.staged_next_obs[cur_goal_obs_index] 
             cur_goal = np.array([ 
-                cur_goal_state['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 
-                cur_goal_state['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y, 
+                cur_achieved_goal_state[0], # = ['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 
+                cur_achieved_goal_state[1], # = ['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y, 
             ]) # [translation_x, translation_y] of the forklift (goal state)
             for i in range(len(self.staged_obs_flattened)):
                 # Obtain reward for the current goal

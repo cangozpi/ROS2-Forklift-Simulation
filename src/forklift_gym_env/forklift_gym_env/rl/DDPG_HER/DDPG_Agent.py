@@ -21,6 +21,11 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         self.actor_target = deepcopy(self.actor)
         self.critic_target = deepcopy(self.critic)
 
+        # Freeze target networks with respect to optimizers (only update via polyak averaging)
+        for actor_p, critic_p in zip(self.actor_target.parameters(), self.critic_target.parameters()):
+            actor_p.requires_grad = False
+            critic_p.requires_grad = False
+
         self.optim_actor = torch.optim.Adam(self.actor.parameters(), lr)
         self.optim_critic = torch.optim.Adam(self.critic.parameters(), lr)
 
@@ -57,12 +62,13 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         """
         Given a batch of data(i.e. (s,a,r,s',d)) performs training/model update on the DDPG agent's DNNs.
         """
+        self.critic.zero_grad()
         # Compute Q_targets
-        Q_targets = reward_batch + \
-            ((1 - terminal_batch.int()) * self.gamma * self.critic_target(next_state_batch, self.actor_target(next_state_batch, goal_state_batch), goal_state_batch))
+        with torch.no_grad():
+            Q_targets = reward_batch + \
+                ((1 - terminal_batch.int()) * self.gamma * self.critic_target(next_state_batch, self.actor_target(next_state_batch, goal_state_batch), goal_state_batch))
 
         # Update Q function (Critic)
-        self.critic.zero_grad()
         Q_value_preds = self.critic(state_batch, action_batch, goal_state_batch)
         critic_loss = self.critic_loss_func(Q_value_preds, Q_targets)
         critic_loss.backward()
