@@ -24,9 +24,9 @@ from forklift_gym_env.envs.controller_publishers.diff_cont_cmd_vel_unstamped_pub
 from forklift_gym_env.envs.controller_publishers.fork_joint_controller_cmd_publisher import ForkJointContCmdPublisher
 
 
-from forklift_gym_env.rl.DDPG_HER.utils import flatten_and_concatenate_observation
+from forklift_gym_env.rl.sb3_HER.utils import flatten_and_concatenate_observation
 
-class ForkliftEnv(gym.GoalEnv):
+class ForkliftEnvSb3HER(gym.GoalEnv):
     metadata = {
         "render_modes": ["no_render", "show_depth_camera_img_raw"], 
         # "render_fps": 4 #TODO: set this
@@ -47,7 +47,7 @@ class ForkliftEnv(gym.GoalEnv):
 
         # Set render_mode
         for x in self.config["render_mode"]:
-            assert x in ForkliftEnv.metadata['render_modes'] 
+            assert x in ForkliftEnvSb3HER.metadata['render_modes'] 
         self.render_mode = self.config['render_mode']
 
         # self.ros_clock will be used to check that observations are obtained after the actions are taken
