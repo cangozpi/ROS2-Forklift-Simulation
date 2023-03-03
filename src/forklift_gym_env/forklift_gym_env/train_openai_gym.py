@@ -22,20 +22,23 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 
 from sb3_contrib import QRDQN, TQC
 
+from stable_baselines3.common.evaluation import evaluate_policy
 
-mode = "test"
-assert mode in ["train", "test"]
+
 
 def main():
 
+    mode = "train"
+    assert mode in ["train", "test"]
 
-    env = gym.make('forklift_gym_env/ForkliftWorld-v1')
+    # env = gym.make('forklift_gym_env/ForkliftWorld-v1')
+    env = gym.make("MountainCarContinuous-v0")
+    print(f'action_space: {env.action_space} action_space.shape: {env.action_space.shape}, observation_space: {env.observation_space}')
     # It will check your custom environment and output additional warnings if needed
-    check_env(env)
-    print("doneeeeeeeeeeeeEEEEEEEEEEEEEEEE")
-    return None
+    # check_env(env)
 
-    seed_everything(env.config["seed"]) # set seed
+    # seed_everything(env.config["seed"]) # set seed
+    seed_everything(42) # set seed
     # time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
 
     if mode == "train":
@@ -44,61 +47,95 @@ def main():
 
         # The noise objects for DDPG
         n_actions = env.action_space.shape[-1]
-        action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+        action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.01 * np.ones(n_actions))
 
         # Initialize the model
         policy_kwargs = dict(n_critics=2, n_quantiles=25)
-        model = TQC(
-            "MultiInputPolicy", 
-            env, 
-            top_quantiles_to_drop_per_net=2, 
-            verbose=1, 
-            policy_kwargs=policy_kwargs,
-            replay_buffer_class=HerReplayBuffer,
-            replay_buffer_kwargs=dict(
-                n_sampled_goal=4,
-                goal_selection_strategy=goal_selection_strategy,
-                online_sampling=False,
-                max_episode_length=5000,
-            ),
-            tensorboard_log="sb3_tensorboard/"
-        )
-        # model = DDPG(
-        #     "MultiInputPolicy",
-        #     env,
-        #     action_noise=action_noise,
+        # model = TQC(
+        #     "MultiInputPolicy", 
+        #     env, 
+        #     top_quantiles_to_drop_per_net=2, 
+        #     verbose=1, 
+        #     policy_kwargs=policy_kwargs,
         #     replay_buffer_class=HerReplayBuffer,
-        #     # Parameters for HER
         #     replay_buffer_kwargs=dict(
         #         n_sampled_goal=4,
         #         goal_selection_strategy=goal_selection_strategy,
-        #         online_sampling=True,
+        #         online_sampling=False,
         #         max_episode_length=1000,
         #     ),
+        #     tensorboard_log="sb3_tensorboard/"
+        # )
+        model = DDPG(
+            "MlpPolicy",
+            env,
+            action_noise=action_noise,
+            # replay_buffer_class=HerReplayBuffer,
+            # # Parameters for HER
+            # replay_buffer_kwargs=dict(
+            #     n_sampled_goal=4,
+            #     goal_selection_strategy=goal_selection_strategy,
+            #     online_sampling=True,
+            #     max_episode_length=1000,
+            # ),
+            verbose=1,
+            tensorboard_log="sb3_tensorboard/",
+            # actor_lr=0.0001, 
+            # critic_lr=0.001,
+            learning_rate=1e-4,
+            batch_size=512,
+            gamma=0.9999,
+            # nb_train_steps=50,
+            tau=0.001
+        )
+        # model = PPO(
+        #     policy="MlpPolicy",
+        #     env=env,
+        #     seed=0,
+        #     batch_size=256,
+        #     ent_coef=0.00429,
+        #     learning_rate=7.77e-05,
+        #     n_epochs=10,
+        #     n_steps=8,
+        #     gae_lambda=0.9,
+        #     gamma=0.9999,
+        #     clip_range=0.1,
+        #     max_grad_norm =5,
+        #     vf_coef=0.19,
+        #     use_sde=True,
+        #     policy_kwargs=dict(log_std_init=-3.29, ortho_init=False),
         #     verbose=1,
         #     tensorboard_log="sb3_tensorboard/"
         # )
 
 
         # model = DDPG("MlpPolicy", env, action_noise=action_noise, verbose=1, tensorboard_log="sb3_tensorboard/")
-        model.learn(total_timesteps=30_000, tb_log_name="sb3 forklift_env run", reset_num_timesteps=False, log_interval=1) # log_interval=10
-        model.save("sb3_saved_model")
+        for i in range(1):
+            model.learn(total_timesteps=20_000, tb_log_name="2 first run", reset_num_timesteps=False, progress_bar=True, log_interval=1) # log_interval=10
+            model.save("sb3_saved_model")
+            print(f'Training checkpoint: {i} done.')
         print("Finished training the agent !")
+
+        # Evaluate the agent
+        mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=10)
+        print(f'Evaluating the model: mean_reward: {mean_reward}, std_reward: {std_reward}')
 
         # env = model.get_env()
 
         # del model # remove to demonstrate saving and loading
 
+        mode = "test"
+
     if mode == "test":
         # model = DDPG.load("sb3_saved_model") # Non-HER models can use this to load model
-        model = TQC.load("sb3_saved_model", env=env) # HER requires env passed in
+        model = DDPG.load("sb3_saved_model", env=env) # HER requires env passed in
 
         # Testing the agent
         print("Testing the model:")
         obs = env.reset()
         while True: 
             # action, _states = model.predict(obs)
-            action, _ = model.predict(obs, deterministic=True)
+            action, _ = model.predict(obs, deterministic=True) # deterministic=True
             obs, reward, done, info = env.step(action)
             print("action: ", action, "obs:", obs, "reward:", reward)
             env.render()

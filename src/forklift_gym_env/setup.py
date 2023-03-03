@@ -29,6 +29,7 @@ setup(
             'forklift_gym_env_training = forklift_gym_env.train:main',
             'forklift_gym_env_HER_training = forklift_gym_env.train_HER_DDPG:main',
             'forklift_gym_env_sb3_training = forklift_gym_env.train_sb3:main',
+            'forklift_gym_env_openai_gym_training = forklift_gym_env.train_openai_gym:main',
             'forklift_gym_env_testing = forklift_gym_env.test:main',
             'gui_controller = forklift_gym_env.gui_controller.gui_controller:main',
         ],
