@@ -240,7 +240,6 @@ class RewardType(Enum):
     COLLISION_PENALTY = "collision_penalty"
     BINARY = "binary"
 
-
 class ActionType(Enum):
     """
     Specifies the action space for the actions that will be taken by the agent. Used in config.yaml

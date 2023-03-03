@@ -7,7 +7,9 @@ from forklift_gym_env.envs.utils import ObservationType, ActionType
 
 def flatten_and_concatenate_observation(obs, env):
     obs_flattened = torch.tensor([])
+    achieved_state = None
     goal_state = None
+
 
     if ObservationType.TARGET_TRANSFORM in env.obs_types:
         # target_tf_obs = torch.tensor(obs['target_transform_observation']) # [translation_x, translation_y] of the initial absolute position of the target
@@ -18,6 +20,12 @@ def flatten_and_concatenate_observation(obs, env):
         goal_state = target_tf_obs
 
     if ObservationType.FORK_POSITION in env.obs_types:
+        # achieved_state of the agent
+        achieved_state = torch.tensor([
+            obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 
+            obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y, 
+        ])
+
         tf_obs = torch.tensor([
             # Add Pose/transformations:
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 
@@ -60,7 +68,7 @@ def flatten_and_concatenate_observation(obs, env):
         depth_camera_raw_image_obs = torch.tensor(obs['depth_camera_raw_image_observation'])
         obs_flattened = torch.concat((obs_flattened.reshape(-1), depth_camera_raw_image_obs.reshape(-1)), dim=0)
 
-    return obs_flattened, goal_state, obs
+    return obs_flattened, achieved_state, goal_state, obs
 
 
 def flatten_and_concatenate_action(action):
