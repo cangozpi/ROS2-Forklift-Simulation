@@ -23,18 +23,17 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from sb3_contrib import QRDQN, TQC
 
 
-mode = "test"
-assert mode in ["train", "test"]
 
 def main():
-
+    mode = "train"
+    assert mode in ["train", "test"]
 
     env = gym.make('forklift_gym_env/ForkliftWorld-v1')
     # It will check your custom environment and output additional warnings if needed
     # check_env(env)
 
-    seed_everything(env.config["seed"]) # set seed
-    time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
+    # seed_everything(env.config["seed"]) # set seed
+    # time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
 
     if mode == "train":
         # Available strategies (cf paper): future, final, episode
@@ -57,7 +56,7 @@ def main():
                 n_sampled_goal=4,
                 goal_selection_strategy=goal_selection_strategy,
                 online_sampling=False,
-                max_episode_length=1000,
+                max_episode_length=4000,
             ),
             tensorboard_log="sb3_tensorboard/"
         )
@@ -79,13 +78,15 @@ def main():
 
 
         # model = DDPG("MlpPolicy", env, action_noise=action_noise, verbose=1, tensorboard_log="sb3_tensorboard/")
-        model.learn(total_timesteps=30_000, tb_log_name="first run", reset_num_timesteps=False, log_interval=1) # log_interval=10
+        model.learn(total_timesteps=30_000, tb_log_name="forklift_env fix sb3 run", reset_num_timesteps=False, log_interval=1, progress_bar=True)
         model.save("sb3_saved_model")
         print("Finished training the agent !")
 
         # env = model.get_env()
 
         # del model # remove to demonstrate saving and loading
+
+        mode = "test"
 
     if mode == "test":
         # model = DDPG.load("sb3_saved_model") # Non-HER models can use this to load model
