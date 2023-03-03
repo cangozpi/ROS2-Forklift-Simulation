@@ -353,12 +353,16 @@ class ForkliftEnv(gym.GoalEnv):
         self.cur_iteration = 0
 
         # Choose the agent's location uniformly at random
-        self._agent_location = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
+        # self._agent_location = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
+        # self._agent_location *= np.array([0, 1]) # make it only change in y axis
+        self._agent_location = np.array([0.0, 0.0]) # fix forklift start state to origin
 
         # Sample the target's location randomly until it does not coincide with the agent's location
         self._target_transform = self._agent_location
+        self._target_transform *= np.array([0, 1]) # make it only change in y axis
         while np.array_equal(self._target_transform, self._agent_location):
-            self._target_transform = np.random.random(size=2) * 40 - 20 # in the range [-20, 20]
+            self._target_transform = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
+            self._target_transform *= np.array([0, 1]) # make it only change in y axis
  
 
         # Unpause sim so that simulation can be reset
