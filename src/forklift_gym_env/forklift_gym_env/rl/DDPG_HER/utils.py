@@ -81,7 +81,7 @@ def flatten_and_concatenate_action(env, action):
     if ActionType.FORK_JOINT_CONT in env.act_types:
         fork_joint_cont_act = torch.tensor(action['fork_joint_cont_action'])
         act = torch.concat((act.reshape(-1), fork_joint_cont_act.reshape(-1)), dim=0)
-    return act
+    return act.numpy()
 
 
 def convert_agent_action_to_dict(action, env):
@@ -94,7 +94,7 @@ def convert_agent_action_to_dict(action, env):
         action_dict = {
             **action_dict,
             **{
-                "diff_cont_action": action[0:2].cpu().detach().numpy() * abs(env.action_space['diff_cont_action'].high)
+                "diff_cont_action": action[0:2].cpu().detach().numpy()
             }
         }
     else:
@@ -110,7 +110,7 @@ def convert_agent_action_to_dict(action, env):
         action_dict = {
             **action_dict,
             **{
-                "fork_joint_cont_action": np.asarray([action[2].cpu().detach().numpy()]) * abs(env.action_space['fork_joint_cont_action'].high)
+                "fork_joint_cont_action": np.asarray([action[2].cpu().detach().numpy()]) 
             }
         }
     else:

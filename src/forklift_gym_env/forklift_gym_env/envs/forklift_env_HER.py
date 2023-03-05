@@ -715,7 +715,7 @@ class ForkliftEnvHER(gym.GoalEnv):
             if RewardType.L2_DIST in reward_types:
                 def calc_reward_L2_dist(observation, goal_state):
                     """
-                    Returns the L2 distance between the (translation_x, translation_y) coordinates 
+                    Returns negative L2 distance between the (translation_x, translation_y) coordinates 
                     of forklift_robot_transform and target_transform.
                     Inputs:
                         observation: returned by self._get_obs()
@@ -723,16 +723,17 @@ class ForkliftEnvHER(gym.GoalEnv):
                         reward: L2 distance
 
                     """
-                    forklift_robot_transform = observation['forklift_position_observation']
+                    # forklift_robot_transform = observation['forklift_position_observation']
                     # Return negative L2 distance btw chassis_bottom_link and the target location as reward
                     # Note that we are only using translation here, NOT using rotation information
-                    robot_transform_translation = [forklift_robot_transform['chassis_bottom_link']['pose']['position'].x, \
-                        forklift_robot_transform['chassis_bottom_link']['pose']['position'].y] # [translation_x, translation_y]
+                    # robot_transform_translation = [forklift_robot_transform['chassis_bottom_link']['pose']['position'].x, \
+                    #     forklift_robot_transform['chassis_bottom_link']['pose']['position'].y] # [translation_x, translation_y]
+                    robot_transform_translation = [observation[0], observation[1]] # [translation_x, translation_y]
                     if goal_state is None:
                         l2_dist = np.linalg.norm(robot_transform_translation - self._target_transform)
                     else:
                         l2_dist = np.linalg.norm(robot_transform_translation - goal_state)
-                    return l2_dist
+                    return - l2_dist
 
                 reward += calc_reward_L2_dist(observation, goal_state)
     
@@ -782,10 +783,10 @@ class ForkliftEnvHER(gym.GoalEnv):
         d = {}
         # Set action space according to act_type 
         if ActionType.DIFF_CONT in act_types:
-            d["diff_cont_action"] = spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float64) #TODO: set this to limits from config file
+            d["diff_cont_action"] = spaces.Box(low = -5 * np.ones((2)), high = 5 * np.ones((2)), dtype=np.float64) #TODO: set this to limits from config file
         
         if ActionType.FORK_JOINT_CONT in act_types:
-            d["fork_joint_cont_action"] =  spaces.Box(low = -2.0, high = 2.0, shape = (1,), dtype = np.float64) # TODO: set its high and low limits correctly
+            d["fork_joint_cont_action"] =  spaces.Box(low = -5.0, high = 5.0, shape = (1,), dtype = np.float64) # TODO: set its high and low limits correctly
 
 
         return spaces.Dict(d)
