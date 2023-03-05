@@ -9,6 +9,7 @@ class ReplayBuffer:
         self.replay_buffer_size = replay_buffer_size
         self.batch_size = batch_size
         self.index = 0
+        self.buffer_full = False
 
         self.state_buffer = torch.zeros(replay_buffer_size, obs_dim, dtype=torch.float32)
         self.action_buffer = torch.zeros(replay_buffer_size, action_dim, dtype=torch.float32)
@@ -35,6 +36,8 @@ class ReplayBuffer:
         self.terminal_buffer[self.index, :] = term
         self.goal_state_buffer[self.index, :] = goal_state
 
+        if (self.index + 1) >= self.replay_buffer_size:
+            self.buffer_full = True
         self.index = (self.index + 1) % self.replay_buffer_size
     
 
@@ -70,7 +73,7 @@ class ReplayBuffer:
         # Append original experiences ---
         for i in range(len(self.staged_obs_flattened)):
             self.append(self.staged_obs_flattened[i], self.staged_action[i], self.staged_reward[i], \
-                self.staged_next_obs_flattened[i], self.staged_term[i], torch.tensor(self.staged_goal_state[i]))
+                self.staged_next_obs_flattened[i], self.staged_term[i], self.staged_goal_state[i])
 
         # Append HER experiences  ---
         # Generate k many goals from the last states of the current episode
@@ -95,7 +98,12 @@ class ReplayBuffer:
 
 
     def sample_batch(self):
-        batch_indices = np.random.choice(np.arange(start=0, stop=self.replay_buffer_size), size=self.batch_size)
+        if self.buffer_full: # Replay buffer's entries are all filled
+            batch_indices = np.random.choice(np.arange(start=0, stop=self.replay_buffer_size), size=self.batch_size)
+        elif self.index < self.batch_size:
+            raise Exception(f'Can\'t sample a batch since there aren\'t batch_size ({self.batch_size}) many entries in the Replay Buffer yet!')
+        else: # Replay Buffer has empty entries after self.index
+            batch_indices = np.random.choice(np.arange(start=0, stop=self.index), size=self.batch_size)
 
         state_batch = self.state_buffer[batch_indices]
         action_batch = self.action_buffer[batch_indices]
@@ -106,3 +114,12 @@ class ReplayBuffer:
 
         return state_batch, action_batch, reward_batch, next_state_batch, terminal_batch, goal_state_batch
         
+    
+    def can_sample_a_batch(self):
+        """
+        Returns True if Replay Buffer has at least batch_size many entires ,else False.
+        """
+        if self.buffer_full or (self.index >= self.batch_size):
+            return True
+        else:
+            return False

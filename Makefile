@@ -18,6 +18,9 @@ train_HER:
 train_sb3:
 	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_sb3_training
 
+train_openai_gym_HER:
+	source install/setup.bash && ros2 run forklift_gym_env openai_gym_env_HER_training
+
 test:
 	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_testing
 

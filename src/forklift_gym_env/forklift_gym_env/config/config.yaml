@@ -20,21 +20,21 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 
 
 # ========== HYPERPARAMTERS ============= 
-total_episodes: 30 # total number of episodes to train
+total_episodes: 300 # total number of episodes to train
 max_episode_length: 4000 # maximum iteration length of an episode.
-warmup_steps: 100 # number of steps to take random actions before using the agents policy
-update_every: 400 # update model after every update_every steps.
-num_updates: 10 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
-actor_hidden_dims: [64, 64, 64] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
-critic_hidden_dims: [64, 64, 64] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
-lr: 5e-3 # learning rate
+warmup_steps: 30 # number of steps to take random actions before using the agents policy
+update_every: 200 # update model after every update_every steps.
+num_updates: 2 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
+actor_hidden_dims: [32, 64, 128] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
+critic_hidden_dims: [32, 64, 128] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
+lr: 1e-7 # learning rate
 initial_epsilon: 1.0 # epsilon used for multiplying the gaussian distribution sample to obtain the noise to add to the agent's action (exploration).
 epsilon_decay: 0.999 # every time an action is taken epsilon is reduced by this amount (i.e. epsilon *= epsilon_decay).
 min_epsilon: 0.05 # minimum value that epsilon can decay to
 gamma: 0.9999 # next state discount rate
-tau: 0.1 # tau value used in updating the target networks using polyak averaging (i.e. targ_net = tau*targ_net + (1-tau) * net).
+tau: 0.995 # tau value used in updating the target networks using polyak averaging (i.e. targ_net = tau*targ_net + (1-tau) * net).
 replay_buffer_size: 100_000 # size of the replay buffer
-batch_size: 512
+batch_size: 256
 seed: 42 # used to set seed for reproducibility
 save_every: 2000 # specifies after every how many updates to the model the agent model is saved
 # ======================================= HER 

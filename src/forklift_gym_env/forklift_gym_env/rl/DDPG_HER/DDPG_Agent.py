@@ -7,7 +7,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
     """
     Refer to https://spinningup.openai.com/en/latest/algorithms/ddpg.html for implementation details.
     """
-    def __init__(self, obs_dim, action_dim, goal_state_dim, actor_hidden_dims, critic_hidden_dims, lr, initial_epsilon, epsilon_decay, min_epsilon, gamma, tau):
+    def __init__(self, obs_dim, action_dim, goal_state_dim, actor_hidden_dims, critic_hidden_dims, actor_lr, critic_lr, initial_epsilon, epsilon_decay, min_epsilon, gamma, tau):
         self.mode = "train"
         self.epsilon = initial_epsilon
         self.epsilon_decay = epsilon_decay
@@ -26,8 +26,8 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
             actor_p.requires_grad = False
             critic_p.requires_grad = False
 
-        self.optim_actor = torch.optim.Adam(self.actor.parameters(), lr)
-        self.optim_critic = torch.optim.Adam(self.critic.parameters(), lr)
+        self.optim_actor = torch.optim.Adam(self.actor.parameters(), actor_lr)
+        self.optim_critic = torch.optim.Adam(self.critic.parameters(), critic_lr)
 
         self.critic_loss_func = torch.nn.MSELoss()
 
@@ -44,7 +44,8 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         action = self.actor(obs, goal_state)
         # during training add noise to the action
         if self.mode == "train":
-            noise = self.epsilon * torch.normal(mean=torch.tensor(0.0),std=torch.tensor(1.0))
+            # noise = self.epsilon * torch.normal(mean=torch.tensor(0.0),std=torch.tensor(1.0))
+            noise = self.epsilon * torch.normal(mean=torch.tensor(0.0),std=torch.tensor(0.05))
             action += noise
 
             # Decay epsilon
@@ -93,7 +94,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
                 (target_param.data * self.tau) + (param.data * (1.0 - self.tau)) 
                     )
         
-        return critic_loss, actor_loss
+        return critic_loss.cpu().detach(), actor_loss.cpu().detach()
 
 
     def train(self):
@@ -106,8 +107,8 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         self.actor.train()
         self.critic.train()
         # TODO: not sure if target networks should be set to train or eval ??
-        self.actor_target.train()
-        self.critic_target.train() 
+        self.actor_target.eval()
+        self.critic_target.eval() 
     
 
     def eval(self):
@@ -218,6 +219,7 @@ class Critic(nn.Module):
             layers.append(torch.nn.ReLU())
             prev_dim = hidden_dim
         layers.append(torch.nn.Linear(prev_dim, self.output_dim))
+        # layers.append(torch.nn.ReLU())
                 
         self.model_layers = torch.nn.ModuleList(layers)
     
