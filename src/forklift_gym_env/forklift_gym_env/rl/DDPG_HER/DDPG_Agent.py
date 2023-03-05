@@ -7,19 +7,26 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
     """
     Refer to https://spinningup.openai.com/en/latest/algorithms/ddpg.html for implementation details.
     """
-    def __init__(self, obs_dim, action_dim, goal_state_dim, actor_hidden_dims, critic_hidden_dims, actor_lr, critic_lr, initial_epsilon, epsilon_decay, min_epsilon, gamma, tau):
+    def __init__(self, obs_dim, action_dim, actor_hidden_dims, critic_hidden_dims, actor_lr, critic_lr, initial_epsilon, epsilon_decay, min_epsilon, gamma, tau, max_action):
         self.mode = "train"
         self.epsilon = initial_epsilon
         self.epsilon_decay = epsilon_decay
         self.min_epsilon = min_epsilon
         self.gamma = gamma
         self.tau = tau
+        self.max_action = max_action # actions returned is in range [-max_action, max_action]
 
-        self.actor = Actor(obs_dim, action_dim, goal_state_dim, actor_hidden_dims)
-        self.critic = Critic(obs_dim, action_dim, goal_state_dim, critic_hidden_dims)
+        self.actor = Actor(obs_dim, action_dim, actor_hidden_dims, max_action)
+        self.critic = Critic(obs_dim, action_dim, critic_hidden_dims)
 
-        self.actor_target = deepcopy(self.actor)
-        self.critic_target = deepcopy(self.critic)
+        self.actor_target = Actor(obs_dim, action_dim, actor_hidden_dims, max_action)
+        self.critic_target = Critic(obs_dim, action_dim, actor_hidden_dims)
+
+        self.actor_target.load_state_dict(self.actor.state_dict())
+        self.critic_target.load_state_dict(self.critic.state_dict())
+
+        # self.actor_target = deepcopy(self.actor)
+        # self.critic_target = deepcopy(self.critic)
 
         # Freeze target networks with respect to optimizers (only update via polyak averaging)
         for actor_p, critic_p in zip(self.actor_target.parameters(), self.critic_target.parameters()):
@@ -31,22 +38,21 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
 
         self.critic_loss_func = torch.nn.MSELoss()
 
-        self.train()
+        self.train_mode()
     
 
-    def choose_action(self, obs, goal_state):
+    def choose_action(self, obs):
         """
         Returns actions that are normalized in the [-1, 1] range. Don't forget to scale them up for your need.
         Note that obs and goal_state are torch.Tensor with no batch dimension.
         """
         obs = torch.unsqueeze(obs, dim=0) # batch dimension of 1
-        goal_state = torch.unsqueeze(goal_state, dim=0) # batch dimension of 1
-        action = self.actor(obs, goal_state)
+        action = self.actor(obs)
         # during training add noise to the action
         if self.mode == "train":
             # noise = self.epsilon * torch.normal(mean=torch.tensor(0.0),std=torch.tensor(1.0))
             noise = self.epsilon * torch.normal(mean=torch.tensor(0.0),std=torch.tensor(0.05))
-            action += noise
+            action = action + noise
 
             # Decay epsilon
             self.epsilon *= self.epsilon_decay
@@ -54,31 +60,37 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
                 self.epsilon = self.min_epsilon
         
         # clip action [-1, 1]
-        action = torch.clip(action, -1.0, 1.0)
+        action = torch.clip(action, -1.0*self.max_action, 1.0*self.max_action)
 
         return action
 
     
-    def update(self, state_batch, action_batch, reward_batch, next_state_batch, terminal_batch, goal_state_batch):
+    def update(self, state_batch, action_batch, reward_batch, next_state_batch, terminal_batch):
         """
         Given a batch of data(i.e. (s,a,r,s',d)) performs training/model update on the DDPG agent's DNNs.
         """
-        self.critic.zero_grad()
+        self.train_mode()
+
         # Compute Q_targets
         with torch.no_grad():
             Q_targets = reward_batch + \
-                ((1 - terminal_batch.int()) * self.gamma * self.critic_target(next_state_batch, self.actor_target(next_state_batch, goal_state_batch), goal_state_batch))
+                ((1 - terminal_batch.int()) * self.gamma * self.critic_target(next_state_batch, self.actor_target(next_state_batch)))
 
         # Update Q function (Critic)
-        Q_value_preds = self.critic(state_batch, action_batch, goal_state_batch)
+        Q_value_preds = self.critic(state_batch, action_batch)
         critic_loss = self.critic_loss_func(Q_value_preds, Q_targets)
+        self.critic.zero_grad()
         critic_loss.backward()
         self.optim_critic.step()
 
 
         # Update policy (Actor)
+        actor_loss = - torch.mean(self.critic(state_batch, self.actor(state_batch)))
+        # a = self.actor(state_batch)
+        # v = self.critic(state_batch, a)
+        # actor_loss = - torch.mean(v)
+        # actor_loss = - v.mean() 
         self.actor.zero_grad()
-        actor_loss = - torch.mean(self.critic(state_batch, self.actor(state_batch, goal_state_batch), goal_state_batch))
         actor_loss.backward()
         self.optim_actor.step()
 
@@ -97,7 +109,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         return critic_loss.cpu().detach(), actor_loss.cpu().detach()
 
 
-    def train(self):
+    def train_mode(self):
         """
         Sets actor and target networks to model.train() mode of torch.
         Also makes choose_action return actions with added noise for training (exploration reasons).
@@ -111,7 +123,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         self.critic_target.eval() 
     
 
-    def eval(self):
+    def eval_mode(self):
         """
         Sets actor and target networks to model.train() mode of torch.
         Also makes choose_action return actions with no noise added for testing.
@@ -155,7 +167,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
 
 
 class Actor(nn.Module):
-    def __init__(self, obs_dim, action_dim, goal_state_dim, hidden_dims:list):
+    def __init__(self, obs_dim, action_dim, hidden_dims:list, max_action):
         """
         Inputs:
             obs_dim (tuple): dimension of the observations. (e.g. (C, H, W), for and RGB image observation).
@@ -165,14 +177,14 @@ class Actor(nn.Module):
         """
         super().__init__()
         self.obs_dim = obs_dim
-        self.goal_state_dim = goal_state_dim
         self.action_dim = action_dim
+        self.max_action = max_action # actions returned is in range [-max_action, max_action]
 
         layers = []
-        prev_dim = self.obs_dim + self.goal_state_dim # shape of the flattened input to the network
+        prev_dim = self.obs_dim  # shape of the flattened input to the network
         for i, hidden_dim in enumerate(hidden_dims):
-            if i == 0:
-                layers.append(torch.nn.Flatten())
+            # if i == 0:
+            #     layers.append(torch.nn.Flatten())
             layers.append(torch.nn.Linear(prev_dim, hidden_dim))
             layers.append(torch.nn.ReLU())
             prev_dim = hidden_dim
@@ -182,23 +194,24 @@ class Actor(nn.Module):
         self.model_layers = torch.nn.ModuleList(layers)
     
     
-    def forward(self, obs, goal_state):
+    def forward(self, obs_batch):
         """
         Inputs:
-            obs (torch.Tensor): a batch of states.
-            goal_state (torch.Tensor): a batch of goal_state
+            obs_batch (torch.Tensor): a batch of states.
         """
-        concatenated_input = torch.concat((obs, goal_state), dim=1) # agent will choose action by using (state, goal)
         # pass input through the layers of the model
-        out = concatenated_input # --> [B, (obs_dim + goal_state_dim)]
+        batch_dim = obs_batch.shape[0]
+        out = obs_batch.reshape(batch_dim, -1) # --> [B, obs_dim]
+
         for layer in self.model_layers:
-            out = layer(out.float())
+            out = layer(out)
         
+        out = out * self.max_action
         return out
 
 
 class Critic(nn.Module):
-    def __init__(self, obs_dim, action_dim, goal_state_dim, hidden_dims:list):
+    def __init__(self, obs_dim, action_dim, hidden_dims:list):
         """
         Inputs:
             obs_dim (tuple): dimension of the observations. (e.g. (C, H, W), for and RGB image observation).
@@ -207,14 +220,14 @@ class Critic(nn.Module):
                 and the input and the output dimensions.
         """
         super().__init__()
-        self.obs_dim = (obs_dim, action_dim, goal_state_dim) 
+        self.obs_dim = (obs_dim, action_dim) 
         self.output_dim = 1 # Q(s,a) is of shape (1,)
 
         layers = []
         prev_dim = sum(self.obs_dim) # shape of the flattened input to the network
         for i, hidden_dim in enumerate(hidden_dims):
-            if i == 0:
-                layers.append(torch.nn.Flatten())
+            # if i == 0:
+            #     layers.append(torch.nn.Flatten())
             layers.append(torch.nn.Linear(prev_dim, hidden_dim))
             layers.append(torch.nn.ReLU())
             prev_dim = hidden_dim
@@ -224,7 +237,7 @@ class Critic(nn.Module):
         self.model_layers = torch.nn.ModuleList(layers)
     
     
-    def forward(self, state_batch, action_batch, goal_state_batch):
+    def forward(self, state_batch, action_batch):
         """
         Inputs:
             state_batch (torch.Tensor): a batch of states.
@@ -234,10 +247,9 @@ class Critic(nn.Module):
         batch_dim = state_batch.shape[0]
         state_batch = state_batch.reshape(batch_dim, -1)
         action_batch = action_batch.reshape(batch_dim, -1)
-        goal_state_batch = goal_state_batch.reshape(batch_dim, -1)
-        out = torch.concat((state_batch, action_batch, goal_state_batch), dim=1) # --> [B, (self.obs_dim + action_dim + goal_state_dim)]
+        out = torch.concat((state_batch, action_batch), dim=1) # --> [B, (self.obs_dim + action_dim)]
 
         for layer in self.model_layers:
-            out = layer(out.float())
+            out = layer(out)
         
         return out

@@ -2,7 +2,9 @@ import gym
 import time
 from forklift_gym_env.envs.forklift_env_HER import ForkliftEnvHER
 from forklift_gym_env.rl.DDPG_HER.DDPG_Agent import DDPG_Agent
+# from forklift_gym_env.rl.DDPG_HER.DDPG_Agent2 import DDPG_Agent
 from forklift_gym_env.rl.DDPG_HER.Replay_Buffer import ReplayBuffer 
+# from forklift_gym_env.rl.DDPG_HER.Replay_Buffer2 import ReplayBuffer
 from forklift_gym_env.rl.DDPG_HER.utils import *
 
 from torch.utils.tensorboard import SummaryWriter
@@ -30,42 +32,47 @@ def main():
     cur_iteration = 0
     verbose = True
     render = False
-    # goal_state = np.array([0.0, 1.0, 0.0])
-    goal_state = np.array([])
-    actor_lr = 1e-4
+    actor_lr = 1e-3
     critic_lr = 1e-3
+    warmup_done = False
 
     # concatenated_obs_dim, concatenated_action_dim, goal_state_dim = get_concatenated_obs_and_act_dims(env)
     concatenated_obs_dim = env.observation_space.shape[-1]
     concatenated_action_dim = env.action_space.shape[-1]
-    # goal_state_dim = env.observation_space.shape[-1]
-    goal_state_dim = 0 
 
-    agent = DDPG_Agent(concatenated_obs_dim, concatenated_action_dim, goal_state_dim, \
+    agent = DDPG_Agent(concatenated_obs_dim, concatenated_action_dim, \
         config["actor_hidden_dims"], config["critic_hidden_dims"], actor_lr, critic_lr, \
-            config["initial_epsilon"], config["epsilon_decay"], config['min_epsilon'], config["gamma"], config["tau"])
-    agent.train() # TODO: handle .eval() case for testing the model too.
-    replay_buffer = ReplayBuffer(config["replay_buffer_size"], concatenated_obs_dim, concatenated_action_dim, goal_state_dim, config["batch_size"])
+            config["initial_epsilon"], config["epsilon_decay"], config['min_epsilon'], config["gamma"], config["tau"], max_action=env.action_space.high.item())
+    # agent = DDPG_Agent(concatenated_obs_dim, concatenated_action_dim, env.action_space.high.item())
+    # agent.train() # TODO: handle .eval() case for testing the model too.
+    replay_buffer = ReplayBuffer(config["replay_buffer_size"], concatenated_obs_dim, concatenated_action_dim, config["batch_size"])
+    # replay_buffer = ReplayBuffer(max_size=config["replay_buffer_size"])
 
-    obs_dict = env.reset()
+    cur_state = env.reset()
     # obs_flattened, goal_state, obs = flatten_and_concatenate_observation(obs, env)
     replay_buffer.clear_staged_for_append()
     while cur_episode < config["total_episodes"]: # simulate action taking of an agent for debugging the env
         cur_iteration += 1
         # For warmup_steps many iterations take random actions to explore better
-        if cur_iteration < config["warmup_steps"]: # take random actions
+        if cur_iteration < config["warmup_steps"] and not warmup_done: # take random actions
+            if cur_episode > config["warmup_steps"]:
+                warmup_done = True
+
             action = env.action_space.sample()
+            # action /= 2 # [-1, +1] range
             # Take action
-            next_obs_dict, reward, done, info = env.step(action)
+            # next_obs_dict, reward, done, info = env.step(action)
         else: # agent's policy takes action
             with torch.no_grad():
-                action = agent.choose_action(torch.tensor(obs_dict), torch.tensor(goal_state)) # predict action in the range of [-1,1]
+                action = agent.choose_action(torch.tensor(cur_state)) # predict action in the range of [-1,1]
+                # action = agent.select_action(torch.tensor(cur_state)) # predict action in the range of [-1,1]
                 action = torch.squeeze(action, dim=0)
-                action *= env.action_space.high
+                # action *= env.action_space.high
             # action = convert_agent_action_to_dict(action, env) # convert agent action to action dict so that env.step() can parse it
-            action = action.numpy()
-            # Take action
-            next_obs_dict, reward, done, info = env.step(action)
+            # action = action.numpy()
+
+        # Take action
+        next_obs_dict, reward, done, info = env.step(action)
 
         reward /= 10 # reward normalization for pendulum env
         # reward += 2
@@ -79,23 +86,32 @@ def main():
         # Store experience in replay buffer
         # action = flatten_and_concatenate_action(env, action) 
         # Stage current (s,a,s') to replay buffer to be appended using HER at the end of the current episode
-        replay_buffer.stage_for_append(torch.tensor(obs_dict), torch.tensor(action), torch.tensor(reward), \
-            torch.tensor(next_obs_dict), done, torch.tensor(goal_state), \
-                torch.tensor(next_obs_dict))
+        replay_buffer.stage_for_append(torch.tensor(cur_state), torch.tensor(action), torch.tensor(reward), \
+            torch.tensor(next_obs_dict), torch.tensor(done))
+        # agent.replay_buffer.push((cur_state, next_obs_dict, action, reward, done))
 
         # Update current state
-        obs_dict = next_obs_dict
+        cur_state = next_obs_dict
         # obs_flattened = next_obs_flattened #TODO: add this to DDPG only training too @bugfix !
 
         # Update model if its time
         if (cur_iteration % config["update_every"]== 0) and (cur_iteration > config["warmup_steps"]) and replay_buffer.can_sample_a_batch() and \
-            cur_episode > 10:
+            cur_episode > 2:
             print(f"Updating the agent with {config['num_updates']} sampled batches.")
             critic_loss = 0
             actor_loss = 0
             for _ in range(config["num_updates"]):
-                state_batch, action_batch, reward_batch, next_state_batch, terminal_batch, goal_state_batch = replay_buffer.sample_batch() 
-                cur_critic_loss, cur_actor_loss = agent.update(state_batch, action_batch, reward_batch, next_state_batch, terminal_batch, goal_state_batch)
+                state_batch, action_batch, reward_batch, next_state_batch, terminal_batch = replay_buffer.sample_batch() 
+                # x, y, u, r, d = replay_buffer.sample(config["batch_size"]) 
+
+                # state_batch = torch.FloatTensor(x)
+                # action_batch = torch.FloatTensor(u)
+                # next_state_batch = torch.FloatTensor(y)
+                # terminal_batch = torch.FloatTensor(d)
+                # reward_batch = torch.FloatTensor(r)
+
+                cur_critic_loss, cur_actor_loss = agent.update(state_batch, action_batch, reward_batch, next_state_batch, terminal_batch)
+                # cur_critic_loss, cur_actor_loss = agent.update()
 
                 # Accumulate loss for logging
                 critic_loss += cur_critic_loss
@@ -131,14 +147,21 @@ def main():
             # replay_buffer.commit_append(k=config["k"], calc_reward_func=env.compute_reward, check_goal_achieved_func=env.check_goal_achieved) # TODO: set k from config.yaml
 
             # Reset env
-            obs_dict = env.reset()
+            cur_state = env.reset()
             # obs_flattened, goal_state, obs = flatten_and_concatenate_observation(obs, env)
             replay_buffer.clear_staged_for_append()
-            time.sleep(3)
+            # time.sleep(3)
             # Reset episode parameters for a new episode
             cur_episode += 1
             cum_episode_rewards = 0
             cur_iteration = 0
+        
+        if cur_episode % 7 == 0:
+            render = True
+        else:
+            render = False
+        if cur_episode > 30:
+            render = True
 
 
 # SB3 ------------
