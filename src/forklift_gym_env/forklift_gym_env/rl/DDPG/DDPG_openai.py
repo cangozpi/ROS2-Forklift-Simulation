@@ -1,26 +1,38 @@
 import gym
 import time
 from forklift_gym_env.envs.forklift_env_HER import ForkliftEnvHER
-from forklift_gym_env.rl.DDPG_HER.DDPG_Agent import DDPG_Agent
-# from forklift_gym_env.rl.DDPG_HER.DDPG_Agent2 import DDPG_Agent
-from forklift_gym_env.rl.DDPG_HER.Replay_Buffer import ReplayBuffer 
-# from forklift_gym_env.rl.DDPG_HER.Replay_Buffer2 import ReplayBuffer
-from forklift_gym_env.rl.DDPG_HER.utils import *
+from forklift_gym_env.rl.DDPG.DDPG_Agent import DDPG_Agent
+from forklift_gym_env.rl.DDPG.Replay_Buffer import ReplayBuffer 
+from forklift_gym_env.rl.DDPG.utils import *
 
 from torch.utils.tensorboard import SummaryWriter
 import datetime
-
 
 from forklift_gym_env.envs.utils import read_yaml_config
 
 
 def main():
+    agent = "sb3_DDPG_agent" # ["my_DDPG_agent", "sb3_DDPG_agent"] # TODO: set from config
+    assert agent in ["my_DDPG_agent", "sb3_DDPG_agent"]
+
+    if agent == "my_DDPG_agent":
+        my_DDPG_agent()
+    elif agent == "sb3_DDPG_agent":
+        mode = "train" # ["train", "test"] # TODO: set from config
+        assert mode in ["train", "test"]
+
+        sb3_DDPG_agent(mode=mode)
+    else:
+        raise Exception("\'agent\' should be either [\'my_DDPG_agent\', \'sb3_DDPG_agent\']")
+
+
+def my_DDPG_agent():
     # Read in parameters from config.yaml
     config_path = 'build/forklift_gym_env/forklift_gym_env/config/config.yaml'
     config = read_yaml_config(config_path)
 
     # Initialize Tensorboard
-    log_dir, run_name = "logs_tensorboard/", "openai_gym_pendulum_DDPG_HER_agent_" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir, run_name = "logs_tensorboard/", "openAI_pendulum_my_DDPG_agent_" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tb_summaryWriter = SummaryWriter(log_dir + run_name)
 
     # Start Env
@@ -164,9 +176,8 @@ def main():
             render = True
 
 
+
 # SB3 ------------
-
-
 import gym
 
 from stable_baselines3.common.env_checker import check_env
@@ -184,11 +195,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from sb3_contrib import QRDQN, TQC
 
 
-
-def main2():
-    mode = "train"
-    assert mode in ["train", "test"]
-
+def sb3_DDPG_agent(mode="train"):
     env = gym.make('Pendulum-v1', g=9.81)
     # It will check your custom environment and output additional warnings if needed
     # check_env(env)

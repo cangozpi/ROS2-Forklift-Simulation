@@ -49,7 +49,7 @@ def main():
                 n_sampled_goal=4,
                 goal_selection_strategy=goal_selection_strategy,
                 online_sampling=False,
-                max_episode_length=4000,
+                max_episode_length=2000,
             ),
             tensorboard_log="sb3_tensorboard/"
         )
