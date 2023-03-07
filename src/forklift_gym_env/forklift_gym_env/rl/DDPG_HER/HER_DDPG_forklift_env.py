@@ -8,25 +8,29 @@ from forklift_gym_env.rl.DDPG_HER.utils import *
 from torch.utils.tensorboard import SummaryWriter
 import datetime
 
-def main():
-    mode = "train" # ['train', 'test'] # TODO: set from config
 
-    if mode == "train":
-        train_agent()
-    elif mode == "test":
-        test_agent()
+def main():
+    # Read in parameters from config.yaml
+    config_path = 'build/forklift_gym_env/forklift_gym_env/config/config_HER_DDPG_forklift_env.yaml'
+
+    # Start Env
+    # env = gym.make('forklift_gym_env/ForkliftWorld-v0')
+    env = ForkliftEnvHER(config_path=config_path)
+
+    mode = env.config["mode"]
+    if mode == "train": # train agent
+        train_agent(env)
+    elif mode == "test": # test pre-trained agent
+        test_agent(env)
     else:
         raise Exception('\'mode\' must be either [\'train\', \'test\']')
 
 
-def train_agent():
+def train_agent(env):
     # Initialize Tensorboard
     log_dir, run_name = "logs_tensorboard/", "train_DDPG_HER_agent_forklift_env" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tb_summaryWriter = SummaryWriter(log_dir + run_name)
 
-    # Start Env
-    # env = gym.make('forklift_gym_env/ForkliftWorld-v0')
-    env = ForkliftEnvHER()
     seed_everything(env.config["seed"]) # set seed
     # time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
     cur_episode = 0
@@ -145,13 +149,11 @@ def train_agent():
 
 
 
-def test_agent():
+def test_agent(env):
     # Initialize Tensorboard
     log_dir, run_name = "logs_tensorboard/", "test_DDPG_HER_agent_forklift_env_" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tb_summaryWriter = SummaryWriter(log_dir + run_name)
 
-    # Start Env
-    env = ForkliftEnvHER()
     seed_everything(env.config["seed"]) # set seed
     # time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
     cur_episode = 0

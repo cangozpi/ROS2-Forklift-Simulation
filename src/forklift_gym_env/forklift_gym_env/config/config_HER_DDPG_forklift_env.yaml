@@ -20,6 +20,7 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 
 
 # ========== HYPERPARAMTERS HER_DDPG: ============= 
+mode: "train" # ['train', 'test'] # TODO: set from config
 total_episodes: 300 # total number of episodes to train
 max_episode_length: 2000 # maximum iteration length of an episode.
 warmup_steps: 100 # number of steps to take random actions before using the agents policy

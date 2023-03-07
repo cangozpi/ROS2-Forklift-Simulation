@@ -6,7 +6,7 @@ tolerance_y: 1.59  # chassis_bottom_transform's y location's tolerable distance 
 agent_pose_position_z: 0.30 # agent's z coordinate when spawned in the world.
 world_file_name: 'collision_detection.world' # specifies world used for gazebo simulation. These worlds are available in /world folder.
 observation_types: ["fork_position", "target_tf"] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['fork_position', 'pallet_position', 'target_tf', 'tf', 'depth_camera_raw_image', 'collision_detecion']
-reward_types: ["binary"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty", "binary"])
+reward_types: ["L2_distance"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty", "binary"])
 action_types: ["differential_control"] # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options. (e.g. ["differential_control", "fork_joint_control"])
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
 render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
@@ -19,10 +19,12 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 'right_fork_link', 'right_front_wheel_link'] # names of the links that has a corresponding ros topic: /collision_detection/<link_name> , where ros_gazebo_collision_detection_plugin publishes to.
 
 
-# ========== HYPERPARAMTERS HER_DDPG: ============= 
+# ========== HYPERPARAMTERS DDPG openAI GYM: ============= 
+agent: "sb3_DDPG_agent" # ["my_DDPG_agent", "sb3_DDPG_agent"]
+sb3_mode: "train" # if sb3_DDPG_agent is used then this sets the mode from ['train', 'test'], else not used
 total_episodes: 300 # total number of episodes to train
 max_episode_length: 2000 # maximum iteration length of an episode.
-warmup_steps: 100 # number of steps to take random actions before using the agents policy
+warmup_steps: 100 # number of steps to take random actions (at the start of every episode) before sampling from the agents policy
 update_every: 1000 # update model after every update_every steps.
 num_updates: 1000 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
 actor_hidden_dims: [400, 300] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
@@ -38,5 +40,5 @@ replay_buffer_size: 1_000_000 # size of the replay buffer
 batch_size: 256
 seed: 42 # used to set seed for reproducibility
 save_every: 5000 # specifies after every how many updates to the model the agent model is saved
-k: 4 # Number of goals (k) used in HER (Hindsight Experience Replay)
-# ======================================= 
+# =======================================
+

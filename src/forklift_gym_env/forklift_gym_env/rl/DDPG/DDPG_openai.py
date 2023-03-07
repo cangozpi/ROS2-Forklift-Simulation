@@ -12,31 +12,34 @@ from forklift_gym_env.envs.utils import read_yaml_config
 
 
 def main():
-    agent = "sb3_DDPG_agent" # ["my_DDPG_agent", "sb3_DDPG_agent"] # TODO: set from config
+    # Read in parameters from config.yaml
+    config_path = 'build/forklift_gym_env/forklift_gym_env/config/config_DDPG_openai_env.yaml'
+    config = read_yaml_config(config_path)
+
+    # Start Env
+    env = gym.make('Pendulum-v1', g=9.81)
+
+    agent = config["agent"]
     assert agent in ["my_DDPG_agent", "sb3_DDPG_agent"]
 
     if agent == "my_DDPG_agent":
-        my_DDPG_agent()
+        # Read in parameters from config.yaml
+        my_DDPG_agent(env, config)
     elif agent == "sb3_DDPG_agent":
-        mode = "train" # ["train", "test"] # TODO: set from config
+        mode = config["sb3_mode"] # ["train", "test"]
         assert mode in ["train", "test"]
 
-        sb3_DDPG_agent(mode=mode)
+        sb3_DDPG_agent(env, mode=mode)
     else:
         raise Exception("\'agent\' should be either [\'my_DDPG_agent\', \'sb3_DDPG_agent\']")
 
 
-def my_DDPG_agent():
-    # Read in parameters from config.yaml
-    config_path = 'build/forklift_gym_env/forklift_gym_env/config/config.yaml'
-    config = read_yaml_config(config_path)
-
+def my_DDPG_agent(env, config):
     # Initialize Tensorboard
     log_dir, run_name = "logs_tensorboard/", "openAI_pendulum_my_DDPG_agent_" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tb_summaryWriter = SummaryWriter(log_dir + run_name)
 
     # Start Env
-    env = gym.make('Pendulum-v1', g=9.81)
     seed_everything(42) # set seed
     cur_episode = 0
     cum_episode_rewards = 0
@@ -195,8 +198,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from sb3_contrib import QRDQN, TQC
 
 
-def sb3_DDPG_agent(mode="train"):
-    env = gym.make('Pendulum-v1', g=9.81)
+def sb3_DDPG_agent(env, mode="train"):
     # It will check your custom environment and output additional warnings if needed
     # check_env(env)
 
