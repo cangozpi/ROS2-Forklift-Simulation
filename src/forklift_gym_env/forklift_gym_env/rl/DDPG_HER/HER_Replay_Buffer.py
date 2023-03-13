@@ -61,13 +61,13 @@ class HER_ReplayBuffer:
         calling the self.commit_append() function.
         Note that goal_state corresponds to the representation of the next_obs as a goal_state for the HER algorithm.
         """
-        self.staged_state.append(state)
-        self.staged_action.append(action)
-        self.staged_reward.append(reward)
-        self.staged_next_state.append(next_state)
-        self.staged_term.append(term)
-        self.staged_desired_goal.append(desired_goal)
-        self.staged_achieved_goal.append(achieved_goal)
+        self.staged_state.append(state.clone())
+        self.staged_action.append(action.clone())
+        self.staged_reward.append(reward.clone())
+        self.staged_next_state.append(next_state.clone())
+        self.staged_term.append(term.clone())
+        self.staged_desired_goal.append(desired_goal.clone())
+        self.staged_achieved_goal.append(achieved_goal.clone())
 
         self.staged_index += 1
 
@@ -91,7 +91,7 @@ class HER_ReplayBuffer:
             cur_achieved_goal = self.staged_achieved_goal[cur_goal_obs_index] 
             for i in range(len(self.staged_state)):
                 # Obtain reward for the current goal
-                cur_HER_goal_reward = calc_reward_func(self.staged_achieved_goal[i], cur_achieved_goal)
+                cur_HER_goal_reward = calc_reward_func(self.staged_achieved_goal[i], cur_achieved_goal, info=None)
                 # Check if terminal state is reached wrt cur_goal
                 term = check_goal_achieved_func(self.staged_achieved_goal[i], cur_achieved_goal)
                 # Append current HER experiences to the buffer

@@ -23,7 +23,7 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 mode: "train" # ['train', 'test'] # TODO: set from config
 total_episodes: 300 # total number of episodes to train
 max_episode_length: 2000 # maximum iteration length of an episode.
-warmup_steps: 100 # number of steps to take random actions before using the agents policy
+warmup_steps: 0 # number of steps to take random actions before using the agents policy
 update_every: 1000 # update model after every update_every steps.
 num_updates: 1000 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
 actor_hidden_dims: [400, 300] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.

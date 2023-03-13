@@ -7,7 +7,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
     """
     Refer to https://spinningup.openai.com/en/latest/algorithms/ddpg.html for implementation details.
     """
-    def __init__(self, obs_dim, action_dim, actor_hidden_dims, critic_hidden_dims, actor_lr, critic_lr, initial_epsilon, epsilon_decay, min_epsilon, gamma, tau, max_action):
+    def __init__(self, obs_dim, action_dim, actor_hidden_dims, critic_hidden_dims, actor_lr, critic_lr, initial_epsilon, epsilon_decay, min_epsilon, gamma, tau, max_action, policy_update_delay=2):
         self.mode = "train"
         self.epsilon = initial_epsilon
         self.epsilon_decay = epsilon_decay
@@ -39,6 +39,10 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         self.critic_loss_func = torch.nn.MSELoss()
 
         self.train_mode()
+
+        # sb3 debug related stuff
+        self.policy_update_delay = policy_update_delay
+        self._n_updates = 0
     
 
     def choose_action(self, obs):
@@ -51,7 +55,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         # during training add noise to the action
         if self.mode == "train":
             # noise = self.epsilon * torch.normal(mean=torch.tensor(0.0),std=torch.tensor(1.0))
-            noise = self.epsilon * torch.normal(mean=torch.tensor(0.0),std=torch.tensor(0.05))
+            noise = self.epsilon * torch.normal(mean=torch.tensor(0.0),std=torch.tensor(0.2))
             action = action + noise
 
             # Decay epsilon
@@ -79,22 +83,23 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         # Update Q function (Critic)
         Q_value_preds = self.critic(state_batch, action_batch)
         critic_loss = self.critic_loss_func(Q_value_preds, Q_targets)
+
         self.critic.zero_grad()
         critic_loss.backward()
         self.optim_critic.step()
 
 
-        # Update policy (Actor)
+        # Delayed Policy Update
         actor_loss = - torch.mean(self.critic(state_batch, self.actor(state_batch)))
-        # a = self.actor(state_batch)
-        # v = self.critic(state_batch, a)
-        # actor_loss = - torch.mean(v)
-        # actor_loss = - v.mean() 
-        self.actor.zero_grad()
-        actor_loss.backward()
-        self.optim_actor.step()
-
+        if self._n_updates % self.policy_update_delay == 0:
+            # Update policy (Actor)
+            self.actor.zero_grad()
+            actor_loss.backward()
+            self.optim_actor.step()
         
+        self._n_updates += 1
+        
+
         # Update target networks with polyak averaging
         for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()):
             target_param.data.copy_(

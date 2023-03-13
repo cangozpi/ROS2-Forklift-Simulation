@@ -34,7 +34,10 @@ def train_agent(env):
     seed_everything(env.config["seed"]) # set seed
     # time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
     cur_episode = 0
+    cur_iteration = 0
     cum_episode_rewards = 0
+    from collections import deque
+    rewards = deque(maxlen=100)
     cur_num_updates = 0 # total number of updates including all the episodes
 
     concatenated_obs_dim, concatenated_action_dim, goal_state_dim = get_concatenated_obs_and_act_dims(env)
@@ -51,10 +54,12 @@ def train_agent(env):
     obs = np.concatenate((obs_dict['observation'].reshape(-1), obs_dict['desired_goal'].reshape(-1)), axis=0)
 
     her_replay_buffer.clear_staged_for_append()
+    num_warmup_steps_taken = 0
     while cur_episode < env.config["total_episodes"]: # simulate action taking of an agent for debugging the env
         # For warmup_steps many iterations take random actions to explore better
-        if env.cur_iteration < env.config["warmup_steps"]: # take random actions
+        if cur_iteration < env.config["warmup_steps"]: # take random actions
             action = env.action_space.sample()
+            num_warmup_steps_taken += 1
         else: # agent's policy takes action
             with torch.no_grad():
                 action = agent.choose_action(torch.tensor(obs).float()) # predict action in the range of [-1,1]
@@ -86,7 +91,7 @@ def train_agent(env):
         # obs_flattened = next_obs_flattened #TODO: add this to DDPG only training too @bugfix !
 
         # Update model if its time
-        if (info["iteration"] % env.config["update_every"]== 0) and (info["iteration"] > env.config["warmup_steps"]) and her_replay_buffer.can_sample_a_batch():
+        if (cur_iteration % env.config["update_every"]== 0) and (num_warmup_steps_taken >= env.config["warmup_steps"]) and her_replay_buffer.can_sample_a_batch():
             print(f"Updating the agent with {env.config['num_updates']} sampled batches.")
             critic_loss = 0
             actor_loss = 0
@@ -106,14 +111,41 @@ def train_agent(env):
 
                 cur_num_updates += 1
 
+
             # Log to Tensorboard
-            tb_summaryWriter.add_scalar("Critic Loss", critic_loss, cur_num_updates)
-            tb_summaryWriter.add_scalar("Actor Loss", actor_loss, cur_num_updates)
+            tb_summaryWriter.add_scalar("Loss/Critic", critic_loss/config["num_updates"], cur_num_updates/env.config["num_updates"])
+            tb_summaryWriter.add_scalar("Loss/Actor", actor_loss/config["num_updates"], cur_num_updates/env.config["num_updates"])
+
+            # Log weights and gradients to Tensorboard
+            for name, param in agent.actor.named_parameters():
+                if "weight" in name: # Model weight
+                    tb_summaryWriter.add_histogram("Actor/"+name+"/", param, cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_histogram("Actor/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_scalar("Actor/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_scalar("Actor/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
+                elif "bias" in name: # Model bias
+                    tb_summaryWriter.add_histogram("Actor/"+name+"/", param, cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_histogram("Actor/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_scalar("Actor/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_scalar("Actor/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
+
+            for name, param in agent.critic.named_parameters():
+                if "weight" in name: # Model weight
+                    tb_summaryWriter.add_histogram("Critic/"+name+"/", param, cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_histogram("Critic/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_scalar("Critic/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_scalar("Critic/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
+                elif "bias" in name: # Model bias
+                    tb_summaryWriter.add_histogram("Critic/"+name+"/", param, cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_histogram("Critic/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_scalar("Critic/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
+                    tb_summaryWriter.add_scalar("Critic/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
 
 
         
         # Save the model
-        if (cur_num_updates % env.config["save_every"] == 0) and (cur_num_updates > 0 ):
+        if ((cur_num_updates % env.config["save_every"] == 0) and (cur_num_updates > 0 )) or \
+            (cur_episode + 1 == env.config["total_episodes"]):
             print("Saving the model ...")
             agent.save_model()
 
@@ -127,8 +159,11 @@ def train_agent(env):
 
 
         if done:
+            mean_ep_reward = cum_episode_rewards/cur_iteration
+            rewards.append(cum_episode_rewards)
             # Log to Tensorboard
-            tb_summaryWriter.add_scalar("Training Reward", cum_episode_rewards/info["iteration"], cur_episode)
+            tb_summaryWriter.add_scalar("Training Reward/[per episode]", mean_ep_reward, cur_episode)
+            tb_summaryWriter.add_scalar("Training Reward/[ep_rew_mean]", np.mean(rewards), cur_episode)
             tb_summaryWriter.add_scalar("Training epsilon", agent.epsilon, cur_episode)
 
             # Commit HER experiences to replay_buffer
@@ -145,6 +180,7 @@ def train_agent(env):
             # Reset episode parameters for a new episode
             cur_episode += 1
             cum_episode_rewards = 0
+            cur_iteration = 0
 
 
 
@@ -158,6 +194,7 @@ def test_agent(env):
     # time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
     cur_episode = 0
     cum_episode_rewards = 0
+    cur_iteration = 0
 
     concatenated_obs_dim, concatenated_action_dim, goal_state_dim = get_concatenated_obs_and_act_dims(env)
 
@@ -200,10 +237,12 @@ def test_agent(env):
                 f'Action: {action.tolist()}, Reward: {info["reward"]:.3f}')
         
 
+        cur_iteration += 1
+
 
         if done:
             # Log to Tensorboard
-            tb_summaryWriter.add_scalar("Testing Reward", cum_episode_rewards/info["iteration"], cur_episode)
+            tb_summaryWriter.add_scalar("Testing Reward", cum_episode_rewards/cur_iteration, cur_episode)
 
             # Reset env
             obs_dict = env.reset()
@@ -214,3 +253,4 @@ def test_agent(env):
             # Reset episode parameters for a new episode
             cur_episode += 1
             cum_episode_rewards = 0
+            cur_iteration = 0
