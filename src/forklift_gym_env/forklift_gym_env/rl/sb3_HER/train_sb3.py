@@ -7,7 +7,7 @@ from forklift_gym_env.rl.sb3_HER.utils import seed_everything
 
 import numpy as np
 
-from stable_baselines3 import DDPG, PPO, HerReplayBuffer 
+from stable_baselines3 import DDPG, PPO, HerReplayBuffer
 from stable_baselines3.her.goal_selection_strategy import GoalSelectionStrategy
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -37,22 +37,28 @@ def main():
         action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
         # Initialize the model
-        policy_kwargs = dict(n_critics=2, n_quantiles=25)
-        model = TQC(
+        model = PPO(
             "MultiInputPolicy", 
             env, 
-            top_quantiles_to_drop_per_net=2, 
             verbose=1, 
-            policy_kwargs=policy_kwargs,
-            replay_buffer_class=HerReplayBuffer,
-            replay_buffer_kwargs=dict(
-                n_sampled_goal=4,
-                goal_selection_strategy=goal_selection_strategy,
-                online_sampling=False,
-                max_episode_length=2000,
-            ),
             tensorboard_log="sb3_tensorboard/"
         )
+        # policy_kwargs = dict(n_critics=2, n_quantiles=25)
+        # model = TQC(
+        #     "MultiInputPolicy", 
+        #     env, 
+        #     top_quantiles_to_drop_per_net=2, 
+        #     verbose=1, 
+        #     policy_kwargs=policy_kwargs,
+        #     replay_buffer_class=HerReplayBuffer,
+        #     replay_buffer_kwargs=dict(
+        #         n_sampled_goal=4,
+        #         goal_selection_strategy=goal_selection_strategy,
+        #         online_sampling=False,
+        #         max_episode_length=1000,
+        #     ),
+        #     tensorboard_log="sb3_tensorboard/"
+        # )
         # model = DDPG(
         #     "MultiInputPolicy",
         #     env,
@@ -71,7 +77,7 @@ def main():
 
 
         # model = DDPG("MlpPolicy", env, action_noise=action_noise, verbose=1, tensorboard_log="sb3_tensorboard/")
-        model.learn(total_timesteps=30_000, tb_log_name="forklift_env fix sb3 run", reset_num_timesteps=False, log_interval=1, progress_bar=True)
+        model.learn(total_timesteps=10_000, tb_log_name="forklift_env fix sb3 run", reset_num_timesteps=False, log_interval=1, progress_bar=True)
         model.save("sb3_saved_model")
         print("Finished training the agent !")
 
@@ -93,7 +99,7 @@ def main():
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, done, info = env.step(action)
             print("action: ", action, "obs:", obs, "reward:", reward)
-            env.render()
+            # env.render()
 
             if done:
                 print("Resetting the env !")

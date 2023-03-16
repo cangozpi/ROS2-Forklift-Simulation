@@ -21,11 +21,11 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 
 # ========== HYPERPARAMTERS DDPG: ============= 
 mode: "train" # ['train', 'test'] # TODO: set from config
-total_episodes: 300 # total number of episodes to train
-max_episode_length: 2000 # maximum iteration length of an episode.
+total_episodes: 10 # total number of episodes to train
+max_episode_length: 1000 # maximum iteration length of an episode.
 warmup_steps: 100 # number of steps to take random actions (at the start of every episode) before sampling from the agents policy
-update_every: 1000 # update model after every update_every steps.
-num_updates: 1000 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
+update_every: 500 # update model after every update_every steps.
+num_updates: 500 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
 actor_hidden_dims: [400, 300] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
 critic_hidden_dims: [400, 300] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
 actor_lr: 1e-3 # learning rate for the Actor Network
@@ -38,6 +38,6 @@ tau: 0.995 # tau value used in updating the target networks using polyak averagi
 replay_buffer_size: 1_000_000 # size of the replay buffer
 batch_size: 256
 seed: 42 # used to set seed for reproducibility
-save_every: 5000 # specifies after every how many updates to the model the agent model is saved
+save_every: 500 # specifies after every how many updates to the model the agent model is saved
 # =======================================
 

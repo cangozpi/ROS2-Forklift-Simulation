@@ -28,7 +28,7 @@ def main():
 
 def train_agent(env):
     # Initialize Tensorboard
-    log_dir, run_name = "logs_tensorboard/", "train_DDPG_HER_agent_forklift_env" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir, run_name = "logs_tensorboard/", "train_DDPG_HER_agent_forklift_env_my_her2" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tb_summaryWriter = SummaryWriter(log_dir + run_name)
 
     seed_everything(env.config["seed"]) # set seed
@@ -56,6 +56,7 @@ def train_agent(env):
     her_replay_buffer.clear_staged_for_append()
     num_warmup_steps_taken = 0
     while cur_episode < env.config["total_episodes"]: # simulate action taking of an agent for debugging the env
+        cur_iteration += 1
         # For warmup_steps many iterations take random actions to explore better
         if cur_iteration < env.config["warmup_steps"]: # take random actions
             action = env.action_space.sample()
@@ -113,8 +114,8 @@ def train_agent(env):
 
 
             # Log to Tensorboard
-            tb_summaryWriter.add_scalar("Loss/Critic", critic_loss/config["num_updates"], cur_num_updates/env.config["num_updates"])
-            tb_summaryWriter.add_scalar("Loss/Actor", actor_loss/config["num_updates"], cur_num_updates/env.config["num_updates"])
+            tb_summaryWriter.add_scalar("Loss/Critic", critic_loss/env.config["num_updates"], cur_num_updates/env.config["num_updates"])
+            tb_summaryWriter.add_scalar("Loss/Actor", actor_loss/env.config["num_updates"], cur_num_updates/env.config["num_updates"])
 
             # Log weights and gradients to Tensorboard
             for name, param in agent.actor.named_parameters():
@@ -167,7 +168,7 @@ def train_agent(env):
             tb_summaryWriter.add_scalar("Training epsilon", agent.epsilon, cur_episode)
 
             # Commit HER experiences to replay_buffer
-            her_replay_buffer.commit_append(k=env.config["k"], calc_reward_func=env.calc_reward, check_goal_achieved_func=env.check_goal_achieved) # TODO: set k from config.yaml
+            her_replay_buffer.commit_append(k=env.config["k"], calc_reward_func=env.compute_reward, check_goal_achieved_func=env.check_goal_achieved) # TODO: set k from config.yaml
             # replay_buffer.commit_append(k=env.config["k"], calc_reward_func=env.compute_reward, check_goal_achieved_func=env.check_goal_achieved) # TODO: set k from config.yaml
             her_replay_buffer.clear_staged_for_append()
 

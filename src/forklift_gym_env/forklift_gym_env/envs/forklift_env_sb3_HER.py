@@ -722,11 +722,12 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                         reward: L2 distance
 
                     """
-                    forklift_robot_transform = observation['forklift_position_observation']
+                    # forklift_robot_transform = observation['forklift_position_observation']
                     # Return negative L2 distance btw chassis_bottom_link and the target location as reward
                     # Note that we are only using translation here, NOT using rotation information
-                    robot_transform_translation = [forklift_robot_transform['chassis_bottom_link']['pose']['position'].x, \
-                        forklift_robot_transform['chassis_bottom_link']['pose']['position'].y] # [translation_x, translation_y]
+                    # robot_transform_translation = [forklift_robot_transform['chassis_bottom_link']['pose']['position'].x, \
+                    #     forklift_robot_transform['chassis_bottom_link']['pose']['position'].y] # [translation_x, translation_y]
+                    robot_transform_translation = [observation[0], observation[1]] # [translation_x, translation_y]
                     if goal_state is None:
                         l2_dist = np.linalg.norm(robot_transform_translation - self._target_transform)
                     else:

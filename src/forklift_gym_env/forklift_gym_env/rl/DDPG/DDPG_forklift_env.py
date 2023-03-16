@@ -27,7 +27,7 @@ def main():
 
 def train_agent(env):
     # Initialize Tensorboard
-    log_dir, run_name = "logs_tensorboard/", "train_DDPG_agent_forklift_env_" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir, run_name = "logs_tensorboard/", "train_DDPG_agent_forklift_env_my_ddpg3" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tb_summaryWriter = SummaryWriter(log_dir + run_name)
 
     seed_everything(env.config["seed"]) # set seed
