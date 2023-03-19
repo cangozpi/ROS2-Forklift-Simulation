@@ -720,7 +720,7 @@ class ForkliftEnvHER(gym.GoalEnv):
                     Inputs:
                         observation: returned by self._get_obs()
                     Returns:
-                        reward: L2 distance
+                        reward: negative L3 distance
 
                     """
                     # forklift_robot_transform = observation['forklift_position_observation']

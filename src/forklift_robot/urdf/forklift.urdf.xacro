@@ -16,12 +16,12 @@
     <xacro:property name="back_wheel_thickness" value="0.221" />  -->
     <xacro:property name="back_wheel_radius" value="0.30" />
     <xacro:property name="back_wheel_thickness" value="0.23" /> <!-- Made up number TODO: tune this parameter -->
-    <xacro:property name="back_wheel_mass" value="0.05" /> <!-- Made up number TODO: tune this parameter -->
+    <xacro:property name="back_wheel_mass" value="0.01" /> <!-- Made up number TODO: tune this parameter -->
     <xacro:property name="back_wheel_length_offset" value="${(chassis_bottom_length / 2)  * (2/3)}" />
 
     <xacro:property name="front_wheel_radius" value="0.30" />
     <xacro:property name="front_wheel_thickness" value="0.23" /> <!-- Made up number TODO: tune this parameter -->
-    <xacro:property name="front_wheel_mass" value="0.05" /> <!-- Made up number TODO: tune this parameter -->
+    <xacro:property name="front_wheel_mass" value="0.005" /> <!-- Made up number TODO: tune this parameter -->
     <xacro:property name="front_wheel_length_offset" value="${(chassis_bottom_length / 2)}" />
 
     <xacro:property name="lift_body_connector_length" value="0.15" />
@@ -62,18 +62,17 @@
     <!-- <xacro:include filename="lidar.xacro"/> -->
     <!-- <xacro:include filename="camera.xacro"/> --> <!-- Uncomment this line, and comment the line below to switch between Depth Camera and a Regular Camera -->
     <xacro:include filename="depth_camera.xacro"/>
-    <!-- <xacro:include filename="gazebo.xacro"/> -->
 
 
-    <!-- This first link called "world" is empty -->
-    <!-- <link name="world"></link> -->
+    <!-- BASE LINK -->
+    <!-- <link name="base_link">
 
+    </link>
 
-    <!-- bottom of the chassis -->
-    <!-- <joint name="chassis_bottom_joint" type="fixed">
-        <origin xyz="0 0 ${height_of_chassis_from_ground_plane}" rpy="0 0 0"/>
-        <parent link="world"/>
-        <child link="chassis_bottom_link"/>        
+    <joint name="chassis_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="chassis_bottom_link"/>
+        <origin xyz="0 0 0"/>
     </joint> -->
 
 
@@ -93,11 +92,9 @@
                 <box size="${chassis_bottom_width} ${chassis_bottom_length} ${chassis_bottom_height}" />
             </geometry>
         </collision>
-        <inertial>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-            <mass value="120" />
-            <inertia ixx="2.26" ixy="0.0" ixz="0.0" iyy="6.26" iyz="0.0" izz="8.5" />
-        </inertial>
+        <xacro:inertial_box mass="1" x="${chassis_bottom_width}" y="${chassis_bottom_length}" z="${chassis_bottom_height}">
+            <origin xyz="0 0 ${chassis_bottom_height / 2}" rpy="0 0 0"/>
+        </xacro:inertial_box>
     </link>
 
     <!-- top of the chassis -->
@@ -117,11 +114,9 @@
                 <box size="${chassis_top_width} ${chassis_top_length} ${chassis_top_height}" />
             </geometry>
         </collision>
-        <inertial>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-            <mass value="12" />221
-            <inertia ixx="2.26" ixy="0.0" ixz="0.0" iyy="6.26" iyz="0.0" izz="8.5" />
-        </inertial>
+        <xacro:inertial_box mass="5" x="${chassis_top_width}" y="${chassis_top_length}" z="${chassis_top_height}">
+            <origin xyz="0 0 ${chassis_top_height / 2}" rpy="0 0 0"/>
+        </xacro:inertial_box>
     </link>
 
 
@@ -176,9 +171,9 @@
                 <sphere radius="${back_wheel_radius}"/>
             </geometry>
         </collision>
-        <xacro:inertial_cylinder mass="${back_wheel_mass}" length="${back_wheel_thickness}" radius="${back_wheel_radius}">
+        <xacro:inertial_sphere mass="${back_wheel_mass}" radius="${back_wheel_radius}">
             <origin xyz="0 0 0" rpy="0 0 0"/>
-        </xacro:inertial_cylinder>
+        </xacro:inertial_sphere>
     </link>
 
     <!-- <joint name="back_wheel_joint" type="fixed">
@@ -192,17 +187,23 @@
         <child link="back_wheel_link"/>
         <origin xyz=" 0 -${back_wheel_length_offset} 0" />
     </joint>
+
+    <!-- Wheel Frictions -->
     <gazebo reference="back_wheel_link">
         <material>Gazebo/White</material>
         <mu1 value="0.001"/>
         <mu2 value="0.001"/>
     </gazebo>
-    <!-- <joint name="back_wheel_joint" type="continuous">
-        <parent link="chassis_bottom_link"/>
-        <child link="back_wheel_link"/>
-        <origin xyz=" 0 -${back_wheel_length_offset} 0" rpy="0 -${pi/2} 0" />
-        <axis xyz="1 1 1"/>
-    </joint> -->
+    <gazebo reference="right_front_wheel_link">
+        <material>Gazebo/White</material>
+        <mu1 value="1.0"/>
+        <mu2 value="0.25"/>
+    </gazebo>
+    <gazebo reference="left_front_wheel_link">
+        <material>Gazebo/White</material>
+        <mu1 value="1.0"/>
+        <mu2 value="0.25"/>
+    </gazebo>
 
  
     <!-- left_back_wheel -->
@@ -257,8 +258,10 @@
     <joint name="right_front_wheel_joint" type="continuous">
         <parent link="chassis_bottom_link"/>
         <child link="right_front_wheel_link"/>
-        <origin xyz="${(chassis_bottom_width / 2) - (front_wheel_thickness / 2)} ${front_wheel_length_offset} 0" rpy="0 -${pi/2} 0" />
-        <axis xyz="0 0 1"/>
+        <!-- <origin xyz="${(chassis_bottom_width / 2) - (front_wheel_thickness / 2)} ${front_wheel_length_offset} 0" rpy="0 ${pi/2} 0" /> -->
+        <origin xyz="${(chassis_bottom_width / 2)} ${front_wheel_length_offset} 0" rpy="0 ${pi/2} 0" />
+        <axis xyz="0 0 -1"/>
+        <dynamics damping="0.2"/>
     </joint>
 
 
@@ -285,8 +288,10 @@
     <joint name="left_front_wheel_joint" type="continuous">
         <parent link="chassis_bottom_link"/>
         <child link="left_front_wheel_link"/>
-        <origin xyz="${ -(chassis_bottom_width / 2) + (front_wheel_thickness / 2)} ${front_wheel_length_offset} 0" rpy="0 -${pi/2} 0" />
+        <!-- <origin xyz="${ -(chassis_bottom_width / 2) + (front_wheel_thickness / 2)} ${front_wheel_length_offset} 0" rpy="0 -${pi/2} 0" /> -->
+        <origin xyz="${ -(chassis_bottom_width / 2)} ${front_wheel_length_offset} 0" rpy="0 -${pi/2} 0" />
         <axis xyz="0 0 1"/>
+        <dynamics damping="0.2"/>
     </joint>
 
 
@@ -307,10 +312,10 @@
                 <box size="${chassis_bottom_width} ${lift_base_length} ${lift_base_height}"/>
             </geometry>
             <!-- Added by me (surface tag) to prevent fork falling down issue -->
-            <surface>
+            <!-- <surface>
                 <friction>
                     <ode>
-                        <mu>100000.0</mu> <!-- TODO: set mu values -->
+                        <mu>100000.0</mu> 
                         <mu2>100000.0</mu2>
                     </ode>
                 </friction>
@@ -319,10 +324,10 @@
                         <min_depth>0.003</min_depth>
                     </ode>
                 </contact>
-            </surface>
+            </surface> -->
         </collision>
-        <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+        <xacro:inertial_box mass="${0.001}" x="${chassis_bottom_width}" y="${lift_base_length}" z="${lift_base_height}" >
+            <origin xyz="0 0 ${lift_base_height / 2}" rpy="0 0 0"/>
         </xacro:inertial_box>
     </link>
 
@@ -350,8 +355,8 @@
                 <box size="${chassis_bottom_width} ${lift_body_connector_length} ${lift_body_connector_height}"/>
             </geometry>
         </collision>
-        <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+        <xacro:inertial_box mass="${0.001}" x="${chassis_bottom_width}" y="${lift_body_connector_length}" z="${lift_body_connector_height}" > 
+            <origin xyz="0 0 ${(lift_body_connector_height / 2)}" rpy="0 0 0"/>
         </xacro:inertial_box>
     </link>
 
@@ -379,10 +384,10 @@
                 <box size="${fork_base_width} ${fork_base_length} ${fork_base_height}"/>
             </geometry>
             <!-- Added by me (surface tag) to prevent fork falling down issue -->
-            <surface>
+            <!-- <surface>
                 <friction>
                     <ode>
-                        <mu>100000.0</mu> <!-- TODO: set mu values-->
+                        <mu>100000.0</mu> 
                         <mu2>100000.0</mu2>
                     </ode>
                 </friction>
@@ -391,10 +396,10 @@
                         <min_depth>0.003</min_depth>
                     </ode>
                 </contact>
-            </surface>
+            </surface> -->
         </collision>
-        <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+        <xacro:inertial_box mass="0.001" x="${fork_base_width}" y="${fork_base_length}" z="${fork_base_height}" > 
+            <origin xyz="0 0 ${(fork_base_height / 2)}" rpy="0 0 0"/>
         </xacro:inertial_box>
     </link>
 
@@ -425,8 +430,8 @@
                 <box size="${fork_width} ${fork_length} ${fork_height}"/>
             </geometry>
         </collision>
-        <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+        <xacro:inertial_box mass="0.001" x="${fork_width}" y="${fork_length}" z="${fork_height}" >
+            <origin xyz="0 0 ${(fork_height / 2)}" rpy="0 0 0"/>
         </xacro:inertial_box>
     </link>
 
@@ -455,8 +460,8 @@
                 <box size="${fork_width} ${fork_length} ${fork_height}"/>
             </geometry>
         </collision>
-        <xacro:inertial_box mass="${front_wheel_mass}" x="0" y="0" z="0" > <!-- TODO: set weight etc. -->
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+        <xacro:inertial_box mass="0.001" x="${fork_width}" y="${fork_length}" z="${fork_height}" > 
+            <origin xyz="0 0 ${(fork_height / 2)}" rpy="0 0 0"/>
         </xacro:inertial_box>
     </link>
 
@@ -471,6 +476,7 @@
     
     <!-- Setup ROS_CONTROL and transmission tags for the forklift robot-->
     <xacro:include filename="ros2_control.xacro"/>
+    <!-- <xacro:include filename="gazebo.xacro"/> -->
 
     <!-- Setup Collision Detection Plugin for the forklift robot -->
     <xacro:include filename="ros_gazebo_collision_detection_plugin.xacro"/>

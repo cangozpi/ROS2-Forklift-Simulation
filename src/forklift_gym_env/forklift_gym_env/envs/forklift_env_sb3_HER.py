@@ -359,13 +359,16 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # Sample the target's location randomly until it does not coincide with the agent's location
         self._target_transform = np.array([0.0, 0.0]) # in the range [-10, 10]
-        self._target_transform[0] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
-        self._target_transform[1] = np.random.random(size=(1,)) * 4 + 2 # y in the range [2, 6]
+        # self._target_transform[0] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
+        self._target_transform[1] = np.random.random(size=(1,)) * 20 + (-10) # y in the range [-10, 10]
         while np.array_equal(self._target_transform, self._agent_location):
             # self._target_transform = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
             # self._target_transform *= np.array([0, 1]) # make it only change in y axis
-            self._target_transform[0] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
-            self._target_transform[1] = np.random.random(size=(1,)) * 4 + 2 # y in the range [2, 6]
+            # self._target_transform[0] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
+            self._target_transform[1] = np.random.random(size=(1,)) * 20 + (-10) # y in the range [-10, 10]
+        if self._target_transform[1] > -4 and self._target_transform[1] < 4:
+            self._target_transform[1] = 5
+
  
 
         # Unpause sim so that simulation can be reset
@@ -445,7 +448,8 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
-        diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
+        # diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
+        diff_cont_msg.angular.z = 0.0 # use this one
         # Take diff_cont action
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
@@ -714,12 +718,12 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
             if RewardType.L2_DIST in reward_types:
                 def calc_reward_L2_dist(observation, goal_state):
                     """
-                    Returns the L2 distance between the (translation_x, translation_y) coordinates 
+                    Returns the negative L2 distance between the (translation_x, translation_y) coordinates 
                     of forklift_robot_transform and target_transform.
                     Inputs:
                         observation: returned by self._get_obs()
                     Returns:
-                        reward: L2 distance
+                        reward: negative L2 distance
 
                     """
                     # forklift_robot_transform = observation['forklift_position_observation']
@@ -732,7 +736,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                         l2_dist = np.linalg.norm(robot_transform_translation - self._target_transform)
                     else:
                         l2_dist = np.linalg.norm(robot_transform_translation - goal_state)
-                    return l2_dist
+                    return - l2_dist
 
                 reward += calc_reward_L2_dist(observation, goal_state)
     
@@ -788,7 +792,8 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # return spaces.Dict(d)
 
         # Flatten action_space for SB3
-        return spaces.Box(low= -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32)
+        # return spaces.Box(low= -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32)
+        return spaces.Box(low= -1 * np.ones((1)), high = 1 * np.ones((1)), dtype=np.float32)
 
 
 
@@ -872,11 +877,17 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                 ob, reward, done, info = env.step()
                 assert reward == env.compute_reward(ob['achieved_goal'], ob['desired_goal'], info)
         """
-        g = self.check_goal_achieved(achieved_goal, desired_goal, full_obs=False)
-        if type(g) == list:
-            return np.array([int(success) for success in g])
-        elif type(g) == bool:
-            return g
-        # return self.calc_reward(achieved_goal, desired_goal)
+        # Vectorized binary reward calculation # TODO: integrate into calc_reward funciton
+        # g = self.check_goal_achieved(achieved_goal, desired_goal, full_obs=False)
+        # if type(g) == list:
+        #     return np.array([int(success) for success in g])
+        # elif type(g) == bool:
+        #     return g
+
+        # Process batch data one by one
+        goals = []
+        for a_goal, d_goal in zip(achieved_goal, desired_goal):
+            goals.append(self.calc_reward(a_goal, d_goal))
+        return np.array(goals)
 
     

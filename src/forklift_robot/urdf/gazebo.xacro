@@ -162,6 +162,7 @@
     <xacro:property name="front_wheel_radius" value="0.30" />
     <xacro:property name="front_wheel_thickness" value="0.23" /> Made up number TODO: tune this parameter -->
 
+     <!-- to test run: $ros2 run teleop_twist_keyboard teleop_twist_keyboard  -->
     <gazebo>
         <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
 
@@ -179,7 +180,8 @@
             
             <!-- Output -->
             <odometry_frame>odom</odometry_frame>
-            <robot_base_frame>base_link</robot_base_frame>
+            <!-- <robot_base_frame>base_link</robot_base_frame> -->
+            <robot_base_frame>chassis_bottom_link</robot_base_frame>
 
             <publish_odom>true</publish_odom>
             <publish_odom_tf>true</publish_odom_tf>
