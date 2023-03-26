@@ -41,7 +41,7 @@ diff_cont: # refer to https://github.com/ros-controls/ros2_controllers/blob/mast
   ros__parameters:
     publish_rate: 50.0 #50 Hz
 
-    base_frame_id: chassis_bottom_link #TODO: this was base_link NOT SURE IF I SET IT CORRECTLY !
+    base_frame_id: base_link #TODO: this was base_link NOT SURE IF I SET IT CORRECTLY !
     # base_frame_id: base_link #TODO: this was base_link NOT SURE IF I SET IT CORRECTLY !
 
     wheel_separation_multiplier: 1.0
@@ -50,11 +50,11 @@ diff_cont: # refer to https://github.com/ros-controls/ros2_controllers/blob/mast
     pose_covariance_diagonal : [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
     twist_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
     #wheels_per_side: 1 
-    open_loop: true
+    open_loop: false
     position_feedback: true
     # wheels_per_side: 1 # I added this during debugging
-    left_wheel_names: ["left_front_wheel_joint"]
-    right_wheel_names: ["right_front_wheel_joint"]
+    left_wheel_names: ["left_wheel_joint"]
+    right_wheel_names: ["right_wheel_joint"]
     # wheel_separation: 0.655 # (chassis_bottom_width - 2*front_wheel_thickness)
     wheel_separation: 1.115 # chassis_bottom_width (shortest distance btw the centers of the two wheels)
     # wheel_separation: 0.885 # equals $chassis_bottom_width in forklift.urdf.xacro (chassis_bottom_width - front_wheel_thickness)

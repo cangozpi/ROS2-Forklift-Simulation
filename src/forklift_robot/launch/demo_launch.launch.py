@@ -56,11 +56,11 @@ def generate_launch_description():
         output='screen'
     )
 
-    diff_controller = ExecuteProcess(
-            cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
-                'diff_cont'],
-            output='screen'
-        )
+    # diff_controller = ExecuteProcess(
+    #         cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+    #             'diff_cont'],
+    #         output='screen'
+    #     )
 
 
     return LaunchDescription([
@@ -76,12 +76,12 @@ def generate_launch_description():
                 on_exit=[fork_joint_controller],
             )
         ),
-        RegisterEventHandler(
-            event_handler=OnProcessExit(
-                target_action=fork_joint_controller,
-                on_exit=[diff_controller],
-            )
-        ),
+        # RegisterEventHandler(
+        #     event_handler=OnProcessExit(
+        #         target_action=fork_joint_controller,
+        #         on_exit=[diff_controller],
+        #     )
+        # ),
         gazebo,
         node_robot_state_publisher,
         spawn_entity,

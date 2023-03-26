@@ -126,7 +126,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
             flag = True
             while (current_forklift_robot_position_obs is None) or flag:
                 # Obtain forklift_robot frame observation -----
-                t = self.get_entity_state_client.get_entity_state("fork_base_link", "world")
+                t = self.get_entity_state_client.get_entity_state("chassis_bottom_link", "world")
                 if t is not None and (t.success == True):
                     current_forklift_robot_position_obs = t
                     flag = False
@@ -367,7 +367,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
             # self._target_transform[0] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
             self._target_transform[1] = np.random.random(size=(1,)) * 20 + (-10) # y in the range [-10, 10]
         if self._target_transform[1] > -4 and self._target_transform[1] < 4:
-            self._target_transform[1] = 5
+            self._target_transform[1] = 5 * np.sign(np.random.random(size=(1,)))
 
  
 
@@ -442,7 +442,8 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
-        diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
+        # diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
+        diff_cont_msg.linear.x = 10.0 if float(diff_cont_action[0]) > 0 else -10.0 # use this one
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 
@@ -793,7 +794,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # Flatten action_space for SB3
         # return spaces.Box(low= -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32)
-        return spaces.Box(low= -1 * np.ones((1)), high = 1 * np.ones((1)), dtype=np.float32)
+        return spaces.Box(low= -10 * np.ones((1)), high = 10 * np.ones((1)), dtype=np.float32)
 
 
 

@@ -14,7 +14,8 @@ class DiffContCmdVelUnstampedPublisher(Node):
 
         self.publisher_ = self.create_publisher(
             Twist,
-            '/diff_cont/cmd_vel_unstamped',
+            # '/diff_cont/cmd_vel_unstamped',
+            '/cmd_vel',
             10
             )
 

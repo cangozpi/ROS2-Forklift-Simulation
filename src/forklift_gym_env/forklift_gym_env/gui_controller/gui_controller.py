@@ -64,20 +64,23 @@ def main():
         borderwidth=1
     )
     differential_control_keys_frame.grid(row=1, column=0, sticky="nsew", pady=13)
-    differential_control_keys_frame.grid_rowconfigure([0,1], weight=1)
+    differential_control_keys_frame.grid_rowconfigure([0,1,2], weight=1)
     differential_control_keys_frame.grid_columnconfigure([0,1,2], weight=1)
+
+    w_label = tk.Label(master=differential_control_keys_frame, text="Q")
+    w_label.grid(row=1, column=1, sticky="nsew")
 
     w_label = tk.Label(master=differential_control_keys_frame, text="W")
     w_label.grid(row=0, column=1, sticky="n")
 
     a_label = tk.Label(master=differential_control_keys_frame, text="A")
-    a_label.grid(row=1, column=0, sticky="e")
+    a_label.grid(row=2, column=0, sticky="e")
 
     s_label = tk.Label(master=differential_control_keys_frame, text="S")
-    s_label.grid(row=1, column=1, sticky="n")
+    s_label.grid(row=2, column=1, sticky="n")
 
     d_label = tk.Label(master=differential_control_keys_frame, text="D")
-    d_label.grid(row=1, column=2, sticky="w")
+    d_label.grid(row=2, column=2, sticky="w")
 
 
     # Twist Inputs:
@@ -150,7 +153,7 @@ def main():
 
     # Key Pressed Events ------------------------------------------
     default_linear_x = 1.0 # Differential Controller linear.x value
-    default_angular_z = 15.0 # Differential Controller angular.z value
+    default_angular_z = 1.0 # Differential Controller angular.z value
     default_velocity = 1.0 # Fork Joint Controller velocity value
     linear_x_entry.insert(tk.END, str(default_linear_x))
     angular_z_entry.insert(tk.END, str(default_angular_z))
@@ -186,6 +189,19 @@ def main():
             # convert to Twist message
             diff_cont_msg = Twist()
             diff_cont_msg.linear.x = float(linear_x) # use this one
+            diff_cont_msg.linear.y = 0.0
+            diff_cont_msg.linear.z = 0.0
+
+            diff_cont_msg.angular.x = 0.0
+            diff_cont_msg.angular.y = 0.0
+            diff_cont_msg.angular.z = 0.0 # use this one
+            # Take action
+            diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
+
+        elif event.keysym == 'q' or event.keysym == 'Q':
+            # convert to Twist message
+            diff_cont_msg = Twist()
+            diff_cont_msg.linear.x = 0.0 # use this one
             diff_cont_msg.linear.y = 0.0
             diff_cont_msg.linear.z = 0.0
 
@@ -234,9 +250,8 @@ def main():
             # Take action
             diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
         
-
         # Handle Fork Joint Controller Events -----------
-        elif event.keysym == "Up":
+        if event.keysym == "Up":
             # convert to Float64MultiArray message
             fork_joint_cont_msg = Float64MultiArray()
             fork_joint_cont_msg.data = [velocity]
@@ -259,10 +274,33 @@ def main():
 
             # Take action
             fork_joint_cont_publisher.publish_cmd(fork_joint_cont_msg)
-
-
     # Bind keypress event to handle_keypress()
     window.bind("<Key>", handle_keypress)
+
+    def handle_keyrelease(event):
+        # DIFF_DRIVE STOP ACTION
+        # convert to Twist message
+        diff_cont_msg = Twist()
+        diff_cont_msg.linear.x = 0.0 # use this one
+        diff_cont_msg.linear.y = 0.0
+        diff_cont_msg.linear.z = 0.0
+
+        diff_cont_msg.angular.x = 0.0
+        diff_cont_msg.angular.y = 0.0
+        diff_cont_msg.angular.z = 0.0 # use this one
+        # Take action
+        diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
+
+        # FORK_JOINT CONTROL STOP ACTION
+        # convert to Float64MultiArray message
+        fork_joint_cont_msg = Float64MultiArray()
+        fork_joint_cont_msg.data = [0.0]
+
+        # Take action
+        fork_joint_cont_publisher.publish_cmd(fork_joint_cont_msg)
+    # Bind keyrelease event to handle_keyrelease()
+    # window.bind('<KeyRelease>', handle_keyrelease)
+
     def handle_set_focus(event):
         try:
             event.widget.focus_set()

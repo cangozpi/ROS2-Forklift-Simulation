@@ -7,22 +7,24 @@
         </hardware>
 
         <!-- Wheels -->
-        <joint name="right_front_wheel_joint">
+        <joint name="right_wheel_joint">
             <command_interface name="velocity">
-                <param name="min"> -10 </param>
-                <param name="max"> 10 </param>
+                <!-- <param name="min"> -10 </param>
+                <param name="max"> 10 </param> -->
             </command_interface>
             <state_interface name="velocity"/>
             <state_interface name="position"/>
+            <state_interface name="effort"/>
         </joint>
         
-        <joint name="left_front_wheel_joint">
+        <joint name="left_wheel_joint">
             <command_interface name="velocity">
-                <param name="min"> -10 </param>
-                <param name="max"> 10 </param>
+                <!-- <param name="min"> -10 </param>
+                <param name="max"> 10 </param> -->
             </command_interface>
             <state_interface name="velocity"/>
             <state_interface name="position"/>
+            <state_interface name="effort"/>
         </joint>
 
         <!-- Fork Joint -->
@@ -56,41 +58,5 @@
     </gazebo>
 
 
-
-    <!-- Add transmission tags for forklift URDF bot -->
-
-    <!-- <transmission name="transmission_right_front_wheel_joint">
-        <type>transmission_interface/SimpleTransmission</type>
-        <joint name="right_front_wheel_joint">
-            <hardwareInterface>EffortJointInterface</hardwareInterface>
-        </joint>
-        <actuator name="motor_right_front_wheel_joint">
-            <hardwareInterface>EffortJointInterface</hardwareInterface>
-            <mechanicalReduction>1</mechanicalReduction>
-        </actuator>
-    </transmission>
-
-    
-    <transmission name="transmission_left_front_wheel_joint">
-        <type>transmission_interface/SimpleTransmission</type>
-        <joint name="left_front_wheel_joint">
-            <hardwareInterface>EffortJointInterface</hardwareInterface>
-        </joint>
-        <actuator name="motor_left_front_wheel_joint">
-            <hardwareInterface>EffortJointInterface</hardwareInterface>
-            <mechanicalReduction>1</mechanicalReduction>
-        </actuator>
-    </transmission> -->
-
-
-
-    <!-- Include Ros_Control for Gazebo Simulation plugin -->
-    <!-- <gazebo>
-        <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
-            <robot_param>robot_description</robot_param>
-            <robot_param_node>robot_state_publisher</robot_param_node>
-            <parameters>$(find forklift_ros_control)/config/forklift_control.yaml</parameters>
-        </plugin>
-    </gazebo> -->
 
 </robot>

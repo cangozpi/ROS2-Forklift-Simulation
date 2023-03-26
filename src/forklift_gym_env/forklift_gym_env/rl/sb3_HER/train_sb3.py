@@ -64,14 +64,14 @@ def main():
             "MultiInputPolicy",
             env,
             # action_noise=action_noise,
-            # replay_buffer_class=HerReplayBuffer,
+            replay_buffer_class=HerReplayBuffer,
             # Parameters for HER
-            # replay_buffer_kwargs=dict(
-            #     n_sampled_goal=4,
-            #     goal_selection_strategy=goal_selection_strategy,
-            #     online_sampling=True,
-            #     max_episode_length=500,
-            # ),
+            replay_buffer_kwargs=dict(
+                n_sampled_goal=4,
+                goal_selection_strategy=goal_selection_strategy,
+                online_sampling=True,
+                max_episode_length=500,
+            ),
             policy_kwargs={
                 'activation_fn':torch.nn.LeakyReLU,
                 'net_arch':{
@@ -84,7 +84,7 @@ def main():
 
 
         # model = DDPG("MlpPolicy", env, action_noise=action_noise, verbose=1, tensorboard_log="sb3_tensorboard/")
-        model.learn(total_timesteps=20_000, tb_log_name="forklift_env fix sb3 run binary", reset_num_timesteps=False, log_interval=1, progress_bar=True)
+        model.learn(total_timesteps=20_000, tb_log_name="forklift_env fix sb3 DDPG+HER [16,8] k=0", reset_num_timesteps=False, log_interval=1, progress_bar=True)
         model.save("sb3_saved_model")
         print("Finished training the agent !")
 
