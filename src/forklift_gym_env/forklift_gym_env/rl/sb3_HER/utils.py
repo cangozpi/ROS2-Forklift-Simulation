@@ -34,8 +34,8 @@ def flatten_and_concatenate_observation(obs, env):
             # Add Pose/rotations:
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].x,
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].y, 
-            # obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].z, 
-            # obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].w, 
+            obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].z, 
+            obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].w, 
             
             # Add Twist/linear
             obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].x, 

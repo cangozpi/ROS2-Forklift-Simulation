@@ -51,9 +51,6 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
             assert x in ForkliftEnvSb3HER.metadata['render_modes'] 
         self.render_mode = self.config['render_mode']
 
-        # self.ros_clock will be used to check that observations are obtained after the actions are taken
-        self.ros_clock = None
-
         # -------------------- 
         # Start gazebo simulation, robot_state_publisher
         self.gazebo_launch_subp = generate_and_launch_ros_description_as_new_process(self.config) # Reference to subprocess that runs these things
@@ -90,6 +87,9 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # -------------------- 
         # ====================================================
        
+        # self.ros_clock will be used to check that observations are obtained after the actions are taken
+        self.ros_clock = self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now()
+
         # Parameters: -------------------- 
         self.cur_iteration = 0
         self.max_episode_length = self.config['max_episode_length']
@@ -101,6 +101,8 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # -------------------------------------
 
         self._target_transform = None # agent's goal state
+
+
         
 
     def _get_obs_target_transform_decorator(self, func):
@@ -139,7 +141,6 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                         + (str(t.header.stamp.nanosec))) \
                             < (self.ros_clock.nanoseconds + self.config['step_duration'])):
                             flag = True
-                            break
 
             # --------------------------------------------
             return {
@@ -184,7 +185,6 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                         + (str(t.header.stamp.nanosec))) \
                             < (self.ros_clock.nanoseconds + self.config['step_duration'])):
                             flag = True
-                            break
 
             # --------------------------------------------
             return {
@@ -387,6 +387,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         diff_cont_msg.angular.y = 0.0
         diff_cont_msg.angular.z = 0.0 # use this one
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
+        rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
 
 
         # send 'no action' action to fork_joint_cont of forklift robot
@@ -395,7 +396,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         fork_joint_cont_msg.data = [0.0]
         # Take fork_joint_cont action
         self.fork_joint_cont_cmd_publisher.publish_cmd(fork_joint_cont_msg)
-
+        rclpy.spin_once(self.fork_joint_cont_cmd_publisher)
 
         # Reset the simulation & world (gazebo)
         self.simulation_controller_node.send_reset_simulation_request()
@@ -407,6 +408,8 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         self.simulation_controller_node.change_entity_location(self._pallet_entity_name, self._target_transform, [], \
             0.0, self.config, spawn_pallet=True)
 
+        while self.ros_clock == self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now():
+            rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
         self.ros_clock = self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now()
 
         # Get observation
@@ -471,7 +474,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
         # Take diff_cont action
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
-
+        rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
 
         # set fork_joint_cont action
         # fork_joint_cont_action = action['fork_joint_cont_action']
@@ -481,18 +484,17 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         fork_joint_cont_msg.data = [0.0]
         # Take fork_joint_cont action
         self.fork_joint_cont_cmd_publisher.publish_cmd(fork_joint_cont_msg)
-
+        rclpy.spin_once(self.fork_joint_cont_cmd_publisher)
 
         # Get observation after taking the action
+        while self.ros_clock == self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now():
+            rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
         self.ros_clock = self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now() # will be used to make sure observation is coming from after the action was taken
 
         observation = self._get_obs()
 
         # Convert nested Dict obs to flat obs array for SB3
         observation_flat, achieved_state, goal_state, observation = flatten_and_concatenate_observation(observation, self)
-        # Concat observation_flat with goal_state for sb3
-        # import torch
-        # observation_flat = torch.concat([observation_flat, torch.tensor(goal_state)], dim=-1).numpy()
 
         obs_dict = {
             'observation': observation_flat.numpy(),
@@ -517,6 +519,9 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         self._coordinate_image['forklift_coordinates'].append(obs_dict['achieved_goal'])
         self.render(observation)
 
+        # print('action:',action)
+        # print('observation_orientation:',obs_dict['observation'][2:6])
+        # print('observation_xz:', obs_dict['observation'][-2:])
         # return observation_flat, reward, done, False, info # (observation, reward, done, truncated, info)
         return obs_dict, reward, done, info # (observation, reward, done, truncated, info)
 
@@ -527,15 +532,14 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
     
     def _render_frame(self, observation):
         if "draw_coordinates" in self.render_mode:
-            # Draw Forklift coordinates
             self.ax.clear()
+            # Draw Forklift coordinates
             fork_coordinates = np.array(self._coordinate_image['forklift_coordinates'])
             x = fork_coordinates[:,0]
             y = fork_coordinates[:,1]
             self.ax.plot(x, y, 'b-', label="forklift coordinates")
             # Draw Target coordinates
             self.ax.plot(self._coordinate_image['target_coordinate'][0], self._coordinate_image['target_coordinate'][1], 'r*', label='pallet coordinates')
-
             # Label the plot
             self.ax.set_title('Rendering Coordinates')
             self.ax.legend()
@@ -734,7 +738,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # return spaces.Dict(obs_space_dict), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
         # return spaces.Box(low = -float("inf") * np.ones((15,)), high = float("inf") * np.ones((15,)), dtype = np.float64), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
         return spaces.Dict({
-            'observation': spaces.Box(low = -float("inf") * np.ones((6,)), high = float("inf") * np.ones((6,)), dtype = np.float64),
+            'observation': spaces.Box(low = -float("inf") * np.ones((8,)), high = float("inf") * np.ones((8,)), dtype = np.float64),
             'achieved_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64),
             'desired_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64)
         }), _get_obs
