@@ -139,11 +139,11 @@ def generateLaunchDescriptionForkliftEnv(config):
         output='screen'
     )
 
-    diff_controller = ExecuteProcess(
-            cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
-                'diff_cont'],
-            output='screen'
-        )
+    # diff_controller = ExecuteProcess(
+    #         cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+    #             'diff_cont'],
+    #         output='screen'
+    #     )
 
 
     return LaunchDescription([

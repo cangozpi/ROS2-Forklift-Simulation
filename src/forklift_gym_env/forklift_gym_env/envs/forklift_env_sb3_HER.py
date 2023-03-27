@@ -2,6 +2,7 @@ import gym
 from gym import spaces
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
 from cv_bridge import CvBridge
 import time
 import rclpy
@@ -28,7 +29,7 @@ from forklift_gym_env.rl.sb3_HER.utils import flatten_and_concatenate_observatio
 
 class ForkliftEnvSb3HER(gym.GoalEnv):
     metadata = {
-        "render_modes": ["no_render", "show_depth_camera_img_raw"], 
+        "render_modes": ["no_render", "show_depth_camera_img_raw", "draw_coordinates"], 
         # "render_fps": 4 #TODO: set this
     }
 
@@ -75,7 +76,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # ====================================================
 
         # Create publisher for controlling forklift robot's joints: ============================== 
-        # --------------------  /diff_cont/cmd_vel_unstamped
+        # --------------------  /cmd_vel
         self.diff_cont_cmd_vel_unstamped_publisher = DiffContCmdVelUnstampedPublisher()
         # -------------------- 
         # --------------------  /fork_joint_controller/commands
@@ -126,7 +127,9 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
             flag = True
             while (current_forklift_robot_position_obs is None) or flag:
                 # Obtain forklift_robot frame observation -----
-                t = self.get_entity_state_client.get_entity_state("chassis_bottom_link", "world")
+                t = self.get_entity_state_client.get_entity_state(\
+                    "forklift_bot::base_link::base_link_fixed_joint_lump__chassis_bottom_link_collision_collision", \
+                        "world")
                 if t is not None and (t.success == True):
                     current_forklift_robot_position_obs = t
                     flag = False
@@ -359,15 +362,15 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # Sample the target's location randomly until it does not coincide with the agent's location
         self._target_transform = np.array([0.0, 0.0]) # in the range [-10, 10]
-        # self._target_transform[0] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
-        self._target_transform[1] = np.random.random(size=(1,)) * 20 + (-10) # y in the range [-10, 10]
+        self._target_transform[0] = np.random.random(size=(1,)) * 20 + (-10) # x in the range [-10, 10]
+        self._target_transform[1] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
         while np.array_equal(self._target_transform, self._agent_location):
             # self._target_transform = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
             # self._target_transform *= np.array([0, 1]) # make it only change in y axis
             # self._target_transform[0] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
-            self._target_transform[1] = np.random.random(size=(1,)) * 20 + (-10) # y in the range [-10, 10]
-        if self._target_transform[1] > -4 and self._target_transform[1] < 4:
-            self._target_transform[1] = 5 * np.sign(np.random.random(size=(1,)))
+            self._target_transform[0] = np.random.random(size=(1,)) * 20 + (-10) # y in the range [-10, 10]
+        if self._target_transform[0] > -4 and self._target_transform[0] < 4:
+            self._target_transform[0] = 5 * np.sign(np.random.random(size=(1,)))
 
  
 
@@ -424,7 +427,24 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         self.simulation_controller_node.send_pause_physics_client_request()
 
         # Render
+        self._coordinate_image = np.zeros((20, 20 , 3), np.uint8)
+        self._coordinate_image = {
+            'forklift_coordinates': [],
+            'target_coordinate': None
+        }
+        # Mark forklift location
+        self._coordinate_image['forklift_coordinates'].append(self._agent_location)
+        # Mark target location
+        self._coordinate_image['target_coordinate'] = self._target_transform
+        # Initialize and render plot
+        plt.close()
+        plt.ion()
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111)
+        self.ax.axis('equal')
+        self.ax.autoscale()
         self.render(observation)
+
 
         # return observation_flat, self._get_info(None, diff_cont_msg, observation)
         return obs_dict
@@ -442,15 +462,13 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
-        # diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
-        diff_cont_msg.linear.x = 10.0 if float(diff_cont_action[0]) > 0 else -10.0 # use this one
+        diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 
         diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
-        # diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
-        diff_cont_msg.angular.z = 0.0 # use this one
+        diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
         # Take diff_cont action
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
 
@@ -495,6 +513,8 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         info = self._get_info(reward, diff_cont_msg, observation) 
 
         # Render
+        # Mark forklift location
+        self._coordinate_image['forklift_coordinates'].append(obs_dict['achieved_goal'])
         self.render(observation)
 
         # return observation_flat, reward, done, False, info # (observation, reward, done, truncated, info)
@@ -506,6 +526,24 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
             self._render_frame(observation)
     
     def _render_frame(self, observation):
+        if "draw_coordinates" in self.render_mode:
+            # Draw Forklift coordinates
+            self.ax.clear()
+            fork_coordinates = np.array(self._coordinate_image['forklift_coordinates'])
+            x = fork_coordinates[:,0]
+            y = fork_coordinates[:,1]
+            self.ax.plot(x, y, 'b-', label="forklift coordinates")
+            # Draw Target coordinates
+            self.ax.plot(self._coordinate_image['target_coordinate'][0], self._coordinate_image['target_coordinate'][1], 'r*', label='pallet coordinates')
+
+            # Label the plot
+            self.ax.set_title('Rendering Coordinates')
+            self.ax.legend()
+
+            self.fig.canvas.draw()
+            self.fig.canvas.flush_events()
+
+
         if "show_depth_camera_img_raw" in self.render_mode:
             depth_camera_img = observation['depth_camera_raw_image_observation']
             cv2.imshow('Forklift depth_camera_raw_image message', depth_camera_img)
@@ -696,7 +734,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # return spaces.Dict(obs_space_dict), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
         # return spaces.Box(low = -float("inf") * np.ones((15,)), high = float("inf") * np.ones((15,)), dtype = np.float64), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
         return spaces.Dict({
-            'observation': spaces.Box(low = -float("inf") * np.ones((13,)), high = float("inf") * np.ones((13,)), dtype = np.float64),
+            'observation': spaces.Box(low = -float("inf") * np.ones((6,)), high = float("inf") * np.ones((6,)), dtype = np.float64),
             'achieved_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64),
             'desired_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64)
         }), _get_obs
@@ -793,8 +831,8 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # return spaces.Dict(d)
 
         # Flatten action_space for SB3
-        # return spaces.Box(low= -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32)
-        return spaces.Box(low= -10 * np.ones((1)), high = 10 * np.ones((1)), dtype=np.float32)
+        return spaces.Box(low= -1 * np.ones((2)), high = 1 * np.ones((2)), dtype=np.float32)
+        # return spaces.Box(low= -1 * np.ones((1)), high = 1 * np.ones((1)), dtype=np.float32)
 
 
 

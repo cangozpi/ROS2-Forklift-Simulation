@@ -1,6 +1,6 @@
 verbose: True # Whether to print info.
 entity_name: 'forklift_bot' # entity name of the forklift robot in the simulation.
-ros_controller_names:  ['joint_broad', 'fork_joint_controller'] # ROS2 controllers that are activated. (Check out forklift_robot pkg my_controllers.yaml)
+ros_controller_names:  ['joint_broad','fork_joint_controller'] # ROS2 controllers that are activated. (Check out forklift_robot pkg my_controllers.yaml)
 tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance to target_location's x coordinate for agent to achieve the goal state.
 tolerance_y: 1.59  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state.
 agent_pose_position_z: 0.30 # agent's z coordinate when spawned in the world.
@@ -9,8 +9,8 @@ observation_types: ["fork_position", "target_tf"] # specifies the observation sp
 reward_types: ["L2_distance"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty", "binary"])
 action_types: ["differential_control"] # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options. (e.g. ["differential_control", "fork_joint_control"])
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
-render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
-step_duration: 0_050_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds.
+render_mode: ['no_render', 'draw_coordinates'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw", "draw_coordinates"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
+step_duration: 100000_000_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds (e.g. 0_050_000_000).
 gui: True # Whether to launch gzclient. gzclient is run when it is True.
 gazebo_verbose: 'false' # (str ['true', 'false']) Whether to launch launch.gazebo.py with verbose:true
 pallet_model_sdf_path: "pallet/model.sdf" # path to the model sdf file which will be used as the pallet model wrt build/forklift_gym_env/models/ path. (e.g. "pallet/model.sdf")

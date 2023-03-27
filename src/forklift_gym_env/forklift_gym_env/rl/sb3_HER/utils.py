@@ -30,20 +30,20 @@ def flatten_and_concatenate_observation(obs, env):
             # Add Pose/transformations:
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y, 
-            obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].z,
+            # obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].z,
             # Add Pose/rotations:
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].x,
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].y, 
-            obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].z, 
-            obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].w, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].z, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].w, 
             
             # Add Twist/linear
             obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].x, 
-            obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].y, 
-            obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].z,
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].y, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].z,
             # Add Twist/angular
-            obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].x, 
-            obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].y, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].x, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].y, 
             obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z,
             ])
         obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)

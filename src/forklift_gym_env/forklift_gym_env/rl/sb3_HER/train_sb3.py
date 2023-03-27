@@ -18,7 +18,7 @@ from sb3_contrib import QRDQN, TQC
 
 
 def main():
-    mode = "test"
+    mode = "train"
     assert mode in ["train", "test"]
 
     # env = gym.make('forklift_gym_env/ForkliftWorld-v1')
@@ -84,7 +84,7 @@ def main():
 
 
         # model = DDPG("MlpPolicy", env, action_noise=action_noise, verbose=1, tensorboard_log="sb3_tensorboard/")
-        model.learn(total_timesteps=20_000, tb_log_name="forklift_env fix sb3 DDPG+HER [16,8] k=0", reset_num_timesteps=False, log_interval=1, progress_bar=True)
+        model.learn(total_timesteps=200_000, tb_log_name="forklift_env fix sb3 DDPG+HER [16,8] k=0", reset_num_timesteps=False, log_interval=1, progress_bar=True)
         model.save("sb3_saved_model")
         print("Finished training the agent !")
 
