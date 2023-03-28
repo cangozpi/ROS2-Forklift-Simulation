@@ -62,5 +62,13 @@
     </plugin>
 
 
+    <!-- Speed up simulation time -->
+    <physics name='default_physics' default='0' type='ode'>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>2000</real_time_update_rate> <!-- For instance, (by changing this to 2000) 1 second in real-time will be executed as 2000 ms in simulation. -->
+    </physics>
+
+
   </world>
 </sdf>
