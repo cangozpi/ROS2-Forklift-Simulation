@@ -336,15 +336,15 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         return f
 
 
-    def _get_info(self, reward, diff_cont_msg, observation):
+    def _get_info(self, observation):
         info = {
             "iteration": self.cur_iteration,
             "max_episode_length": self.max_episode_length,
-            "reward": reward,
             "agent_location": [observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x,\
                  observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y], # [translation_x, translation_y]
             "target_location": self._target_transform, # can be changed with: observation['pallet_position']['pallet_model']['pose']['position']
-            "verbose": self.config["verbose"]
+            "verbose": self.config["verbose"],
+            "observation": observation
         }
         return info
     
@@ -465,7 +465,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
-        diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
+        diff_cont_msg.linear.x = (float(diff_cont_action[0]) + 1) / 2 # modify action from [-1, ,1] to [0, 1] so that it only moves forward
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 
@@ -505,14 +505,15 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
 
+        # Get info
+        info = self._get_info(observation) 
+
         # Calculate reward
-        reward = self.calc_reward(obs_dict['achieved_goal'], obs_dict['desired_goal']) 
+        reward = self.compute_reward(obs_dict['achieved_goal'], obs_dict['desired_goal'], info)
 
         # Check if episode should terminate 
         done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(obs_dict['achieved_goal'], full_obs=False))
 
-        # Get info
-        info = self._get_info(reward, diff_cont_msg, observation) 
 
         # Render
         # Mark forklift location
@@ -755,7 +756,9 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
             assert reward_type in RewardType
 
         # Return corresponding reward calculation function by accumulating the rewards returned by the functions specified in the reward_types
-        def reward_func(observation, goal_state = None):
+        def reward_func(achieved_goal, desired_goal, info):
+        # def reward_func(observation, goal_state = None):
+
             reward = 0
 
             if RewardType.L2_DIST in reward_types:
@@ -782,6 +785,34 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                     return - l2_dist
 
                 reward += calc_reward_L2_dist(observation, goal_state)
+
+            if RewardType.NAV_REWARD in reward_types:
+                def calc_navigation_reward(achieved_goal, desired_goal, info):
+                    """
+                    Returns a high reward for achieving the goal_state, if not returns a reward that favors linear.x velocity (forward movement)
+                    but penalizes angular.z velocity (turning).
+                    Refer to https://medium.com/@reinis_86651/deep-reinforcement-learning-in-mobile-robot-navigation-tutorial-part4-environment-7e4bc672f590
+                    and its definition of a reward function for further details.
+                    Inputs:
+                        achieved_goal: state that the robot is in.
+                        desired_goal: desired goal state (state of the goal).
+                        info: bears further information that can be used in reward calculation.
+                    Returns:
+                        reward 
+
+                    """
+                    goal_achieved = self.check_goal_achieved(achieved_goal, desired_goal, full_obs=False)
+                    if goal_achieved:
+                        return 100.0
+                    else:
+                        obs = info['observation']
+                        # Extract linear.x action
+                        linearX_velocity = obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].x
+                        # Extract angular.z action
+                        angularZ_velocity = obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z 
+                        return abs(linearX_velocity) / 2 - abs(angularZ_velocity) / 2
+
+                reward += calc_navigation_reward(achieved_goal, desired_goal, info)
     
             if RewardType.COLLISION_PENALTY in reward_types:
                 def calc_reward_collision_penalty(observation):
@@ -911,7 +942,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         Args:
             achieved_goal (object): the goal that was achieved during execution
             desired_goal (object): the desired goal that we asked the agent to attempt to achieve
-            info (dict): an info dictionary with additional information
+            info (dict): an info dictionary with additional information.
 
         Returns:
             float: The reward that corresponds to the provided achieved goal w.r.t. to the desired
@@ -920,17 +951,21 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                 ob, reward, done, info = env.step()
                 assert reward == env.compute_reward(ob['achieved_goal'], ob['desired_goal'], info)
         """
-        # Vectorized binary reward calculation # TODO: integrate into calc_reward funciton
-        # g = self.check_goal_achieved(achieved_goal, desired_goal, full_obs=False)
-        # if type(g) == list:
-        #     return np.array([int(success) for success in g])
-        # elif type(g) == bool:
-        #     return g
+        # Handle batch and single processing cases
+        dims = len(achieved_goal.shape)
 
-        # Process batch data one by one
-        goals = []
-        for a_goal, d_goal in zip(achieved_goal, desired_goal):
-            goals.append(self.calc_reward(a_goal, d_goal))
-        return np.array(goals)
+        if dims == 1: # Process single data coming from step() function
+            reward = self.calc_reward(achieved_goal, desired_goal, info) 
+            return reward
+
+        elif dims > 1: # Process batch data coming from HER implementation.
+            rewards = []
+            for cur_a_goal, cur_d_goal, cur_info in zip(achieved_goal, desired_goal, info):
+                cur_reward = self.calc_reward(cur_a_goal, cur_d_goal, cur_info) 
+                rewards.append(cur_reward) 
+            return np.array(rewards)
+
+        else: # Invalid inputs
+            raise Exception("compute_reward got inputs with invalid shape")
 
     

@@ -237,6 +237,7 @@ class RewardType(Enum):
     Specifies the reward function being used. Used in config.yaml
     """
     L2_DIST = "L2_distance"
+    NAV_REWARD = "navigation_reward"
     COLLISION_PENALTY = "collision_penalty"
     BINARY = "binary"
 
