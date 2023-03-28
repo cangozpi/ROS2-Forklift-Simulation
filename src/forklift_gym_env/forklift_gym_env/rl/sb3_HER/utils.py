@@ -32,8 +32,8 @@ def flatten_and_concatenate_observation(obs, env):
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y, 
             # obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].z,
             # Add Pose/rotations:
-            obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].x,
-            obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].y, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].x,
+            # obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].y, 
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].z, 
             obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].w, 
             
@@ -60,6 +60,10 @@ def flatten_and_concatenate_observation(obs, env):
             obs['pallet_position_observation']['pallet_model']['pose']['orientation'].z, 
             obs['pallet_position_observation']['pallet_model']['pose']['orientation'].w, 
             ])
+        obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
+
+    if ObservationType.LATEST_ACTION in env.obs_types:
+        tf_obs = torch.tensor(obs['latest_action'])
         obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
 
     # TODO: collision detection case is missing here

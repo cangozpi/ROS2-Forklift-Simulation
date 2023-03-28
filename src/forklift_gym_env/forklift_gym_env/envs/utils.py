@@ -230,6 +230,7 @@ class ObservationType(Enum):
     TARGET_TRANSFORM = "target_tf"
     DEPTH_CAMERA_RAW_IMAGE = "depth_camera_raw_image"
     COLLISION_DETECTION = "collision_detection"
+    LATEST_ACTION = "latest_action"
 
 
 class RewardType(Enum):

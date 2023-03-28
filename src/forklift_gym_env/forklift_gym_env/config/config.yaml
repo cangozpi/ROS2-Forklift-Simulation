@@ -5,12 +5,12 @@ tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance 
 tolerance_y: 1.59  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state.
 agent_pose_position_z: 0.30 # agent's z coordinate when spawned in the world.
 world_file_name: 'collision_detection.world' # specifies world used for gazebo simulation. These worlds are available in /world folder.
-observation_types: ["fork_position", "target_tf"] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['fork_position', 'pallet_position', 'target_tf', 'tf', 'depth_camera_raw_image', 'collision_detecion']
-reward_types: ["navigation_reward"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty", "binary"])
+observation_types: ["fork_position", "target_tf", "latest_action"] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['fork_position', 'pallet_position', 'target_tf', 'tf', 'depth_camera_raw_image', 'collision_detecion', 'latest_action']
+reward_types: ["navigation_reward"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty", "binary", "navigation_reward"])
 action_types: ["differential_control"] # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options. (e.g. ["differential_control", "fork_joint_control"])
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
 render_mode: ['no_render', 'draw_coordinates'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw", "draw_coordinates"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
-step_duration: 100_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds (e.g. 1 second is 1_000_000_000).
+step_duration: 50_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds (e.g. 1 second is 1_000_000_000).
 gui: True # Whether to launch gzclient. gzclient is run when it is True.
 gazebo_verbose: 'false' # (str ['true', 'false']) Whether to launch launch.gazebo.py with verbose:true
 pallet_model_sdf_path: "pallet/model.sdf" # path to the model sdf file which will be used as the pallet model wrt build/forklift_gym_env/models/ path. (e.g. "pallet/model.sdf")
@@ -21,7 +21,7 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 
 # ========== HYPERPARAMTERS HER_DDPG: ============= 
 total_episodes: 10 # total number of episodes to train
-max_episode_length: 500 # maximum iteration length of an episode.
+max_episode_length: 100 # maximum iteration length of an episode.
 warmup_steps: 100 # number of steps to take random actions before using the agents policy
 update_every: 500 # update model after every update_every steps.
 num_updates: 500 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 

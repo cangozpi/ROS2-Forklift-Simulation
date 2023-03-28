@@ -65,19 +65,20 @@ def main():
             env,
             action_noise=action_noise,
             replay_buffer_class=HerReplayBuffer,
+            learning_rate=1e-5,
             # Parameters for HER
             replay_buffer_kwargs=dict(
-                n_sampled_goal=4,
+                n_sampled_goal=0,
                 goal_selection_strategy=goal_selection_strategy,
                 online_sampling=True,
-                max_episode_length=500,
+                max_episode_length=100,
             ),
-            # policy_kwargs={
-            #     'activation_fn':torch.nn.LeakyReLU,
-            #     'net_arch':{
-            #         'pi':[16, 8], 'qf':[16, 8]
-            #         }
-            #     },
+            policy_kwargs={
+                # 'activation_fn':torch.nn.LeakyReLU,
+                'net_arch':{
+                    'pi':[16, 8], 'qf':[16, 8]
+                    }
+                },
             verbose=1,
             tensorboard_log="sb3_tensorboard/"
         )

@@ -336,6 +336,22 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         return f
 
 
+    def _get_obs_latest_action_decorator(self, func):
+        def _get_latest_action(self):
+            return {
+                'latest_action': self.action
+            }
+        
+
+        def f():
+            return {
+                **(func()),
+                **(_get_latest_action(self))
+            }
+
+        return f
+
+
     def _get_info(self, observation):
         info = {
             "iteration": self.cur_iteration,
@@ -344,7 +360,8 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                  observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y], # [translation_x, translation_y]
             "target_location": self._target_transform, # can be changed with: observation['pallet_position']['pallet_model']['pose']['position']
             "verbose": self.config["verbose"],
-            "observation": observation
+            "observation": observation,
+            "action": self.action
         }
         return info
     
@@ -362,13 +379,13 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # Sample the target's location randomly until it does not coincide with the agent's location
         self._target_transform = np.array([0.0, 0.0]) # in the range [-10, 10]
-        self._target_transform[0] = np.random.random(size=(1,)) * 20 + (-10) # x in the range [-10, 10]
+        self._target_transform[0] = np.random.random(size=(1,)) * 10 #+ (-10) # x in the range [-10, 10]
         self._target_transform[1] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
         while np.array_equal(self._target_transform, self._agent_location):
             # self._target_transform = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
             # self._target_transform *= np.array([0, 1]) # make it only change in y axis
             # self._target_transform[0] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
-            self._target_transform[0] = np.random.random(size=(1,)) * 20 + (-10) # y in the range [-10, 10]
+            self._target_transform[0] = np.random.random(size=(1,)) * 10 #+ (-10) # y in the range [-10, 10]
         if self._target_transform[0] > -4 and self._target_transform[0] < 4:
             self._target_transform[0] = 5 * np.sign(np.random.random(size=(1,)))
 
@@ -377,15 +394,17 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # Unpause sim so that simulation can be reset
         self.simulation_controller_node.send_unpause_physics_client_request()
 
+        self.action = np.zeros((2), dtype=np.float32) # diff_cont_msg
+
         # Send 'no action' action to diff_cmd_cont of forklift robot
         diff_cont_msg = Twist()
-        diff_cont_msg.linear.x = 0.0 # use this one
+        diff_cont_msg.linear.x = self.action[0].item() # use this one
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 
         diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
-        diff_cont_msg.angular.z = 0.0 # use this one
+        diff_cont_msg.angular.z = self.action[1].item() # use this one
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
         rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
 
@@ -461,11 +480,12 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # Set diff_cont action
         # diff_cont_action = action['diff_cont_action'] 
+        action[0] = (float(action[0]) + 1) / 2 # modify action from [-1, ,1] to [0, 1] so that it only moves forward
+        self.action = action
         diff_cont_action = action
-
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
-        diff_cont_msg.linear.x = (float(diff_cont_action[0]) + 1) / 2 # modify action from [-1, ,1] to [0, 1] so that it only moves forward
+        diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 
@@ -510,6 +530,10 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # Calculate reward
         reward = self.compute_reward(obs_dict['achieved_goal'], obs_dict['desired_goal'], info)
+        # print(f'obs: {observation}')
+        print(f'reward: {reward}')
+        print('action:', action)
+
 
         # Check if episode should terminate 
         done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(obs_dict['achieved_goal'], full_obs=False))
@@ -735,6 +759,9 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
             elif obs_type == ObservationType.COLLISION_DETECTION:
                 _get_obs = self._get_obs_collision_detection_decorator(_get_obs)
+            
+            elif obs_type == ObservationType.LATEST_ACTION:
+                _get_obs = self._get_obs_latest_action_decorator(_get_obs)
 
         # return spaces.Dict(obs_space_dict), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
         # return spaces.Box(low = -float("inf") * np.ones((15,)), high = float("inf") * np.ones((15,)), dtype = np.float64), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
@@ -762,7 +789,8 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
             reward = 0
 
             if RewardType.L2_DIST in reward_types:
-                def calc_reward_L2_dist(observation, goal_state):
+                def calc_reward_L2_dist(achieved_goal, desired_goal, info):
+                # def calc_reward_L2_dist(observation, goal_state):
                     """
                     Returns the negative L2 distance between the (translation_x, translation_y) coordinates 
                     of forklift_robot_transform and target_transform.
@@ -777,14 +805,10 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                     # Note that we are only using translation here, NOT using rotation information
                     # robot_transform_translation = [forklift_robot_transform['chassis_bottom_link']['pose']['position'].x, \
                     #     forklift_robot_transform['chassis_bottom_link']['pose']['position'].y] # [translation_x, translation_y]
-                    robot_transform_translation = [observation[0], observation[1]] # [translation_x, translation_y]
-                    if goal_state is None:
-                        l2_dist = np.linalg.norm(robot_transform_translation - self._target_transform)
-                    else:
-                        l2_dist = np.linalg.norm(robot_transform_translation - goal_state)
+                    l2_dist = np.linalg.norm(achieved_goal - desired_goal)
                     return - l2_dist
 
-                reward += calc_reward_L2_dist(observation, goal_state)
+                reward += calc_reward_L2_dist(achieved_goal, desired_goal, info)
 
             if RewardType.NAV_REWARD in reward_types:
                 def calc_navigation_reward(achieved_goal, desired_goal, info):
@@ -801,15 +825,24 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                         reward 
 
                     """
+                    action = info["action"]
+                    # 
                     goal_achieved = self.check_goal_achieved(achieved_goal, desired_goal, full_obs=False)
                     if goal_achieved:
                         return 100.0
                     else:
                         obs = info['observation']
                         # Extract linear.x action
-                        linearX_velocity = obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].x
+                        # linearX_velocity = obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].x
+                        # linearY_velocity = obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].y
+                        linearX_velocity = action[0]
+                        angularZ_velocity = action[1]
+                        # s1 = linearX_velocity ** 2 + linearY_velocity ** 2
+                        print(f'linearx: {linearX_velocity}, angularZ: {angularZ_velocity}')
+                        print("---")
                         # Extract angular.z action
-                        angularZ_velocity = obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z 
+                        # angularZ_velocity = obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z 
+                        
                         return abs(linearX_velocity) / 2 - abs(angularZ_velocity) / 2
 
                 reward += calc_navigation_reward(achieved_goal, desired_goal, info)
