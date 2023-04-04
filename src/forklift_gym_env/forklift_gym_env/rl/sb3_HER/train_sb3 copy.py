@@ -1,7 +1,7 @@
 import gym
 
 from stable_baselines3.common.env_checker import check_env
-from forklift_gym_env.envs.Forklift_env import ForkliftEnv
+from forklift_gym_env.envs.forklift_env_sb3_HER import ForkliftEnvSb3HER
 
 from forklift_gym_env.rl.sb3_HER.utils import seed_everything
 
@@ -22,7 +22,7 @@ def main():
     assert mode in ["train", "test"]
 
     # env = gym.make('forklift_gym_env/ForkliftWorld-v1')
-    env =  ForkliftEnv()
+    env =  ForkliftEnvSb3HER()
     # It will check your custom environment and output additional warnings if needed
     # check_env(env)
 
