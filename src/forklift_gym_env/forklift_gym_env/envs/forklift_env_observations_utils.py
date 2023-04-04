@@ -16,7 +16,7 @@ def observation_space_factory(env, obs_types):
     for obs_type in obs_types:
         assert obs_type in ObservationType
 
-        # Extended observation_space according to obs_type. Currently NOT being used but left as a reference.
+        # Extended observation_space according to obs_type. Currently NOT being used, but left as a reference.
         # obs_space_dict = {}
         # if obs_type == ObservationType.FORK_POSITION:
         #     obs_space_dict["forklift_position_observation"] = spaces.Dict({

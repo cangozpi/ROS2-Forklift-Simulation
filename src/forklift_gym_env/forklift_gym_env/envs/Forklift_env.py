@@ -26,6 +26,8 @@ from forklift_gym_env.envs.controller_publishers.fork_joint_controller_cmd_publi
 
 # Observation, Action, Reward function Factories
 from forklift_gym_env.envs.forklift_env_observations_utils import observation_space_factory
+from forklift_gym_env.envs.forklift_env_Actions_utils import action_space_factory
+from forklift_gym_env.envs.forklift_env_Rewards_utils import calculate_reward_factory
 
 
 from forklift_gym_env.rl.sb3_HER.utils import flatten_and_concatenate_observation
@@ -45,9 +47,9 @@ class ForkliftEnv(gym.GoalEnv):
         self.obs_types = [ObservationType(obs_type) for obs_type in self.config["observation_types"]]
         self.observation_space, self._get_obs = observation_space_factory(self, obs_types = self.obs_types)
         self.act_types = [ActionType(act_type) for act_type in self.config["action_types"]]
-        self.action_space = self.action_space_factory(act_types = self.act_types)
+        self.action_space = action_space_factory(self, act_types = self.act_types)
         self.reward_types = [RewardType(reward_type) for reward_type in self.config["reward_types"]]
-        self.calc_reward = self.calculate_reward_factory(reward_types = self.reward_types)
+        self.calc_reward = calculate_reward_factory(self, reward_types = self.reward_types)
 
         # Set render_mode
         for x in self.config["render_mode"]:
@@ -400,139 +402,8 @@ class ForkliftEnv(gym.GoalEnv):
 
     
     
-    def calculate_reward_factory(self, reward_types):
-        """
-        Returns a function that calculates reward which corresponds to the given reward_type
-        Inputs:
-            reward_type (List[RewardType]): specifies which reward function is used.
-        """
-        for reward_type in reward_types:
-            assert reward_type in RewardType
-
-        # Return corresponding reward calculation function by accumulating the rewards returned by the functions specified in the reward_types
-        def reward_func(achieved_goal, desired_goal, info):
-        # def reward_func(observation, goal_state = None):
-
-            reward = 0
-
-            if RewardType.L2_DIST in reward_types:
-                def calc_reward_L2_dist(achieved_goal, desired_goal, info):
-                # def calc_reward_L2_dist(observation, goal_state):
-                    """
-                    Returns the negative L2 distance between the (translation_x, translation_y) coordinates 
-                    of forklift_robot_transform and target_transform.
-                    Inputs:
-                        observation: returned by self._get_obs()
-                    Returns:
-                        reward: negative L2 distance
-
-                    """
-                    # forklift_robot_transform = observation['forklift_position_observation']
-                    # Return negative L2 distance btw chassis_bottom_link and the target location as reward
-                    # Note that we are only using translation here, NOT using rotation information
-                    # robot_transform_translation = [forklift_robot_transform['chassis_bottom_link']['pose']['position'].x, \
-                    #     forklift_robot_transform['chassis_bottom_link']['pose']['position'].y] # [translation_x, translation_y]
-                    l2_dist = np.linalg.norm(achieved_goal - desired_goal)
-                    # return - l2_dist
-                    # angle penalty
-                    reward = 0
-                    obs = info['observation']
-                    reward += -(obs['total_angle_difference_to_goal_in_degrees'] **2)
-
-                    # uncomment below to debug env/AI_agent
-                    # action = info["action"]
-                    # reward = action[0] # penalize turning right/negative angular action
-
-                    return reward
-
-                reward += calc_reward_L2_dist(achieved_goal, desired_goal, info)
-
-            if RewardType.NAV_REWARD in reward_types:
-                def calc_navigation_reward(achieved_goal, desired_goal, info):
-                    """
-                    Returns a high reward for achieving the goal_state, if not returns a reward that favors linear.x velocity (forward movement)
-                    but penalizes angular.z velocity (turning).
-                    Refer to https://medium.com/@reinis_86651/deep-reinforcement-learning-in-mobile-robot-navigation-tutorial-part4-environment-7e4bc672f590
-                    and its definition of a reward function for further details.
-                    Inputs:
-                        achieved_goal: state that the robot is in.
-                        desired_goal: desired goal state (state of the goal).
-                        info: bears further information that can be used in reward calculation.
-                    Returns:
-                        reward 
-
-                    """
-                    action = info["action"]
-                    # 
-                    goal_achieved = self.check_goal_achieved(achieved_goal, desired_goal, full_obs=False)
-                    if goal_achieved:
-                        return 100.0
-                    else:
-                        # Extract linear.x action
-                        linearX_velocity = action[0]
-                        # Extract angular.z action
-                        angularZ_velocity = action[1]
-                        print(f'linearx: {linearX_velocity}, angularZ: {angularZ_velocity}')
-                        print("---")
-                        
-                        return abs(linearX_velocity) / 2 - abs(angularZ_velocity) / 2
-
-                reward += calc_navigation_reward(achieved_goal, desired_goal, info)
-    
-            if RewardType.COLLISION_PENALTY in reward_types:
-                def calc_reward_collision_penalty(observation):
-                    """
-                    Returns a Reward which penalizes agent's collision with other (non-ground) objects.
-
-                    """
-                    penalty_per_collision = -5 # TODO: fine-tune this value
-                    collision_detection_observations = observation['observation']['collision_detection_observations']
-                    # Check for agents collisions with non-ground objects
-                    unique_non_ground_contacts = {} # holds ContactsState msgs for the collisions with objects that are not the ground
-                    for state in collision_detection_observations.values():
-                        unique_non_ground_contacts = {**unique_non_ground_contacts, **CollisionDetectionSubscriber.get_non_ground_collisions(contactsState_msg = state)}
-                    return penalty_per_collision * len(unique_non_ground_contacts)
-
-                reward += calc_reward_collision_penalty(observation)
-            
-            if RewardType.BINARY in reward_types:
-                def calc_reward_binary(observation, goal_state):
-                    """
-                    Returns 1 if goal_achieved else 0.
-                    Inputs:
-                        observation: returned by self._get_obs()
-                    Returns:
-                        reward: 1 or 0 (binary reward).
-                    """
-                    return int(self.check_goal_achieved(observation, goal_state, full_obs=False))
-
-                reward += calc_reward_binary(observation, goal_state)
-
-            return reward
-
-        return reward_func
 
 
-    def action_space_factory(self, act_types):
-        """
-        Returns observation space that corresponds to obs_type
-        Inputs:
-            act_type (List(ActionType)): specifies which actions can be taken by the agent.
-        """
-        for act_type in act_types:
-            assert act_type in ActionType
-
-        # Set action space according to act_type 
-        d =  {
-                "diff_cont_action": spaces.Box(low = -10 * np.ones((2)), high = 10 * np.ones((2)), dtype=np.float32), #TODO: set this to limits from config file
-                "fork_joint_cont_action": spaces.Box(low = -2.0, high = 2.0, shape = (1,), dtype = np.float64) # TODO: set its high and low limits correctly
-        }
-
-        # return spaces.Dict(d)
-
-        # Flatten action_space for SB3
-        # return spaces.Box(low= -1 * np.ones((2)), high = 1 * np.ones((2)), dtype=np.float32)
-        return spaces.Box(low= -1 * np.ones((1)), high = 1 * np.ones((1)), dtype=np.float32)
 
 
 
@@ -597,7 +468,6 @@ class ForkliftEnv(gym.GoalEnv):
             
         
     
-
     def compute_reward(self, achieved_goal, desired_goal, info):
         """Compute the step reward. This externalizes the reward function and makes
         it dependent on a desired goal and the one that was achieved. If you wish to include
@@ -613,8 +483,8 @@ class ForkliftEnv(gym.GoalEnv):
             float: The reward that corresponds to the provided achieved goal w.r.t. to the desired
             goal. Note that the following should always hold true:
 
-                ob, reward, done, info = env.step()
-                assert reward == env.compute_reward(ob['achieved_goal'], ob['desired_goal'], info)
+                ob, reward, done, info = self.step()
+                assert reward == self.compute_reward(ob['achieved_goal'], ob['desired_goal'], info)
         """
         # Handle batch and single processing cases
         dims = len(achieved_goal.shape)
@@ -632,5 +502,3 @@ class ForkliftEnv(gym.GoalEnv):
 
         else: # Invalid inputs
             raise Exception("compute_reward got inputs with invalid shape")
-
-    
