@@ -66,6 +66,8 @@ def main():
             action_noise=action_noise,
             replay_buffer_class=HerReplayBuffer,
             learning_rate=1e-5,
+            # train_freq=(10, 'episode'),
+            # seed=3,
             # Parameters for HER
             replay_buffer_kwargs=dict(
                 n_sampled_goal=0,

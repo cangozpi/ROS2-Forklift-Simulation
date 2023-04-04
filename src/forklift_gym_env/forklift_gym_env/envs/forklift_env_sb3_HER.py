@@ -142,8 +142,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                             < (self.ros_clock.nanoseconds + self.config['step_duration'])):
                             flag = True
 
-            # --------------------------------------------
-            return {
+            obs =  {
                 'forklift_position_observation': {
                     'chassis_bottom_link': {
                         'pose': {
@@ -157,6 +156,51 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                     } 
                 },
             }
+
+            # Calculate the angle between the forklift and the target point
+            from tf_transformations import euler_from_quaternion
+            theta = 0.0 # Current angle of the robot
+            # Get forklifts location
+            x = obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x,
+            y = obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y,
+            # Get forklifts orientation
+            rot_q = obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation']
+            (roll, pitch, theta) = euler_from_quaternion([rot_q.x, rot_q.y, rot_q.z, rot_q.w]) # convert quaternion to euler angles
+            # Get target(goal) location
+            from geometry_msgs.msg import Point
+            goal = Point()
+            goal.x = self._target_transform[0]
+            goal.y = self._target_transform[1]
+            # Calculate the angle between the forklift and the target
+            inc_x = goal.x - x
+            inc_y = goal.y - y
+            from math import atan2, pi
+            angle_to_goal = atan2(inc_y, inc_x) #calculate angle through distance from robot to goal in x and y (Radians)
+            total_angle_difference_to_goal = abs(angle_to_goal - theta)
+            # print(f'theta(forklifts orientation): {theta}, angle_to_goal: {angle_to_goal}, total_angle_difference_to_goal: {total_angle_difference_to_goal}')
+            # Convert to degrees
+            total_angle_difference_to_goal_degrees = total_angle_difference_to_goal * 180.0 / pi; 
+            print(f'total_angle_difference_to_goal_degrees: {total_angle_difference_to_goal_degrees}')
+            # TODO: normalize total_angle_difference_to_goal_degrees by dividing by 180
+
+            # --------------------------------------------
+            obs =  {
+                'forklift_position_observation': {
+                    'chassis_bottom_link': {
+                        'pose': {
+                            'position': current_forklift_robot_position_obs.state.pose.position,
+                            'orientation': current_forklift_robot_position_obs.state.pose.orientation
+                        },
+                        'twist': {
+                            'linear': current_forklift_robot_position_obs.state.twist.linear,
+                            'angular': current_forklift_robot_position_obs.state.twist.angular
+                        }
+                    } 
+                },
+                'total_angle_difference_to_goal_in_degrees': total_angle_difference_to_goal_degrees
+            }
+
+            return obs
         
 
         def f():
@@ -394,17 +438,17 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # Unpause sim so that simulation can be reset
         self.simulation_controller_node.send_unpause_physics_client_request()
 
-        self.action = np.zeros((2), dtype=np.float32) # diff_cont_msg
+        self.action = np.zeros(self.action_space.shape, dtype=np.float32) # diff_cont_msg
 
         # Send 'no action' action to diff_cmd_cont of forklift robot
         diff_cont_msg = Twist()
-        diff_cont_msg.linear.x = self.action[0].item() # use this one
+        diff_cont_msg.linear.x = 0.0 # use this one
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 
         diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
-        diff_cont_msg.angular.z = self.action[1].item() # use this one
+        diff_cont_msg.angular.z = 0.0 # use this one
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
         rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
 
@@ -480,18 +524,20 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
 
         # Set diff_cont action
         # diff_cont_action = action['diff_cont_action'] 
-        action[0] = (float(action[0]) + 1) / 2 # modify action from [-1, ,1] to [0, 1] so that it only moves forward
+        # action[0] = (float(action[0]) + 1) / 2 # modify action from [-1, ,1] to [0, 1] so that it only moves forward
         self.action = action
         diff_cont_action = action
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
-        diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
+        # diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
+        diff_cont_msg.linear.x = 0.0 # use this one
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 
         diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
-        diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
+        # diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
+        diff_cont_msg.angular.z = float(diff_cont_action[0]) # use this one
         # Take diff_cont action
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
         rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
@@ -766,7 +812,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # return spaces.Dict(obs_space_dict), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
         # return spaces.Box(low = -float("inf") * np.ones((15,)), high = float("inf") * np.ones((15,)), dtype = np.float64), _get_obs #TODO: change self._get_obs method being returned (use decorator pattern)
         return spaces.Dict({
-            'observation': spaces.Box(low = -float("inf") * np.ones((8,)), high = float("inf") * np.ones((8,)), dtype = np.float64),
+            'observation': spaces.Box(low = -float("inf") * np.ones((6,)), high = float("inf") * np.ones((6,)), dtype = np.float64),
             'achieved_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64),
             'desired_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64)
         }), _get_obs
@@ -806,7 +852,16 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                     # robot_transform_translation = [forklift_robot_transform['chassis_bottom_link']['pose']['position'].x, \
                     #     forklift_robot_transform['chassis_bottom_link']['pose']['position'].y] # [translation_x, translation_y]
                     l2_dist = np.linalg.norm(achieved_goal - desired_goal)
-                    return - l2_dist
+                    # return - l2_dist
+                    # angle penalty
+                    reward = 0
+                    obs = info['observation']
+                    reward += -(obs['total_angle_difference_to_goal_in_degrees'] **2)
+
+                    # action = info["action"]
+                    # reward = action[0] # penalize turning right/negative angular action
+
+                    return reward
 
                 reward += calc_reward_L2_dist(achieved_goal, desired_goal, info)
 
@@ -831,17 +886,12 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                     if goal_achieved:
                         return 100.0
                     else:
-                        obs = info['observation']
                         # Extract linear.x action
-                        # linearX_velocity = obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].x
-                        # linearY_velocity = obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].y
                         linearX_velocity = action[0]
+                        # Extract angular.z action
                         angularZ_velocity = action[1]
-                        # s1 = linearX_velocity ** 2 + linearY_velocity ** 2
                         print(f'linearx: {linearX_velocity}, angularZ: {angularZ_velocity}')
                         print("---")
-                        # Extract angular.z action
-                        # angularZ_velocity = obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z 
                         
                         return abs(linearX_velocity) / 2 - abs(angularZ_velocity) / 2
 
@@ -899,8 +949,8 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
         # return spaces.Dict(d)
 
         # Flatten action_space for SB3
-        return spaces.Box(low= -1 * np.ones((2)), high = 1 * np.ones((2)), dtype=np.float32)
-        # return spaces.Box(low= -1 * np.ones((1)), high = 1 * np.ones((1)), dtype=np.float32)
+        # return spaces.Box(low= -1 * np.ones((2)), high = 1 * np.ones((2)), dtype=np.float32)
+        return spaces.Box(low= -1 * np.ones((1)), high = 1 * np.ones((1)), dtype=np.float32)
 
 
 
