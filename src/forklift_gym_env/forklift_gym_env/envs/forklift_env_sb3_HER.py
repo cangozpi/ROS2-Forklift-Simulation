@@ -858,6 +858,7 @@ class ForkliftEnvSb3HER(gym.GoalEnv):
                     obs = info['observation']
                     reward += -(obs['total_angle_difference_to_goal_in_degrees'] **2)
 
+                    # uncomment below to debug env/AI_agent
                     # action = info["action"]
                     # reward = action[0] # penalize turning right/negative angular action
 

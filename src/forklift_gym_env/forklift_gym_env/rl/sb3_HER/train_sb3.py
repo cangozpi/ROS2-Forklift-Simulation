@@ -63,11 +63,13 @@ def main():
         model = DDPG(
             "MultiInputPolicy",
             env,
-            action_noise=action_noise,
+            # action_noise=action_noise,
             replay_buffer_class=HerReplayBuffer,
-            learning_rate=1e-5,
+            learning_rate=0,
             # train_freq=(10, 'episode'),
             # seed=3,
+            learning_starts=1e-2,
+            batch_size=1,
             # Parameters for HER
             replay_buffer_kwargs=dict(
                 n_sampled_goal=0,
