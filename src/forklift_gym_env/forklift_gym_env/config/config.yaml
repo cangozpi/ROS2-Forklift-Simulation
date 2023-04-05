@@ -5,11 +5,11 @@ tolerance_x: 1.115 # chassis_bottom_transform's x location's tolerable distance 
 tolerance_y: 1.59  # chassis_bottom_transform's y location's tolerable distance to target_location's y coordinate for agent to achieve the goal state.
 agent_pose_position_z: 0.30 # agent's z coordinate when spawned in the world.
 world_file_name: 'collision_detection.world' # specifies world used for gazebo simulation. These worlds are available in /world folder.
-observation_types: ["fork_position", "target_tf", "latest_action", 'depth_camera_raw_image'] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['fork_position', 'pallet_position', 'target_tf', 'tf', 'depth_camera_raw_image', 'collision_detecion', 'latest_action']
+observation_types: ["fork_position", "target_tf", "latest_action"] # specifies the observation space used. Check out ObservationType Enum inside utils.py for available options. Valid options are ['fork_position', 'pallet_position', 'target_tf', 'tf', 'depth_camera_raw_image', 'collision_detection', 'latest_action']
 reward_types: ["L2_distance"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty", "binary", "navigation_reward"])
 action_types: ["differential_control"] # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options. (e.g. ["differential_control", "fork_joint_control"])
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
-render_mode: ['no_render', 'draw_coordinates', 'show_depth_camera_img_raw'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw", "draw_coordinates"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
+render_mode: ['no_render', 'draw_coordinates'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw", "draw_coordinates"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
 step_duration: 50_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds (e.g. 1 second is 1_000_000_000).
 gui: True # Whether to launch gzclient. gzclient is run when it is True.
 gazebo_verbose: 'false' # (str ['true', 'false']) Whether to launch launch.gazebo.py with verbose:true

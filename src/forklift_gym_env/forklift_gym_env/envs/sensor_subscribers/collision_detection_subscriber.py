@@ -19,7 +19,6 @@ class CollisionDetectionSubscriber(Node):
         use_sim_time_parameter = rclpy.parameter.Parameter('use_sim_time', rclpy.parameter.Parameter.Type.BOOL, True)
         self.set_parameters([use_sim_time_parameter])
 
-
         self.subscription = self.create_subscription(
             ContactsState,
             '/collision_detection/' + link_name,
@@ -55,6 +54,22 @@ class CollisionDetectionSubscriber(Node):
                     unique_non_ground_contacts[foreign_contact_part_name] = state
 
         return unique_non_ground_contacts
+    
+
+    @staticmethod
+    def initialize_collision_detection_subscriber(env, link_name):
+        """
+        Returns an instance of class CollisionDetectionSubscriber which is is a ros node that has subscribed to collision topic
+        associated with the given link_name.
+        Inputs:
+            link_name (str): name of the link that contacts msgs are being published for. For example for a given link_name
+                of 'chassis_bottom_link', this will subscribe to ros topic: '/collision_detections/link_name'
+        """
+        # callback function for subscribing
+        def collision_detection_cb(msg):
+            env.collision_detection_states[link_name] = msg
+
+        return CollisionDetectionSubscriber(collision_detection_cb, link_name)
 
 
 

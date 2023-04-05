@@ -74,7 +74,7 @@ class ForkliftEnv(gym.GoalEnv):
         self.collision_detection_states = {}
         self.collision_detection_subscribers = []
         for link_name in self.config['collision_detection_link_names']:
-            self.collision_detection_subscribers.append(self.initialize_collision_detection_subscriber(link_name))
+            self.collision_detection_subscribers.append(CollisionDetectionSubscriber.initialize_collision_detection_subscriber(self, link_name))
         # ====================================================
 
         # Create publisher for controlling forklift robot's joints: ============================== 
@@ -364,16 +364,6 @@ class ForkliftEnv(gym.GoalEnv):
     # ============================================= Helper functions
     
 
-    def initialize_collision_detection_subscriber(self, link_name):
-        """
-        Inputs:
-            link_name (str): name of the link that contacts msgs are being published for. For example for a given link_name
-                of 'chassis_bottom_link', this will subscribe to ros topic: '/collision_detections/link_name'
-        """
-        def collision_detection_cb(msg):
-            self.collision_detection_states[link_name] = msg
-
-        return CollisionDetectionSubscriber(collision_detection_cb, link_name)
 
 
 

@@ -71,9 +71,9 @@ def flatten_and_concatenate_observation(obs, env):
 
     # TODO: collision detection case is missing here
 
-    # if ObservationType.DEPTH_CAMERA_RAW_IMAGE in env.obs_types:
-    #     depth_camera_raw_image_obs = torch.tensor(obs['depth_camera_raw_image_observation'])
-    #     obs_flattened = torch.concat((obs_flattened.reshape(-1), depth_camera_raw_image_obs.reshape(-1)), dim=0)
+    if ObservationType.DEPTH_CAMERA_RAW_IMAGE in env.obs_types: # TODO: @fix: replay buffer cannot store images returned from camera since it requires too much space
+        depth_camera_raw_image_obs = torch.tensor(obs['depth_camera_raw_image_observation'])
+        obs_flattened = torch.concat((obs_flattened.reshape(-1), depth_camera_raw_image_obs.reshape(-1)), dim=0)
 
     return obs_flattened, achieved_state, goal_state, obs
 
