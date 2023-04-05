@@ -9,8 +9,11 @@ build:
 
 clean_build: clean build
 
-DDPG_forklift_env:
-	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_DDPG
+train_sb3:
+	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_sb3_training
+
+train_DDPG:
+	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_DDPG_training
 
 HER_DDPG_forklift_env:
 	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_HER_DDPG
@@ -18,8 +21,6 @@ HER_DDPG_forklift_env:
 DDPG_openAI_gym:
 	source install/setup.bash && ros2 run forklift_gym_env openai_gym_env_DDPG
 
-train_sb3:
-	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_sb3_training
 
 
 test:

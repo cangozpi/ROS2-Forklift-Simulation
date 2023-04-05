@@ -16,10 +16,11 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from sb3_contrib import QRDQN, TQC
 
 
-
-rl_algorithm = "TQC_HER"
+# SET THIS TO YOUR RL ALGORITHM OF CHOICE
+rl_algorithm = "PPO" 
 rl_algorithms = ["DDPG", "DDPG_HER", "TQC_HER", "PPO"]
 assert rl_algorithm in rl_algorithms
+config_path = 'build/forklift_gym_env/forklift_gym_env/config/config.yaml'
 
 def main():
     
@@ -30,7 +31,7 @@ def main():
         assert mode in ["train", "test"]
 
         # env = gym.make('forklift_gym_env/ForkliftWorld-v1')
-        env =  ForkliftEnv(use_GoalEnv=False)
+        env =  ForkliftEnv(config_path=config_path, use_GoalEnv=False)
         # It will check your custom environment and output additional warnings if needed
         # check_env(env)
 
@@ -44,9 +45,9 @@ def main():
                 env, 
                 policy_kwargs={
                     # 'activation_fn':torch.nn.LeakyReLU,
-                    # 'net_arch':{
-                    #     'pi':[16, 8], 'qf':[16, 8]
-                    #     }
+                    'net_arch':{
+                        'pi':[16, 8], 'vf':[16, 8]
+                        }
                 },
                 verbose=1, 
                 tensorboard_log="sb3_tensorboard/"
@@ -88,7 +89,7 @@ def main():
         assert mode in ["train", "test"]
 
         # env = gym.make('forklift_gym_env/ForkliftWorld-v1')
-        env =  ForkliftEnv(use_GoalEnv=False)
+        env =  ForkliftEnv(config_path=config_path, use_GoalEnv=False)
         # It will check your custom environment and output additional warnings if needed
         # check_env(env)
 
@@ -156,7 +157,7 @@ def main():
         assert mode in ["train", "test"]
 
         # env = gym.make('forklift_gym_env/ForkliftWorld-v1')
-        env =  ForkliftEnv(use_GoalEnv=True)
+        env =  ForkliftEnv(config_path=config_path, use_GoalEnv=True)
         # It will check your custom environment and output additional warnings if needed
         # check_env(env)
 
@@ -236,7 +237,7 @@ def main():
         assert mode in ["train", "test"]
 
         # env = gym.make('forklift_gym_env/ForkliftWorld-v1')
-        env =  ForkliftEnv(use_GoalEnv=True)
+        env =  ForkliftEnv(config_path=config_path, use_GoalEnv=True)
         # It will check your custom environment and output additional warnings if needed
         # check_env(env)
 

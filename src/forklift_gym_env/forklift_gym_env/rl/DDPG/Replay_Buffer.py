@@ -29,11 +29,11 @@ class ReplayBuffer:
 
 
     def append(self, state, action, reward, next_state, term): #TODO: make sure inputs are torch Tensors and numpy objects
-        self.state_buffer[self.index, :] = state.clone()
-        self.action_buffer[self.index, :] = action.clone()
-        self.reward_buffer[self.index, :] = reward.clone()
-        self.next_state_buffer[self.index, :] = next_state.clone()
-        self.terminal_buffer[self.index, :] = term.clone()
+        self.state_buffer[self.index, :] = state
+        self.action_buffer[self.index, :] = action
+        self.reward_buffer[self.index, :] = reward
+        self.next_state_buffer[self.index, :] = next_state
+        self.terminal_buffer[self.index, :] = term
         # self.goal_state_buffer[self.index, :] = goal_state.clone()
 
         if (self.index + 1) >= self.replay_buffer_size:
@@ -57,11 +57,11 @@ class ReplayBuffer:
         calling the self.commit_append() function.
         Note that goal_state corresponds to the representation of the next_obs as a goal_state for the HER algorithm.
         """
-        self.staged_state.append(state)
-        self.staged_action.append(action)
-        self.staged_reward.append(reward)
-        self.staged_next_state.append(next_state)
-        self.staged_term.append(term)
+        self.staged_state.append(state.detach().clone())
+        self.staged_action.append(action.detach().clone())
+        self.staged_reward.append(reward.detach().clone())
+        self.staged_next_state.append(next_state.detach().clone())
+        self.staged_term.append(term.detach().clone())
         # self.staged_goal_state.append(goal_state)
         # self.staged_next_obs.append(next_obs)
 

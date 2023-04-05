@@ -26,7 +26,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'forklift_gym_env_DDPG = forklift_gym_env.rl.DDPG.DDPG_forklift_env:main',
+            'forklift_gym_env_DDPG_training = forklift_gym_env.rl.DDPG.train_DDPG:main',
             'forklift_gym_env_HER_DDPG = forklift_gym_env.rl.DDPG_HER.HER_DDPG_forklift_env:main',
 
             'openai_gym_env_DDPG = forklift_gym_env.rl.DDPG.DDPG_openai:main',

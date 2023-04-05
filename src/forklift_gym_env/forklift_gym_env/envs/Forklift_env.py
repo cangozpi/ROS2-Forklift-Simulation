@@ -35,10 +35,9 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         # "render_fps": 4 #TODO: set this
     }
 
-    def __init__(self, render_mode = None, use_GoalEnv = False):
+    def __init__(self, render_mode = None, config_path = None, use_GoalEnv = False):
         self.use_GoalEnv = use_GoalEnv # if True, ForkliftEnv behaves like a gym.GoalEnv. If False, behaves like a regular gym.Env
         # Read in parameters from config.yaml
-        config_path = 'build/forklift_gym_env/forklift_gym_env/config/config.yaml'
         self.config = read_yaml_config(config_path)
 
         # Set observation_space, _get_obs method, and action_space
