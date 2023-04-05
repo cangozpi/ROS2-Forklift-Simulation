@@ -38,7 +38,8 @@ class ForkliftEnv(gym.GoalEnv):
         # "render_fps": 4 #TODO: set this
     }
 
-    def __init__(self, render_mode = None):
+    def __init__(self, render_mode = None, use_GoalEnv = True):
+        self.use_GoalEnv = use_GoalEnv # if True, ForkliftEnv behaves like a gym.GoalEnv. If False, behaves like a regular gym.Env
         # Read in parameters from config.yaml
         config_path = 'build/forklift_gym_env/forklift_gym_env/config/config.yaml'
         self.config = read_yaml_config(config_path)
@@ -196,14 +197,9 @@ class ForkliftEnv(gym.GoalEnv):
         # Get observation
         observation = self._get_obs()
 
-        # Convert nested Dict obs to flat obs array
-        observation_flat, achieved_state, goal_state, observation = flatten_and_concatenate_observation(self, observation)
+        # Convert nested Dict obs to the required format (gym.Env | gym.GoalEnv)
+        processed_observations = flatten_and_concatenate_observation(self, observation)
 
-        obs_dict = {
-            'observation': observation_flat.numpy(),
-            'achieved_goal': achieved_state.numpy(),
-            'desired_goal': goal_state
-        }
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
 
@@ -228,7 +224,7 @@ class ForkliftEnv(gym.GoalEnv):
 
 
         # return observation_flat, self._get_info(None, diff_cont_msg, observation)
-        return obs_dict
+        return processed_observations
 
     
     def step(self, action):
@@ -274,14 +270,8 @@ class ForkliftEnv(gym.GoalEnv):
 
         observation = self._get_obs()
 
-        # Convert nested Dict obs to flat obs array for SB3
-        observation_flat, achieved_state, goal_state, observation = flatten_and_concatenate_observation(self, observation)
-
-        obs_dict = {
-            'observation': observation_flat.numpy(),
-            'achieved_goal': achieved_state.numpy(),
-            'desired_goal': goal_state
-        }
+        # Convert nested Dict obs to the required format (gym.Env | gym.GoalEnv)
+        processed_observations = flatten_and_concatenate_observation(self, observation)
 
         # Pause simuation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
@@ -290,21 +280,21 @@ class ForkliftEnv(gym.GoalEnv):
         info = self._get_info(observation) 
 
         # Calculate reward
-        reward = self.compute_reward(obs_dict['achieved_goal'], obs_dict['desired_goal'], info)
+        reward = self.compute_reward(processed_observations['achieved_goal'], processed_observations['desired_goal'], info)
         print(f'reward: {reward}')
         print('action:', action)
 
 
         # Check if episode should terminate 
-        done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(obs_dict['achieved_goal'], full_obs=False))
+        done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(processed_observations['achieved_goal'], full_obs=False))
 
 
         # Render
         # Mark forklift location
-        self._coordinate_image['forklift_coordinates'].append(obs_dict['achieved_goal'])
+        self._coordinate_image['forklift_coordinates'].append(processed_observations['achieved_goal'])
         self.render(observation)
 
-        return obs_dict, reward, done, info # (observation, reward, done, truncated, info)
+        return processed_observations, reward, done, info # (observation, reward, done, truncated, info)
 
 
     def render(self, observation): 
