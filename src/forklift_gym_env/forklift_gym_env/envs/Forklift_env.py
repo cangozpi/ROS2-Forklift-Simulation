@@ -3,8 +3,6 @@ from gym import spaces
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from cv_bridge import CvBridge
-import time
 import rclpy
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float64MultiArray
@@ -30,15 +28,14 @@ from forklift_gym_env.envs.forklift_env_Actions_utils import action_space_factor
 from forklift_gym_env.envs.forklift_env_Rewards_utils import calculate_reward_factory
 
 
-# from forklift_gym_env.rl.sb3_HER.utils import flatten_and_concatenate_observation
 
-class ForkliftEnv(gym.GoalEnv):
+class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
     metadata = {
         "render_modes": ["no_render", "show_depth_camera_img_raw", "draw_coordinates"], 
         # "render_fps": 4 #TODO: set this
     }
 
-    def __init__(self, render_mode = None, use_GoalEnv = True):
+    def __init__(self, render_mode = None, use_GoalEnv = False):
         self.use_GoalEnv = use_GoalEnv # if True, ForkliftEnv behaves like a gym.GoalEnv. If False, behaves like a regular gym.Env
         # Read in parameters from config.yaml
         config_path = 'build/forklift_gym_env/forklift_gym_env/config/config.yaml'
@@ -267,18 +264,22 @@ class ForkliftEnv(gym.GoalEnv):
 
 
         # Check if episode should terminate 
-        done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(processed_observations['achieved_goal'], full_obs=False))
-
+        if self.use_GoalEnv:
+            achieved_goal = processed_observations['achieved_goal']
+        else:
+            achieved_goal = np.array([observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x, \
+                observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y])
+        done = bool(self.cur_iteration >= (self.max_episode_length)) or (self.check_goal_achieved(achieved_goal, full_obs=False))
 
         # Render
-        self.draw_coordinates_dict['forklift_coordinates'].append(processed_observations['achieved_goal']) # Mark forklift location
+        self.draw_coordinates_dict['forklift_coordinates'].append(achieved_goal) # Mark forklift location
         self.render(observation)
 
         return processed_observations, reward, done, info # (observation, reward, done, truncated, info)
 
 
 
-    def compute_reward(self, achieved_goal, desired_goal, info): # required for supporting GoalEnv
+    def compute_reward(self, achieved_goal, desired_goal, info): # Required for supporting gym.GoalEnv
         """Compute the step reward. This externalizes the reward function and makes
         it dependent on a desired goal and the one that was achieved. If you wish to include
         additional rewards that are independent of the goal, you can include the necessary values

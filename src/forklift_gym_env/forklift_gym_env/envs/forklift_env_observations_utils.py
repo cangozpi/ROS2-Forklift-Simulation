@@ -94,7 +94,7 @@ def flatten_and_concatenate_observation(env, obs):
 
 
         if ObservationType.TARGET_TRANSFORM in env.obs_types:
-            target_tf_obs = np.array(obs['target_transform_observation']) # [translation_x, translation_y] of the initial absolute position of the target (pallet)
+            target_tf_obs = torch.tensor(obs['target_transform_observation']) # [translation_x, translation_y] of the initial absolute position of the target (pallet)
             obs_flattened = torch.concat((obs_flattened.reshape(-1), target_tf_obs.reshape(-1)), dim=0)
 
         if ObservationType.FORK_POSITION in env.obs_types:
@@ -148,7 +148,12 @@ def flatten_and_concatenate_observation(env, obs):
             obs_flattened = torch.concat((obs_flattened.reshape(-1), depth_camera_raw_image_obs.reshape(-1)), dim=0)
         
 
-        return obs_flattened 
+        obs_dict = {
+            'observation': obs_flattened.numpy(),
+        }
+
+        return obs_dict
+
 
 
 # -------------------------------------------------------------------------------------------
@@ -351,11 +356,18 @@ def observation_space_factory(env, obs_types):
 
     # return spaces.Dict(obs_space_dict), _get_obs #TODO: change env._get_obs method being returned (use decorator pattern)
     # return spaces.Box(low = -float("inf") * np.ones((15,)), high = float("inf") * np.ones((15,)), dtype = np.float64), _get_obs #TODO: change env._get_obs method being returned (use decorator pattern)
-    return spaces.Dict({
-        'observation': spaces.Box(low = -float("inf") * np.ones((6,)), high = float("inf") * np.ones((6,)), dtype = np.float64),
-        'achieved_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64),
-        'desired_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64)
-    }), _get_obs
+    if env.use_GoalEnv:
+        gym_obs_space = spaces.Dict({
+            'observation': spaces.Box(low = -float("inf") * np.ones((6,)), high = float("inf") * np.ones((6,)), dtype = np.float64),
+            'achieved_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64),
+            'desired_goal': spaces.Box(low = -float("inf") * np.ones((2,)), high = float("inf") * np.ones((2,)), dtype = np.float64)
+        })
+    else:
+        gym_obs_space = spaces.Dict({
+            'observation': spaces.Box(low = -float("inf") * np.ones((11,)), high = float("inf") * np.ones((11,)), dtype = np.float64),
+        })
+        
+    return gym_obs_space, _get_obs
 
 
 
