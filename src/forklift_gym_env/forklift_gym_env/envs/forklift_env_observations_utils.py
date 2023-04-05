@@ -2,11 +2,152 @@ from gym import spaces
 from forklift_gym_env.envs.utils import ObservationType 
 import rclpy
 import numpy as np
+import torch
 
 
 
+def flatten_and_concatenate_observation(env, obs):
+    obs_flattened = torch.tensor([])
+    achieved_state = None
+    goal_state = None
 
 
+    if ObservationType.TARGET_TRANSFORM in env.obs_types:
+        # target_tf_obs = torch.tensor(obs['target_transform_observation']) # [translation_x, translation_y] of the initial absolute position of the target
+        # obs_flattened = torch.concat((obs_flattened.reshape(-1), target_tf_obs.reshape(-1)), dim=0)
+
+        # Goal state for HER buffer is [translation_x, translation_y] of the target_transform (pallet)
+        target_tf_obs = np.array(obs['target_transform_observation']) # [translation_x, translation_y] of the initial absolute position of the target (pallet)
+        goal_state = target_tf_obs
+
+    if ObservationType.FORK_POSITION in env.obs_types:
+        # achieved_state of the agent
+        achieved_state = torch.tensor([
+            obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 
+            obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y, 
+        ])
+
+        tf_obs = torch.tensor([
+            # Add Pose/transformations:
+            # obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].z,
+            # Add Pose/rotations:
+            obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].x,
+            obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].y, 
+            obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].z, 
+            obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].w, 
+            
+            # Add Twist/linear
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].x, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].y, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['linear'].z,
+            # Add Twist/angular
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].x, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].y, 
+            # obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z,
+
+            # Add angle difference between the forklifts face and the target location
+            obs['total_angle_difference_to_goal_in_degrees'],
+            ])
+        obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
+
+    if ObservationType.PALLET_POSITION in env.obs_types:
+        tf_obs = torch.tensor([
+            # Add transformations:
+            obs['pallet_position_observation']['pallet_model']['pose']['position'].x, 
+            obs['pallet_position_observation']['pallet_model']['pose']['position'].y, 
+            obs['pallet_position_observation']['pallet_model']['pose']['position'].z,
+            # Add rotations:
+            obs['pallet_position_observation']['pallet_model']['pose']['orientation'].x,
+            obs['pallet_position_observation']['pallet_model']['pose']['orientation'].y, 
+            obs['pallet_position_observation']['pallet_model']['pose']['orientation'].z, 
+            obs['pallet_position_observation']['pallet_model']['pose']['orientation'].w, 
+            ])
+        obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
+
+    if ObservationType.LATEST_ACTION in env.obs_types:
+        tf_obs = torch.tensor(obs['latest_action'])
+        obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
+
+    # TODO: collision detection case is missing here
+
+    if ObservationType.DEPTH_CAMERA_RAW_IMAGE in env.obs_types: # TODO: @fix: replay buffer cannot store images returned from camera since it requires too much space
+        depth_camera_raw_image_obs = torch.tensor(obs['depth_camera_raw_image_observation'])
+        obs_flattened = torch.concat((obs_flattened.reshape(-1), depth_camera_raw_image_obs.reshape(-1)), dim=0)
+
+    return obs_flattened, achieved_state, goal_state, obs
+
+
+# -------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------
+
+def init_check_goal_achieved(env):
+    """
+    Returns a function which returns True if "chassis_bottom_link" is withing the (env._tolerance_x, env._tolerance_y) 
+    distance from the env. In other words, checks if goal state is reached by the agent In other words, checks 
+    if goal state is reached by the agent.
+    """
+    def check_goal_achieved(observation, goal_state = None, full_obs = True):
+        goal_achieved_list = []
+        # Vectorized implementation -->
+        if len(observation.shape) > 1: # Batch inputs
+            for i in range(len(observation)):
+                cur_observation = observation[i, :]
+            
+                # Get (translation_x, translation_y) of forklift robot
+                if full_obs:
+                    agent_location = [cur_observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x, \
+                        cur_observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y]
+                else:
+                    agent_location = cur_observation
+
+                # Check if agent is withing the tolerance of target_location
+                if goal_state is None:
+                    if (abs(agent_location[0] - env._target_transform[0]) <= env._tolerance_x) and \
+                        (abs(agent_location[1] - env._target_transform[1]) <= env._tolerance_y):
+                        goal_achieved_list.append(True)
+                    else:
+                        goal_achieved_list.append(False)
+                else:
+                    cur_goal_state = goal_state[i, :]
+                    if (abs(agent_location[0] - cur_goal_state[0]) <= env._tolerance_x) and \
+                        (abs(agent_location[1] - cur_goal_state[1]) <= env._tolerance_y):
+                        goal_achieved_list.append(True)
+                    else:
+                        goal_achieved_list.append(False)
+        
+            return goal_achieved_list
+
+        else: # Non-vectorized implementation:
+                # Get (translation_x, translation_y) of forklift robot
+                if full_obs:
+                    agent_location = [observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].x, \
+                        observation["forklift_position_observation"]["chassis_bottom_link"]["pose"]['position'].y]
+                else:
+                    agent_location = observation
+        
+                # Check if agent is withing the tolerance of target_location
+                if goal_state is None:
+                    if (abs(agent_location[0] - env._target_transform[0]) <= env._tolerance_x) and \
+                        (abs(agent_location[1] - env._target_transform[1]) <= env._tolerance_y):
+                        return True
+                    else:
+                        return False
+                else:
+                    cur_goal_state = goal_state
+                    if (abs(agent_location[0] - cur_goal_state[0]) <= env._tolerance_x) and \
+                        (abs(agent_location[1] - cur_goal_state[1]) <= env._tolerance_y):
+                        return True
+                    else:
+                        return False
+
+    return check_goal_achieved
+
+
+
+# -------------------------------------------------------------------------------------------
+# ---------------------------------------------- OBSERVATION_SPACE_FACTORY: 
 def observation_space_factory(env, obs_types):
     """
     Returns observation space and corresponding _get_obs method that corresponds to the given obs_types.
@@ -437,3 +578,6 @@ def _get_obs_latest_action_decorator(env, func):
 
     return f
 
+
+# ------------------------------------------------------------------------------------------------------------ 
+# ------------------------------------------------------------------------------------------------------------ 
