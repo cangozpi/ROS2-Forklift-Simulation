@@ -1,5 +1,6 @@
 from gym import spaces
 from forklift_gym_env.envs.utils import ObservationType 
+import rclpy
 import numpy as np
 
 
@@ -309,13 +310,14 @@ def _get_obs_depth_camera_raw_image_decorator(env, func):
             rclpy.spin_once(env.depth_camera_raw_image_subscriber)
             current_depth_camera_raw_image_obs = env.depth_camera_img_observation
 
-        depth_camera_raw_image_observation = current_depth_camera_raw_image_obs["image"] # get image
+        depth_camera_raw_image_observation = current_depth_camera_raw_image_obs # get image
         # --------------------------------------------
         # reset observations for next iteration
-        env.depth_camera_img_observation = None 
+        # env.depth_camera_img_observation = None 
+        env.depth_camera_img_observation = depth_camera_raw_image_observation
 
         return {
-            'depth_camera_raw_image_observation': depth_camera_raw_image_observation,
+            'depth_camera_raw_image_observation': depth_camera_raw_image_observation["image"],
         }
 
 

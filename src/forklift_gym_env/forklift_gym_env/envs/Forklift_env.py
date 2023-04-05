@@ -67,8 +67,8 @@ class ForkliftEnv(gym.GoalEnv):
         # -------------------- /gazebo/get_entity_state
         self.get_entity_state_client = GetEntityStateClient()
         # -------------------- 
-        # -------------------- /camera/depth/image/raw
-        self.depth_camera_raw_image_subscriber = self.initialize_depth_camera_raw_image_subscriber(normalize_img = True)
+        # -------------------- /camera/depth/image_raw
+        self.depth_camera_raw_image_subscriber = DepthCameraRawImageSubscriber(self, normalize_img=False)
         # -------------------- 
         # -------------------- /collision_detections/*
         self.collision_detection_states = {}
@@ -338,7 +338,7 @@ class ForkliftEnv(gym.GoalEnv):
 
 
         if "show_depth_camera_img_raw" in self.render_mode:
-            depth_camera_img = observation['depth_camera_raw_image_observation']
+            depth_camera_img = self.depth_camera_img_observation['image']
             cv2.imshow('Forklift depth_camera_raw_image message', depth_camera_img)
             cv2.waitKey(1)
 
@@ -362,29 +362,6 @@ class ForkliftEnv(gym.GoalEnv):
 
 
     # ============================================= Helper functions
-    def initialize_depth_camera_raw_image_subscriber(self, normalize_img = False):
-        """
-        Input:
-            normalize_img (bool) = if True, img is normalized into range [0, 1]. Defaults to False.
-        """
-        self.depth_camera_img_observation = None
-        def depth_camera_raw_image_subscriber_cb(msg):
-            try:
-                self.bridge
-            except:
-                self.bridge = CvBridge()
-
-            depth_camera_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-
-            if normalize_img:
-                depth_camera_img = cv2.normalize(depth_camera_img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F) # Normalize the depth_camera_image to range [0,1]
-
-            self.depth_camera_img_observation = {
-                'header': msg.header,
-                'image': depth_camera_img
-            }
-
-        return DepthCameraRawImageSubscriber(depth_camera_raw_image_subscriber_cb)
     
 
     def initialize_collision_detection_subscriber(self, link_name):
