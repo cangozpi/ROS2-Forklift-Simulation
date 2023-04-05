@@ -110,25 +110,6 @@ class ForkliftEnv(gym.GoalEnv):
         self._target_transform = None # agent's goal state
 
 
-        
-
-
-
-    def _get_info(self, observation):
-        info = {
-            "iteration": self.cur_iteration,
-            "max_episode_length": self.max_episode_length,
-            "agent_location": [observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x,\
-                    observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y], # [translation_x, translation_y]
-            "target_location": self._target_transform, # can be changed with: observation['pallet_position']['pallet_model']['pose']['position']
-            "verbose": self.config["verbose"],
-            "observation": observation,
-            "action": self.action
-        }
-        return info
-
-
-    
 
     def reset(self):
         seed = self.config["seed"]
@@ -204,15 +185,12 @@ class ForkliftEnv(gym.GoalEnv):
         self.simulation_controller_node.send_pause_physics_client_request()
 
         # Render
-        self._coordinate_image = np.zeros((20, 20 , 3), np.uint8)
-        self._coordinate_image = {
+        self.draw_coordinates_dict = {
             'forklift_coordinates': [],
             'target_coordinate': None
         }
-        # Mark forklift location
-        self._coordinate_image['forklift_coordinates'].append(self._agent_location)
-        # Mark target location
-        self._coordinate_image['target_coordinate'] = self._target_transform
+        self.draw_coordinates_dict['forklift_coordinates'].append(self._agent_location) # Mark forklift location
+        self.draw_coordinates_dict['target_coordinate'] = self._target_transform # Mark target location
         # Initialize and render plot
         plt.close()
         plt.ion()
@@ -273,7 +251,7 @@ class ForkliftEnv(gym.GoalEnv):
         # Convert nested Dict obs to the required format (gym.Env | gym.GoalEnv)
         processed_observations = flatten_and_concatenate_observation(self, observation)
 
-        # Pause simuation so that obseration does not change until another action is taken
+        # Pause simulation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
 
         # Get info
@@ -293,57 +271,11 @@ class ForkliftEnv(gym.GoalEnv):
 
 
         # Render
-        # Mark forklift location
-        self._coordinate_image['forklift_coordinates'].append(processed_observations['achieved_goal'])
+        self.draw_coordinates_dict['forklift_coordinates'].append(processed_observations['achieved_goal']) # Mark forklift location
         self.render(observation)
 
         return processed_observations, reward, done, info # (observation, reward, done, truncated, info)
 
-
-    def render(self, observation): 
-        if self.render_mode is not None:
-            self._render_frame(observation)
-    
-    def _render_frame(self, observation):
-        if "draw_coordinates" in self.render_mode:
-            self.ax.clear()
-            # Draw Forklift coordinates
-            fork_coordinates = np.array(self._coordinate_image['forklift_coordinates'])
-            x = fork_coordinates[:,0]
-            y = fork_coordinates[:,1]
-            self.ax.plot(x, y, 'b-', label="forklift coordinates")
-            # Draw Target coordinates
-            self.ax.plot(self._coordinate_image['target_coordinate'][0], self._coordinate_image['target_coordinate'][1], 'r*', label='pallet coordinates')
-            # Label the plot
-            self.ax.set_title('Rendering Coordinates')
-            self.ax.legend()
-
-            self.fig.canvas.draw()
-            self.fig.canvas.flush_events()
-
-
-        if "show_depth_camera_img_raw" in self.render_mode:
-            depth_camera_img = self.depth_camera_img_observation['image']
-            cv2.imshow('Forklift depth_camera_raw_image message', depth_camera_img)
-            cv2.waitKey(1)
-
-
-    def close(self): 
-        # delete ros nodes
-        self.depth_camera_raw_image_subscriber.destroy_node()
-        self.diff_cont_cmd_vel_unstamped_publisher.destroy_node()
-        self.fork_joint_cont_cmd_publisher.destroy_node()
-        for subscriber in self.collision_detection_subscribers:
-            subscriber.destroy_node()
-        rclpy.shutdown()
-
-        # Stop gazebo launch process
-        self.gazebo_launch_subp.terminate() 
-        self.gazebo_launch_subp.join() 
-        self.gazebo_launch_subp.close()     
-
-        # Release used CV2 resources
-        cv2.destroyAllWindows()
 
 
     def compute_reward(self, achieved_goal, desired_goal, info): # required for supporting GoalEnv
@@ -385,3 +317,64 @@ class ForkliftEnv(gym.GoalEnv):
 
         else: # Invalid inputs
             raise Exception("compute_reward got inputs with invalid shape")
+    
+
+
+    def _get_info(self, observation):
+        info = {
+            "iteration": self.cur_iteration,
+            "max_episode_length": self.max_episode_length,
+            "agent_location": [observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x,\
+                    observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y], # [translation_x, translation_y]
+            "target_location": self._target_transform, # can be changed with: observation['pallet_position']['pallet_model']['pose']['position']
+            "verbose": self.config["verbose"],
+            "observation": observation,
+        }
+        return info
+    
+
+
+    def render(self, observation): 
+        if self.render_mode is not None:
+            self._render_frame(observation)
+    
+    def _render_frame(self, observation):
+        if "draw_coordinates" in self.render_mode:
+            self.ax.clear()
+            # Draw Forklift coordinates
+            fork_coordinates = np.array(self.draw_coordinates_dict['forklift_coordinates'])
+            x = fork_coordinates[:,0]
+            y = fork_coordinates[:,1]
+            self.ax.plot(x, y, 'b-', label="forklift coordinates")
+            # Draw Target coordinates
+            self.ax.plot(self.draw_coordinates_dict['target_coordinate'][0], self.draw_coordinates_dict['target_coordinate'][1], 'r*', label='pallet coordinates')
+            # Label the plot
+            self.ax.set_title('Rendering Coordinates')
+            self.ax.legend()
+
+            self.fig.canvas.draw()
+            self.fig.canvas.flush_events()
+
+        if "show_depth_camera_img_raw" in self.render_mode:
+            depth_camera_img = self.depth_camera_img_observation['image']
+            cv2.imshow('Forklift depth_camera_raw_image message', depth_camera_img)
+            cv2.waitKey(1)
+
+
+
+    def close(self): 
+        # delete ros nodes
+        self.depth_camera_raw_image_subscriber.destroy_node()
+        self.diff_cont_cmd_vel_unstamped_publisher.destroy_node()
+        self.fork_joint_cont_cmd_publisher.destroy_node()
+        for subscriber in self.collision_detection_subscribers:
+            subscriber.destroy_node()
+        rclpy.shutdown()
+
+        # Stop gazebo launch process
+        self.gazebo_launch_subp.terminate() 
+        self.gazebo_launch_subp.join() 
+        self.gazebo_launch_subp.close()     
+
+        # Release used CV2 resources
+        cv2.destroyAllWindows()

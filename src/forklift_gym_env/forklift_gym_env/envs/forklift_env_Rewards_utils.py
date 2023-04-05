@@ -166,7 +166,7 @@ def calc_reward_binary(env, achieved_goal=None, desired_goal=None, info=None, ob
         reward: 1 or 0 (binary reward).
     """
     if env.use_GoalEnv:
-        return int(env.check_goal_achieved(observation, goal_state, full_obs=False))
+        return int(env.check_goal_achieved(achieved_goal, desired_goal, full_obs=False))
     else:
         ach_goal = [observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, \
             observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y]
