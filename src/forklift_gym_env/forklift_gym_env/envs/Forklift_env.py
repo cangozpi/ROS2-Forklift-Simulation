@@ -280,7 +280,10 @@ class ForkliftEnv(gym.GoalEnv):
         info = self._get_info(observation) 
 
         # Calculate reward
-        reward = self.compute_reward(processed_observations['achieved_goal'], processed_observations['desired_goal'], info)
+        if self.use_GoalEnv: # Support gym.GoalEnv(HER) and return reward
+            reward = self.compute_reward(processed_observations['achieved_goal'], processed_observations['desired_goal'], info)
+        else: # Support gym.Env and return reward
+            reward = self.calc_reward(observation)
         print(f'reward: {reward}')
         print('action:', action)
 
@@ -347,7 +350,12 @@ class ForkliftEnv(gym.GoalEnv):
         """Compute the step reward. This externalizes the reward function and makes
         it dependent on a desired goal and the one that was achieved. If you wish to include
         additional rewards that are independent of the goal, you can include the necessary values
-        to derive it in 'info' and compute it accordingly.
+        to derive it in the 'info' parameter and compute it accordingly.
+
+        *Note that compute reward internally calls the self.calc_reward() function. Only functionality it
+        adds on top of it is accumulating the rewards returned by calling it for the batch input cases.
+        In other words it makes self.calc_reward() process batch inputs.
+        
 
         Args:
             achieved_goal (object): the goal that was achieved during execution
