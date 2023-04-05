@@ -17,7 +17,7 @@ from sb3_contrib import QRDQN, TQC
 rl_algorithm = "PPO" 
 rl_algorithms = ["DDPG", "DDPG_HER", "TQC_HER", "PPO"]
 assert rl_algorithm in rl_algorithms
-config_path = 'build/forklift_gym_env/forklift_gym_env/config/config.yaml'
+config_path = 'build/forklift_gym_env/forklift_gym_env/config/config_SB3_forklift_env.yaml'
 
 def main():
     
