@@ -1,6 +1,5 @@
 import gym
 import time
-# from forklift_gym_env.envs.forklift_env_HER import ForkliftEnvHER
 from forklift_gym_env.rl.DDPG.DDPG_Agent import DDPG_Agent
 from forklift_gym_env.rl.DDPG.Replay_Buffer import ReplayBuffer 
 from forklift_gym_env.rl.DDPG.utils import *
@@ -155,8 +154,7 @@ def train_agent(env):
             tb_summaryWriter.add_scalar("Training epsilon", agent.epsilon, cur_episode)
 
             # Commit HER experiences to replay_buffer
-            replay_buffer.commit_append(k=0, calc_reward_func=env.calc_reward, check_goal_achieved_func=env.check_goal_achieved) # TODO: set k from config.yaml
-            # replay_buffer.commit_append(k=env.config["k"], calc_reward_func=env.compute_reward, check_goal_achieved_func=env.check_goal_achieved) # TODO: set k from config.yaml
+            replay_buffer.commit_append()
             replay_buffer.clear_staged_for_append()
 
             # Reset env

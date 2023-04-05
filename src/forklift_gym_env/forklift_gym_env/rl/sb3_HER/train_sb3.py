@@ -1,13 +1,10 @@
 import gym
 
-from stable_baselines3.common.env_checker import check_env
 from forklift_gym_env.envs.Forklift_env import ForkliftEnv
+from forklift_gym_env.rl.sb3_HER.utils import *
 
-from forklift_gym_env.rl.sb3_HER.utils import seed_everything
 
-import numpy as np
-import torch
-
+from stable_baselines3.common.env_checker import check_env
 from stable_baselines3 import DDPG, PPO, HerReplayBuffer
 from stable_baselines3.her.goal_selection_strategy import GoalSelectionStrategy
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise

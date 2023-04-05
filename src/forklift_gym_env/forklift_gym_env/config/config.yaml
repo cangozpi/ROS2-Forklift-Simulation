@@ -19,7 +19,7 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 'right_fork_link', 'right_front_wheel_link'] # names of the links that has a corresponding ros topic: /collision_detection/<link_name> , where ros_gazebo_collision_detection_plugin publishes to.
 
 
-# ========== HYPERPARAMTERS HER_DDPG: ============= 
+# ========== HYPERPARAMTERS SB3: ============= 
 total_episodes: 10 # total number of episodes to train
 max_episode_length: 100 # maximum iteration length of an episode.
 warmup_steps: 100 # number of steps to take random actions before using the agents policy

@@ -1,2 +1,1 @@
-from forklift_gym_env.envs.forklift_env_HER import ForkliftEnvHER
-from forklift_gym_env.envs.forklift_env_sb3_HER import ForkliftEnvSb3HER
+from forklift_gym_env.envs.Forklift_env import ForkliftEnv

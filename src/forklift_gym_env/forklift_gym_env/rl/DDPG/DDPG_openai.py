@@ -1,6 +1,5 @@
 import gym
 import time
-from forklift_gym_env.envs.forklift_env_HER import ForkliftEnvHER
 from forklift_gym_env.rl.DDPG.DDPG_Agent import DDPG_Agent
 from forklift_gym_env.rl.DDPG.Replay_Buffer import ReplayBuffer 
 from forklift_gym_env.rl.DDPG.utils import *
