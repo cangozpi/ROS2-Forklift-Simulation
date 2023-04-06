@@ -47,7 +47,7 @@ def train_agent(env):
     agent = DDPG_Agent((concatenated_obs_dim + (2 * concatenated_goal_state_dim)), concatenated_action_dim, \
         env.config["actor_hidden_dims"], env.config["critic_hidden_dims"], float(env.config["actor_lr"]), float(env.config["actor_lr"]), \
             env.config["initial_epsilon"], env.config["epsilon_decay"], env.config['min_epsilon'], env.config["gamma"], env.config["tau"], \
-                max_action=torch.tensor(env.action_space.high).float())
+                max_action=torch.tensor(env.action_space.high).float(), policy_update_delay=env.config['policy_update_delay'], logger=tb_summaryWriter, log_full_detail=False)
     agent.train_mode()
     her_replay_buffer = HER_ReplayBuffer(env.config["replay_buffer_size"], concatenated_obs_dim, concatenated_action_dim, concatenated_goal_state_dim, env.config["batch_size"])
 

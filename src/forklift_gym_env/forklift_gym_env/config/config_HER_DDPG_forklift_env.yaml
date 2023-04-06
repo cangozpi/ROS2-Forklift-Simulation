@@ -25,7 +25,7 @@ total_episodes: 10 # total number of episodes to train
 max_episode_length: 100 # maximum iteration length of an episode.
 warmup_steps: 100 # number of steps to take random actions before using the agents policy
 update_every: 100 # update model after every update_every steps.
-num_updates: 500 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
+num_updates: 100 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
 actor_hidden_dims: [400, 300] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
 critic_hidden_dims: [400, 300] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
 actor_lr: 1e-3 # learning rate for the Actor Network
@@ -35,6 +35,7 @@ epsilon_decay: 0.999 # every time an action is taken epsilon is reduced by this 
 min_epsilon: 0.05 # minimum value that epsilon can decay to
 gamma: 0.9999 # next state discount rate
 tau: 0.995 # tau value used in updating the target networks using polyak averaging (i.e. targ_net = tau*targ_net + (1-tau) * net).
+policy_update_delay: 1 # Actor is updated after every policy_update_delay number of updates
 replay_buffer_size: 1_000_000 # size of the replay buffer
 batch_size: 100
 seed: 42 # used to set seed for reproducibility

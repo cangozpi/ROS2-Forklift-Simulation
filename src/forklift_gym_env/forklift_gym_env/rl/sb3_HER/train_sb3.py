@@ -40,6 +40,8 @@ def main():
             model = PPO(
                 "MultiInputPolicy", 
                 env, 
+                n_steps=100,
+                # n_epochs=100,
                 policy_kwargs={
                     # 'activation_fn':torch.nn.LeakyReLU,
                     'net_arch':{

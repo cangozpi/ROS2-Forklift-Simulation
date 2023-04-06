@@ -1,13 +1,17 @@
 import torch
 from torch import nn
 from copy import deepcopy
+from forklift_gym_env.rl.DDPG.utils import log_gradients_in_model
 
 
 class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call its super().__init__()
     """
     Refer to https://spinningup.openai.com/en/latest/algorithms/ddpg.html for implementation details.
     """
-    def __init__(self, obs_dim, action_dim, actor_hidden_dims, critic_hidden_dims, actor_lr, critic_lr, initial_epsilon, epsilon_decay, min_epsilon, gamma, tau, max_action, policy_update_delay=2):
+    def __init__(self, obs_dim, action_dim, actor_hidden_dims, critic_hidden_dims, actor_lr, critic_lr, initial_epsilon, epsilon_decay, min_epsilon, gamma, tau, max_action, policy_update_delay=2, logger=None, log_full_detail=False):
+        self.logger = logger
+        self.log_full_detail = log_full_detail
+
         self.mode = "train"
         self.epsilon = initial_epsilon
         self.epsilon_decay = epsilon_decay
@@ -88,6 +92,8 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         critic_loss.backward()
         self.optim_critic.step()
 
+        # Log Critic's stats to tensorboard
+        log_gradients_in_model(self.critic, self.logger, self._n_updates, "Critic", self.log_full_detail)
 
         # Delayed Policy Update
         actor_loss = - torch.mean(self.critic(state_batch, self.actor(state_batch)))
@@ -96,6 +102,9 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
             self.actor.zero_grad()
             actor_loss.backward()
             self.optim_actor.step()
+
+            # Log Actor's stats to tensorboard
+            log_gradients_in_model(self.actor, self.logger, self._n_updates, "Actor", self.log_full_detail)
         
         self._n_updates += 1
         

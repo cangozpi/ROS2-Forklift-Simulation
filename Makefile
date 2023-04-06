@@ -27,11 +27,9 @@ DDPG_openAI_gym:
 
 
 
-test:
-	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_testing
-
 gui_controller:
 	source install/setup.bash && ros2 run forklift_gym_env gui_controller
+
 
 install_python_deps:
 	pip install -r requirements.txt
@@ -47,3 +45,5 @@ manual_launch:
 start_tensorboard:
 	tensorboard --logdir logs_tensorboard
 
+start_tensorboard_sb3:
+	tensorboard --logdir sb3_tensorboard
