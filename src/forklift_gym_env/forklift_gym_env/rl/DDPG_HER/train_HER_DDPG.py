@@ -117,29 +117,29 @@ def train_agent(env):
             tb_summaryWriter.add_scalar("Loss/Actor", actor_loss/env.config["num_updates"], cur_num_updates/env.config["num_updates"])
 
             # Log weights and gradients to Tensorboard
-            for name, param in agent.actor.named_parameters():
-                if "weight" in name: # Model weight
-                    tb_summaryWriter.add_histogram("Actor/"+name+"/", param, cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_histogram("Actor/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_scalar("Actor/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_scalar("Actor/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
-                elif "bias" in name: # Model bias
-                    tb_summaryWriter.add_histogram("Actor/"+name+"/", param, cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_histogram("Actor/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_scalar("Actor/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_scalar("Actor/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
+            # for name, param in agent.actor.named_parameters():
+            #     if "weight" in name: # Model weight
+            #         tb_summaryWriter.add_histogram("Actor/"+name+"/", param, cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_histogram("Actor/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_scalar("Actor/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_scalar("Actor/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
+            #     elif "bias" in name: # Model bias
+            #         tb_summaryWriter.add_histogram("Actor/"+name+"/", param, cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_histogram("Actor/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_scalar("Actor/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_scalar("Actor/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
 
-            for name, param in agent.critic.named_parameters():
-                if "weight" in name: # Model weight
-                    tb_summaryWriter.add_histogram("Critic/"+name+"/", param, cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_histogram("Critic/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_scalar("Critic/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_scalar("Critic/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
-                elif "bias" in name: # Model bias
-                    tb_summaryWriter.add_histogram("Critic/"+name+"/", param, cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_histogram("Critic/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_scalar("Critic/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
-                    tb_summaryWriter.add_scalar("Critic/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
+            # for name, param in agent.critic.named_parameters():
+            #     if "weight" in name: # Model weight
+            #         tb_summaryWriter.add_histogram("Critic/"+name+"/", param, cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_histogram("Critic/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_scalar("Critic/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_scalar("Critic/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
+            #     elif "bias" in name: # Model bias
+            #         tb_summaryWriter.add_histogram("Critic/"+name+"/", param, cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_histogram("Critic/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_scalar("Critic/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
+            #         tb_summaryWriter.add_scalar("Critic/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
 
 
         

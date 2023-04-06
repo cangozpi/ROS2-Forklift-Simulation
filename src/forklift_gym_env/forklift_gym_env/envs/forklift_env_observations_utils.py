@@ -429,7 +429,6 @@ def _get_obs_forklift_position_decorator(env, func):
         # print(f'theta(forklifts orientation): {theta}, angle_to_goal: {angle_to_goal}, total_angle_difference_to_goal: {total_angle_difference_to_goal}')
         # Convert to degrees
         total_angle_difference_to_goal_degrees = total_angle_difference_to_goal * 180.0 / pi; 
-        print(f'total_angle_difference_to_goal_degrees: {total_angle_difference_to_goal_degrees}')
         # TODO: normalize total_angle_difference_to_goal_degrees by dividing by 180
 
         # --------------------------------------------
