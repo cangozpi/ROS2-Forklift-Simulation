@@ -9,7 +9,7 @@ observation_types: ["fork_position", "target_tf", "latest_action"] # specifies t
 reward_types: ["L2_distance"] # specifies the reward functions being used (accumulates the specified functions as reward). Check out RewardType Enum inside utils.py for available options. (e.g. ["L2_distance", "collision_penalty", "binary", "navigation_reward"])
 action_types: ["differential_control"] # specifies the actions that will be taken by the agent. Check out ActionType Enum inside utils.py for available options. (e.g. ["differential_control", "fork_joint_control"])
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
-render_mode: ['no_render', 'draw_coordinates'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw", "draw_coordinates"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
+render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw", "draw_coordinates"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
 step_duration: 50_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds (e.g. 1 second is 1_000_000_000).
 gui: True # Whether to launch gzclient. gzclient is run when it is True.
 gazebo_verbose: 'false' # (str ['true', 'false']) Whether to launch launch.gazebo.py with verbose:true
@@ -21,24 +21,23 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 
 # ========== HYPERPARAMTERS HER_DDPG: ============= 
 mode: "train" # ['train', 'test'] # TODO: set from config
-total_episodes: 10 # total number of episodes to train
+total_episodes: 100 # total number of episodes to train
 max_episode_length: 100 # maximum iteration length of an episode.
-warmup_steps: 100 # number of steps to take random actions before using the agents policy
+warmup_steps: 500 # number of steps to take random actions before using the agents policy
 update_every: 100 # update model after every update_every steps.
-num_updates: 100 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
-actor_hidden_dims: [400, 300] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
-critic_hidden_dims: [400, 300] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
-actor_lr: 1e-3 # learning rate for the Actor Network
+num_updates: 200 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
+actor_hidden_dims: [64, 32] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
+critic_hidden_dims: [64, 32] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
+actor_lr: 1e-3 # learning rate for the Actor Network20
 critic_lr: 1e-3 # learning rate for the Critic Network
 initial_epsilon: 1.0 # epsilon used for multiplying the gaussian distribution sample to obtain the noise to add to the agent's action (exploration).
 epsilon_decay: 0.999 # every time an action is taken epsilon is reduced by this amount (i.e. epsilon *= epsilon_decay).
 min_epsilon: 0.05 # minimum value that epsilon can decay to
 gamma: 0.9999 # next state discount rate
 tau: 0.995 # tau value used in updating the target networks using polyak averaging (i.e. targ_net = tau*targ_net + (1-tau) * net).
-policy_update_delay: 1 # Actor is updated after every policy_update_delay number of updates
+policy_update_delay: 2 # Actor is updated after every policy_update_delay number of updates
 replay_buffer_size: 1_000_000 # size of the replay buffer
 batch_size: 100
-seed: 42 # used to set seed for reproducibility
+seed: 41 # used to set seed for reproducibility
 save_every: 500 # specifies after every how many updates to the model the agent model is saved
-k: 4 # Number of goals (k) used in HER (Hindsight Experience Replay)
 # ======================================= 

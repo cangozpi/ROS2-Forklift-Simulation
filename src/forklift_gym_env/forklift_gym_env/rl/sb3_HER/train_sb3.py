@@ -14,7 +14,7 @@ from sb3_contrib import QRDQN, TQC
 
 
 # SET THIS TO YOUR RL ALGORITHM OF CHOICE
-rl_algorithm = "PPO" 
+rl_algorithm = "DDPG" 
 rl_algorithms = ["DDPG", "DDPG_HER", "TQC_HER", "PPO"]
 assert rl_algorithm in rl_algorithms
 config_path = 'build/forklift_gym_env/forklift_gym_env/config/config_SB3_forklift_env.yaml'
@@ -40,12 +40,13 @@ def main():
             model = PPO(
                 "MultiInputPolicy", 
                 env, 
-                n_steps=100,
+                n_steps=300,
                 # n_epochs=100,
                 policy_kwargs={
-                    # 'activation_fn':torch.nn.LeakyReLU,
+                    'activation_fn':torch.nn.LeakyReLU,
                     'net_arch':{
-                        'pi':[16, 8], 'vf':[16, 8]
+                        # 'pi':[16, 8], 'vf':[16, 8]
+                        'pi':[64, 32], 'vf':[16, 8]
                         }
                 },
                 verbose=1, 
@@ -104,11 +105,12 @@ def main():
             model = DDPG(
                 "MultiInputPolicy",
                 env,
-                # action_noise=action_noise,
-                learning_rate=1e-5,
+                action_noise=action_noise,
+                learning_rate=1e-3,
                 # train_freq=(10, 'episode'),
+                gradient_steps= 10,
                 # seed=3,
-                learning_starts=100,
+                learning_starts=300,
                 policy_kwargs={
                     # 'activation_fn':torch.nn.LeakyReLU,
                     'net_arch':{
@@ -175,12 +177,13 @@ def main():
             model = DDPG(
                 "MultiInputPolicy",
                 env,
-                # action_noise=action_noise,
+                action_noise=action_noise,
                 replay_buffer_class=HerReplayBuffer,
-                learning_rate=1e-5,
+                learning_rate=1e-3,
                 # train_freq=(10, 'episode'),
                 # seed=3,
-                learning_starts=100,
+                gradient_steps= 10,
+                learning_starts=300,
                 # Parameters for HER
                 replay_buffer_kwargs=dict(
                     n_sampled_goal=4,
@@ -200,7 +203,7 @@ def main():
 
 
             # model = DDPG("MlpPolicy", env, action_noise=action_noise, verbose=1, tensorboard_log="sb3_tensorboard/")
-            model.learn(total_timesteps=500_000, tb_log_name="forklift_env sb3 DDPG+HER", reset_num_timesteps=False, log_interval=1, progress_bar=True)
+            model.learn(total_timesteps=3_000, tb_log_name="forklift_env sb3 DDPG+HER", reset_num_timesteps=False, log_interval=1, progress_bar=True)
             model.save("sb3_saved_model DDPG_HER")
             print("Finished training the agent !")
 

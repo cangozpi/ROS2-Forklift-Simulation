@@ -67,30 +67,71 @@ def calc_reward_L2_dist(env, achieved_goal=None, desired_goal=None, info=None, o
         reward: negative L2 distance
 
     """
+    # -------- Facing Behaviour Reward --------------
+    # Return angle penalty as reward
+    if env.use_GoalEnv:
+        obs = info['observation']
+        total_angle_differencee_to_goal_in_degrees = info['observation']['total_angle_difference_to_goal_in_degrees']
+    else:
+        total_angle_differencee_to_goal_in_degrees = observation['total_angle_difference_to_goal_in_degrees']
+    angular_cost =  -(total_angle_differencee_to_goal_in_degrees **2)
+    # return -( 10 * total_angle_differencee_to_goal_in_degrees **2) - ( 0.1 * observation["latest_action"][1] **2)
+    # -----------------------------------------------
+
+
+    # -------- Reaching Behaviour Reward --------------
     # Return negative L2 distance btw chassis_bottom_link and the target location as reward
-    # if env.use_GoalEnv:
-    #     l2_dist = np.linalg.norm(achieved_goal - desired_goal)
-    # else:
-    #     robot_transform_translation = [forklift_robot_transform['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, \
-    #         forklift_robot_transform['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y] # [translation_x, translation_y]
-    #     l2_dist = np.linalg.norm(robot_transform_translation - env._target_transform)
+    if env.use_GoalEnv:
+        l2_dist = np.linalg.norm(achieved_goal - desired_goal)
+    else:
+        robot_transform_translation = [observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, \
+            observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y] # [translation_x, translation_y]
+        l2_dist = np.linalg.norm(robot_transform_translation - env._target_transform)
     # return - l2_dist
 
-    # Return angle penalty as reward
-    # if env.use_GoalEnv:
-    #     obs = info['observation']
-    #     total_angle_differencee_to_goal_in_degrees = info['observation']['total_angle_difference_to_goal_in_degrees']
-    # else:
-    #     total_angle_differencee_to_goal_in_degrees = observation['total_angle_difference_to_goal_in_degrees']
-    # return -(total_angle_differencee_to_goal_in_degrees **2)
+
+    # Action Norm Penalty Reward: 
+    if env.use_GoalEnv:
+        goal_achieved = env.check_goal_achieved(achieved_goal, desired_goal, full_obs=False)
+        if goal_achieved:
+            return 100.0
+        else:
+            action = info["observation"]["latest_action"]
+            # Extract linear.x action
+            linearX_velocity = action[0]
+            # Extract angular.z action
+            angularZ_velocity = action[1]
+            action_norm_penalty_reward = - abs(linearX_velocity) / 2 - abs(angularZ_velocity) / 2
+    else:
+        ach_goal = [observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x, \
+            observation['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y]
+        des_goal = env._target_transform
+        goal_achieved = env.check_goal_achieved(np.array(ach_goal), des_goal, full_obs=False)
+        if goal_achieved:
+            return 100.0
+        else:
+            action = observation["latest_action"]
+            # Extract linear.x action
+            linearX_velocity = action[0]
+            # Extract angular.z action
+            angularZ_velocity = action[1]
+            action_norm_penalty_reward =  abs((linearX_velocity + 1) / 2) / 2 - abs(angularZ_velocity) / 2
+        
+
+        # action_norm_penalty in range [-1,1], l2_dist in range [?,?]
+        # print(f'action_norm_penalty_reward: {action_norm_penalty_reward}, l2_dist: {l2_dist}')
+        # return (1 * action_norm_penalty_reward) - (1 * (l2_dist))
+        print(f'angular_cost: {10 * angular_cost}, l2_dist: {0.01 * l2_dist}')
+        return (10 * angular_cost) - (0.01 * (l2_dist))
+
 
     # Return turning clockwise penalty as reward
-    if env.use_GoalEnv:
-        action = info["observation"]["latest_action"][0] # penalize turning right/negative angular action
-        return action
-    else:
-        action = observation["latest_action"][0] # penalize turning right/negative angular action
-        return action
+    # if env.use_GoalEnv:
+    #     action = info["observation"]["latest_action"][0] # penalize turning right/negative angular action
+    #     return -action
+    # else:
+    #     action = observation["latest_action"][0] # penalize turning right/negative angular action
+    #     return -action
 
 
 def calc_navigation_reward(env, achieved_goal=None, desired_goal=None, info=None, observation=None):

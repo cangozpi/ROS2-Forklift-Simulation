@@ -31,7 +31,7 @@ def train_agent(env):
     log_dir, run_name = "logs_tensorboard/", "ForkliftEnv DDPG agent training_" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tb_summaryWriter = SummaryWriter(log_dir + run_name)
 
-    seed_everything(env.config["seed"]) # set seed
+    # seed_everything(env.config["seed"]) # set seed # TODO: uncomment it
     # time.sleep(15.0) # delay to compensate for gazebo client window showing up slow
     cur_episode = 0
     cur_iteration = 0
@@ -86,6 +86,7 @@ def train_agent(env):
 
         # Update model if its time
         if (cur_iteration % env.config["update_every"]== 0) and (num_warmup_steps_taken >= env.config["warmup_steps"]) and replay_buffer.can_sample_a_batch():
+        # if (cur_iteration % env.config["update_every"]== 0) and replay_buffer.can_sample_a_batch():
             print(f"Updating the agent with {env.config['num_updates']} sampled batches.")
             critic_loss = 0
             actor_loss = 0
@@ -104,37 +105,12 @@ def train_agent(env):
             tb_summaryWriter.add_scalar("Loss/Critic", critic_loss/env.config["num_updates"], cur_num_updates/env.config["num_updates"])
             tb_summaryWriter.add_scalar("Loss/Actor", actor_loss/env.config["num_updates"], cur_num_updates/env.config["num_updates"])
 
-            # # Log weights and gradients to Tensorboard
-            # for name, param in agent.actor.named_parameters():
-            #     if "weight" in name: # Model weight
-            #         tb_summaryWriter.add_histogram("Actor/"+name+"/", param, cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_histogram("Actor/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_scalar("Actor/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_scalar("Actor/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
-            #     elif "bias" in name: # Model bias
-            #         tb_summaryWriter.add_histogram("Actor/"+name+"/", param, cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_histogram("Actor/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_scalar("Actor/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_scalar("Actor/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
-
-            # for name, param in agent.critic.named_parameters():
-            #     if "weight" in name: # Model weight
-            #         tb_summaryWriter.add_histogram("Critic/"+name+"/", param, cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_histogram("Critic/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_scalar("Critic/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_scalar("Critic/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
-            #     elif "bias" in name: # Model bias
-            #         tb_summaryWriter.add_histogram("Critic/"+name+"/", param, cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_histogram("Critic/"+name+"/grad", param.grad, cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_scalar("Critic/"+name+"/mean", param.mean(), cur_num_updates/env.config["num_updates"])
-            #         tb_summaryWriter.add_scalar("Critic/"+name+"/grad.mean", param.grad.mean(), cur_num_updates/env.config["num_updates"])
-
         
-        # Save the model
-        if ((cur_num_updates % env.config["save_every"] == 0) and (cur_num_updates > 0 )) or \
-            (cur_episode + 1 == env.config["total_episodes"]) :
-            print("Saving the model ...")
-            agent.save_model()
+            # Save the model
+            if ((cur_num_updates % env.config["save_every"] == 0) and (cur_num_updates > 0 )) or \
+                (cur_episode + 1 == env.config["total_episodes"]) :
+                print("Saving the model ...")
+                agent.save_model()
 
 
 

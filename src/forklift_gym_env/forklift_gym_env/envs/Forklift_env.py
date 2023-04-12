@@ -119,17 +119,21 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         self._agent_location = np.array([0.0, 0.0]) # fix forklift start state to origin
 
         # Sample the target's location randomly until it does not coincide with the agent's location
-        self._target_transform = np.array([0.0, 0.0]) # in the range [-10, 10]
-        self._target_transform[0] = np.random.random(size=(1,)) * 10 #+ (-10) # x in the range [-10, 10]
-        self._target_transform[1] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
-        while np.array_equal(self._target_transform, self._agent_location):
+        # self._target_transform = np.array([0.0, 0.0]) 
+        # self._target_transform[0] = np.random.random(size=(1,)) * 10 #+ (-10) # x in the range [-10, 10]
+        # self._target_transform[1] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
+        # while np.array_equal(self._target_transform, self._agent_location):
             # self._target_transform = np.random.random(size=2) * 20 - 10 # in the range [-10, 10]
             # self._target_transform *= np.array([0, 1]) # make it only change in y axis
             # self._target_transform[0] = np.random.random(size=(1,)) * 4 - 2 # x in the range [-2, 2]
-            self._target_transform[0] = np.random.random(size=(1,)) * 10 #+ (-10) # y in the range [-10, 10]
-        if self._target_transform[0] > -4 and self._target_transform[0] < 4:
-            self._target_transform[0] = 5 * np.sign(np.random.random(size=(1,)))
+        #     self._target_transform[0] = np.random.random(size=(1,)) * 10 #+ (-10) # y in the range [-10, 10]
+        # if self._target_transform[0] > -4 and self._target_transform[0] < 4:
+        #     self._target_transform[0] = 5 * np.sign(np.random.random(size=(1,)))
 
+        # self._target_transform = np.array([6.0, 2.0]) # fixed at location [6, 2]
+        # In the range [6, (-4,4)]
+        self._target_transform = np.array([6.0, 0.0]) # in the range [6.0, 0.0]
+        self._target_transform[1] = np.random.random() * 8 - 4 # in the range [-4, 4]
  
 
         # Unpause sim so that simulation can be reset
@@ -215,14 +219,14 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
         # diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
-        diff_cont_msg.linear.x = 0.0 # use this one
+        diff_cont_msg.linear.x = (float(diff_cont_action[0]) + 1) / 2 # use this one
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 
         diff_cont_msg.angular.x = 0.0
         diff_cont_msg.angular.y = 0.0
-        # diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
-        diff_cont_msg.angular.z = float(diff_cont_action[0]) # use this one
+        diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
+        # diff_cont_msg.angular.z = float(diff_cont_action[0]) # use this one
         # Take diff_cont action
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
         rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
