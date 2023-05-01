@@ -40,7 +40,7 @@ def main():
             model = PPO(
                 "MultiInputPolicy", 
                 env, 
-                n_steps=300,
+                n_steps=200,
                 # n_epochs=100,
                 policy_kwargs={
                     'activation_fn':torch.nn.LeakyReLU,
@@ -89,7 +89,14 @@ def main():
         assert mode in ["train", "test"]
 
         # env = gym.make('forklift_gym_env/ForkliftWorld-v1')
-        env =  ForkliftEnv(config_path=config_path, use_GoalEnv=False)
+        # env =  ForkliftEnv(config_path=config_path, use_GoalEnv=False)
+        # -------
+        from forklift_gym_env.envs.utils import read_yaml_config
+        env = gym.make('Pendulum-v1', g=9.81)
+        config = read_yaml_config(config_path)
+        env.config = config
+        env.max_episode_length = 200
+        # ------
         # It will check your custom environment and output additional warnings if needed
         # check_env(env)
 
@@ -100,12 +107,14 @@ def main():
             # The noise objects for DDPG
             n_actions = env.action_space.shape[-1]
             action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+            print(env, "AAAAAAAAAAAAAAAAAAAAA")
+            print(env.observation_space, env.action_space, "oooooooooooOJJJJJJJJ")
 
             # Initialize the model
             model = DDPG(
                 "MultiInputPolicy",
                 env,
-                action_noise=action_noise,
+                # action_noise=action_noise,
                 learning_rate=1e-3,
                 # train_freq=(10, 'episode'),
                 gradient_steps= 10,
