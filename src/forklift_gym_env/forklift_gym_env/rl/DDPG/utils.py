@@ -52,3 +52,16 @@ def log_gradients_in_model(model, logger, step, model_name, log_full_detail=Fals
     logger.add_scalar(model_name +"/all_weight_grads_norm", all_weight_grads_norm.item(), step)
     logger.add_scalar(model_name +"/all_bias_grads_norm", all_bias_grads_norm.item(), step)
 
+
+def log_training_losses(loss, logger, step, model_name):
+    """
+    Logs training losses during the update of the given model to tensorboard.
+    Inputs:
+        model (torch.nn.Module): model to log its paramters
+        loss (Tensor): loss values to log
+        logger (SummaryWriter): information is recorded using the passed tensorboard SummaryWriter
+        step (int): x-axis value in the plots
+        model_name (str): information will be logged under the given model_name in tensorboard
+    """
+    # Log to Tensorboard
+    logger.add_scalar("Loss"+"/"+model_name, loss, step)
