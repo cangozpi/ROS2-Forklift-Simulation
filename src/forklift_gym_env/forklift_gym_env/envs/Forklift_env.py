@@ -12,6 +12,7 @@ from forklift_gym_env.envs.utils import generate_and_launch_ros_description_as_n
 from forklift_gym_env.envs.simulation_controller import SimulationController
 
 # Sensor Subscribers
+from forklift_gym_env.envs.sensor_subscribers.forklift_robot_ros_clock_subscriber import ForkliftRobotRosClockSubscriber
 from forklift_gym_env.envs.sensor_subscribers.forklift_robot_tf_subscriber import ForkliftRobotTfSubscriber
 # from forklift_gym_env.envs.sensor_subscribers.forklift_robot_frame_listener import FrameListener
 from forklift_gym_env.envs.sensor_subscribers.get_entity_state_client import GetEntityStateClient
@@ -27,6 +28,8 @@ from forklift_gym_env.envs.forklift_env_observations_utils import observation_sp
 from forklift_gym_env.envs.forklift_env_Actions_utils import action_space_factory
 from forklift_gym_env.envs.forklift_env_Rewards_utils import calculate_reward_factory
 
+from forklift_gym_env.logging.logger import Logger
+
 
 
 class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
@@ -39,6 +42,7 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         self.use_GoalEnv = use_GoalEnv # if True, ForkliftEnv behaves like a gym.GoalEnv. If False, behaves like a regular gym.Env
         # Read in parameters from config.yaml
         self.config = read_yaml_config(config_path)
+        self.logger = Logger("ForkliftEnv_logger", ['FileHandler'], 'log_ForkliftEnv.log')
 
         # Set observation_space, _get_obs method, and action_space
         self.obs_types = [ObservationType(obs_type) for obs_type in self.config["observation_types"]]
@@ -62,9 +66,13 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         # Listen to sensors: ============================== 
         rclpy.init()
 
+        # -------------------- /clock
+        self.ros_clock = None # self.ros_clock will be used to check that observations are obtained after the actions are taken
+        self.get_ros_clock_client = ForkliftRobotRosClockSubscriber(self) # automatically updates self.ros_clock with the latest published msg
+        # --------------------
         # -------------------- /gazebo/get_entity_state
         self.get_entity_state_client = GetEntityStateClient()
-        # -------------------- 
+        # --------------------
         # -------------------- /camera/depth/image_raw
         self.depth_camera_raw_image_subscriber = DepthCameraRawImageSubscriber(self, normalize_img=False)
         # -------------------- 
@@ -90,9 +98,6 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         # -------------------- 
         # ====================================================
        
-        # self.ros_clock will be used to check that observations are obtained after the actions are taken
-        self.ros_clock = self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now()
-
         # Parameters: -------------------- 
         self.cur_iteration = 0
         self.max_episode_length = self.config['max_episode_length']
@@ -130,10 +135,10 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         # if self._target_transform[0] > -4 and self._target_transform[0] < 4:
         #     self._target_transform[0] = 5 * np.sign(np.random.random(size=(1,)))
 
-        # self._target_transform = np.array([6.0, 2.0]) # fixed at location [6, 2]
+        self._target_transform = np.array([6.0, 2.0]) # fixed at location [6, 2]
         # In the range [6, (-4,4)]
-        self._target_transform = np.array([6.0, 0.0]) # in the range [6.0, 0.0]
-        self._target_transform[1] = np.random.random() * 8 - 4 # in the range [-4, 4]
+        # self._target_transform = np.array([6.0, 0.0]) # in the range [6.0, 0.0]
+        # self._target_transform[1] = np.random.random() * 8 - 4 # in the range [-4, 4]
  
 
         # Unpause sim so that simulation can be reset
@@ -171,9 +176,7 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         self.simulation_controller_node.change_entity_location(self._pallet_entity_name, self._target_transform, [], \
             0.0, self.config, spawn_pallet=True)
 
-        while self.ros_clock == self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now():
-            rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
-        self.ros_clock = self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now()
+        self.ros_clock_ckpt = self.ros_clock
 
         # Get observation
         observation = self._get_obs()
@@ -208,8 +211,11 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
     def step(self, action):
         self.cur_iteration += 1
 
+        self.logger.log_tabular(key="step() > ros_clock before unpause simulation", value=self.ros_clock)
+
         # Unpause simulation so that action can be taken
         self.simulation_controller_node.send_unpause_physics_client_request()
+        self.logger.log_tabular(key="step() > ros_clock after unpause simulation", value=self.ros_clock)
 
         # Set diff_cont action
         # diff_cont_action = action['diff_cont_action'] 
@@ -228,8 +234,10 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         diff_cont_msg.angular.z = float(diff_cont_action[1]) # use this one
         # diff_cont_msg.angular.z = float(diff_cont_action[0]) # use this one
         # Take diff_cont action
+        self.logger.log_tabular(key="step() > ros_clock before diff_cont_cmd_vel_unstamped_publisher.publish_cmd()", value=self.ros_clock)
         self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
         rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
+        self.logger.log_tabular(key="step() > ros_clock after rclpy.spin_once(diff_cont_cmd_vel_unstamped_publisher)", value=self.ros_clock)
 
         # set fork_joint_cont action
         # fork_joint_cont_action = action['fork_joint_cont_action']
@@ -242,17 +250,20 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         rclpy.spin_once(self.fork_joint_cont_cmd_publisher)
 
         # Get observation after taking the action
-        while self.ros_clock == self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now():
-            rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
-        self.ros_clock = self.diff_cont_cmd_vel_unstamped_publisher.get_clock().now() # will be used to make sure observation is coming from after the action was taken
+        self.ros_clock_ckpt = self.ros_clock # will be used to make sure observation is coming from after the action was taken
 
+        self.logger.log_tabular(key="step() > ros_clock before self._get_obs()", value=self.ros_clock)
         observation = self._get_obs()
-
-        # Convert nested Dict obs to the required format (gym.Env | gym.GoalEnv)
-        processed_observations = flatten_and_concatenate_observation(self, observation)
+        self.logger.log_tabular(key="step() > ros_clock after self._get_obs()", value=self.ros_clock)
+        self.logger.log_tabular(key=f"step() > time btw action taken and observation captured", value=f'sec: {(self.ros_clock.sec - self.ros_clock_ckpt.sec)} nanosec:{(self.ros_clock.nanosec - self.ros_clock_ckpt.nanosec)}')
 
         # Pause simulation so that obseration does not change until another action is taken
         self.simulation_controller_node.send_pause_physics_client_request()
+        self.logger.log_tabular(key="step() > ros_clock after pause simulation", value=self.ros_clock)
+
+        # Convert nested Dict obs to the required format (gym.Env | gym.GoalEnv)
+        processed_observations = flatten_and_concatenate_observation(self, observation)
+        self.logger.log_tabular(key="step() > ros_clock after flatten_and_concatenate_observation()", value=self.ros_clock)
 
         # Get info
         info = self._get_info(observation) 
@@ -278,6 +289,8 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         self.draw_coordinates_dict['forklift_coordinates'].append(achieved_goal) # Mark forklift location
         self.render(observation)
 
+        self.logger.log_tabular(key="step() > ros_clock before returning from step()", value=self.ros_clock)
+        self.logger.log_tabular(key="======================== end of step() ====================", value='')
         return processed_observations, reward, done, info # (observation, reward, done, truncated, info)
 
 

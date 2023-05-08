@@ -398,7 +398,7 @@ def _get_obs_forklift_position_decorator(env, func):
                 # Make sure that observation was obtained after the action was taken at least 'step_duration' time later
                 if (int(str(t.header.stamp.sec) \
                     + (str(t.header.stamp.nanosec))) \
-                        < (env.ros_clock.nanoseconds + env.config['step_duration'])):
+                        < ((int(str(env.ros_clock_ckpt.sec) + str(env.ros_clock_ckpt.nanosec))) + env.config['step_duration'])):
                         flag = True
 
         obs =  {
@@ -483,7 +483,7 @@ def _get_obs_pallet_position_decorator(env, func):
                 # Make sure that observation was obtained after the action was taken at least 'step_duration' time later
                 if (int(str(t.header.stamp.sec) \
                     + (str(t.header.stamp.nanosec))) \
-                        < (env.ros_clock.nanoseconds + env.config['step_duration'])):
+                        < ((int(str(env.ros_clock_ckpt.sec) + str(env.ros_clock_ckpt.nanosec))) + env.config['step_duration'])):
                         flag = True
 
         # --------------------------------------------
@@ -537,7 +537,7 @@ def _get_obs_depth_camera_raw_image_decorator(env, func):
         while (current_depth_camera_raw_image_obs is None) or \
             (int(str(current_depth_camera_raw_image_obs["header"].stamp.sec) \
                 + (str(current_depth_camera_raw_image_obs["header"].stamp.nanosec))) \
-                    < (env.ros_clock.nanoseconds + env.config['step_duration'])): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.  
+                    < ((int(str(env.ros_clock_ckpt.sec) + str(env.ros_clock_ckpt.nanosec))) + env.config['step_duration'])): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.  
             # Obtain new depth_camera_raw_image_observation: -----
             rclpy.spin_once(env.depth_camera_raw_image_subscriber)
             current_depth_camera_raw_image_obs = env.depth_camera_img_observation
@@ -574,7 +574,7 @@ def _get_obs_collision_detection_decorator(env, func):
             while (cur_collision_msg is None) or \
                 (int(str(cur_collision_msg.header.stamp.sec) \
                     + (str(cur_collision_msg.header.stamp.nanosec))) \
-                        < (env.ros_clock.nanoseconds + env.config['step_duration'])): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.  
+                        < ((int(str(env.ros_clock_ckpt.sec) + str(env.ros_clock_ckpt.nanosec))) + env.config['step_duration'])): # make sure that observation was obtained after the action was taken by at least 'step_duration' time later.  
                 # Obtain new collision_detection_observation: -----
                 rclpy.spin_once(subscriber)
                 if subscriber.link_name in env.collision_detection_states:
