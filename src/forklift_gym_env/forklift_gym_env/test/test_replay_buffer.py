@@ -63,6 +63,7 @@ def test_replay_buffer_append(initialize_replay_buffer):
 
     obs_dict = env.reset()
     obs = torch.tensor(obs_dict['observation']).float()
+    replay_buffer.clear_staged_for_append()
     while cur_episode < env.config['total_episodes']: 
         cur_iteration += 1 
         action = env.action_space.sample()

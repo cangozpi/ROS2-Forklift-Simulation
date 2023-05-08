@@ -42,7 +42,7 @@ def train_agent(env):
     rewards = deque(maxlen=100)
     cur_num_updates = 0 # total number of updates including all the episodes
 
-    concatenated_obs_dim = sum(env.observation_space['observation'].shape)
+    concatenated_obs_dim = sum(env.observation_space['observation'].shape) # TODO: ochange sum() with np.prod()
     concatenated_action_dim = sum(env.action_space.shape)
 
     agent = DDPG_Agent(concatenated_obs_dim, concatenated_action_dim, \

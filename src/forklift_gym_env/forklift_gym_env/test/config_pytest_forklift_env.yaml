@@ -1,5 +1,5 @@
 # --- Logging Parameters: ----
-verbose: True # Whether to print info.
+verbose: False # Whether to print info.
 gazebo_verbose: 'false' # (str ['true', 'false']) Whether to launch launch.gazebo.py with verbose:true
 log_full_detail: False # if True, logs a more detailed information to tensorboard.
 

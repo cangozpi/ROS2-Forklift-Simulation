@@ -8,3 +8,4 @@ logs_tensorboard/
 *.zip
 sb3_tensorboard/
 .pytest_cache
+*log*
