@@ -33,6 +33,7 @@ setup(
             'openai_gym_env_DDPG = forklift_gym_env.rl.DDPG.DDPG_openai:main',
 
             'gui_controller = forklift_gym_env.gui_controller.gui_controller:main',
+            'forklift_gym_env_pytest = forklift_gym_env.test.run_pytest:main',
         ],
     },
 )
