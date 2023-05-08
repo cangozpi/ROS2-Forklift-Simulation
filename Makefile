@@ -30,6 +30,10 @@ DDPG_openAI_gym:
 gui_controller:
 	source install/setup.bash && ros2 run forklift_gym_env gui_controller
 
+run_pytest:
+	source install/setup.bash && ros2 run forklift_gym_env forklift_gym_env_pytest 
+	@make -s kill_gazebo_processes
+
 
 install_python_deps:
 	pip install -r requirements.txt
