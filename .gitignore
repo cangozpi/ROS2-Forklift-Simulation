@@ -1,10 +1,9 @@
 .vscode/
+__pycache__/
 build/
 install/
 log/
-__pycache__/
-actor.pkl
-critic.pkl
+*.pkl
 logs_tensorboard/
 *.zip
 sb3_tensorboard/

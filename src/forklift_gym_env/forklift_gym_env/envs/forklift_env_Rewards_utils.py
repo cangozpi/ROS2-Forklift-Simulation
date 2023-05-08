@@ -119,10 +119,13 @@ def calc_reward_L2_dist(env, achieved_goal=None, desired_goal=None, info=None, o
         
 
         # action_norm_penalty in range [-1,1], l2_dist in range [?,?]
+        return -0.1 * l2_dist
         # print(f'action_norm_penalty_reward: {action_norm_penalty_reward}, l2_dist: {l2_dist}')
         # return (1 * action_norm_penalty_reward) - (1 * (l2_dist))
-        print(f'angular_cost: {10 * angular_cost}, l2_dist: {0.01 * l2_dist}')
-        return (10 * angular_cost) - (0.01 * (l2_dist))
+        # print(f'angular_cost: {10 * angular_cost}, l2_dist: {0.01 * l2_dist}')
+        # return (10 * angular_cost) - (0.01 * (l2_dist))
+        # print(f'l2_dist: {0.01 * l2_dist}')
+        # return - (0.01 * (l2_dist))
 
 
     # Return turning clockwise penalty as reward

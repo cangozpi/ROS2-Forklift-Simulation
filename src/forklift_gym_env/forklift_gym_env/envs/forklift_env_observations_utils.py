@@ -104,13 +104,9 @@ def flatten_and_concatenate_observation(env, obs):
             # target_tf_obs = torch.tensor(obs['target_transform_observation']) # [translation_x, translation_y] of the initial absolute position of the target (pallet)
             target_tf_obs = torch.tensor(obs['target_transform_observation']) / 12 # [translation_x, translation_y] of the initial absolute position of the target (pallet)
             obs_flattened = torch.concat((obs_flattened.reshape(-1), target_tf_obs.reshape(-1)), dim=0)
+            print(f'target_tf_obs: {target_tf_obs}')
 
         if ObservationType.FORK_POSITION in env.obs_types:
-            theta = 2 * np.arctan2(
-                obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].z,
-                obs['forklift_position_observation']['chassis_bottom_link']['pose']['orientation'].w
-                )
-
             tf_obs = torch.tensor([
                 # Add Pose/transformations:
                 obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x / 12, 
@@ -133,9 +129,9 @@ def flatten_and_concatenate_observation(env, obs):
 
                 # Add angle difference between the forklifts face and the target location
                 obs['total_angle_difference_to_goal_in_degrees'],
-                theta,
                 ])
             obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
+            print(f'forklift_position (x,y,theta): {tf_obs}')
 
         if ObservationType.PALLET_POSITION in env.obs_types:
             tf_obs = torch.tensor([
@@ -154,6 +150,7 @@ def flatten_and_concatenate_observation(env, obs):
         if ObservationType.LATEST_ACTION in env.obs_types:
             tf_obs = torch.tensor(obs['latest_action'])
             obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
+            print(f'latest action (x,z): {tf_obs}')
 
         # TODO: collision detection case is missing here
 
@@ -161,8 +158,6 @@ def flatten_and_concatenate_observation(env, obs):
             depth_camera_raw_image_obs = torch.tensor(obs['depth_camera_raw_image_observation'])
             obs_flattened = torch.concat((obs_flattened.reshape(-1), depth_camera_raw_image_obs.reshape(-1)), dim=0)
         
-        print(f'obs_flattened.shape: {obs_flattened.shape}')
-
         obs_dict = {
             'observation': obs_flattened.numpy(),
         }
@@ -379,7 +374,7 @@ def observation_space_factory(env, obs_types):
         })
     else:
         gym_obs_space = spaces.Dict({
-            'observation': spaces.Box(low = -float("inf") * np.ones((8,)), high = float("inf") * np.ones((8,)), dtype = np.float64),
+            'observation': spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = np.float64),
         })
         
     return gym_obs_space, _get_obs

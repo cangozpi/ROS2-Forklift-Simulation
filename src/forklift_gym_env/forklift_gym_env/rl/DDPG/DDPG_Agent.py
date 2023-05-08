@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from copy import deepcopy
-from forklift_gym_env.rl.DDPG.utils import log_gradients_in_model, log_training_losses
+from forklift_gym_env.rl.DDPG.utils import log_gradients_in_model, log_training_losses, log_residual_variance
 
 
 class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call its super().__init__()
@@ -107,6 +107,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         # Log Critic's stats to tensorboard
         log_gradients_in_model(self.critic, self.logger, self._n_updates, "Critic", self.log_full_detail)
         log_training_losses(critic_loss.cpu().detach(), self.logger, self._n_updates, "Critic")
+        # log_residual_variance(Q_value_preds.detach().cpu().numpy(), Q_targets.detach().cpu().numpy(), self.logger, self._n_updates, "Critic's Q_pred and Q_target")
 
         # ------------------------------------------- Delayed Policy Update:
         if self._n_updates % self.policy_update_delay == 0:

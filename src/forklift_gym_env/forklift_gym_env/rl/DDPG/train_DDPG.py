@@ -159,7 +159,6 @@ def test_agent(env):
     agent.eval_mode()
 
     obs_dict = env.reset()
-    env.render()
     obs = torch.tensor(obs_dict['observation']).float()
 
     while True:
@@ -176,7 +175,6 @@ def test_agent(env):
 
         # Update current state
         obs = next_obs
-        env.render()
 
         if env.config["verbose"]:
             # print(f'Episode: {cur_episode}, Iteration: {cur_iteration}/{info["max_episode_length"]},', 

@@ -65,3 +65,12 @@ def log_training_losses(loss, logger, step, model_name):
     """
     # Log to Tensorboard
     logger.add_scalar("Loss"+"/"+model_name, loss, step)
+
+def log_residual_variance(predicted_values, observed_values, logger, step, title):
+    """
+    Logs residual variance of the given predicted_values and observed_values during the update of the given model to tensorboard.
+    """
+    assert predicted_values.shape == observed_values.shape
+    residual = np.sum(np.square(predicted_values - observed_values)) / (predicted_values.shape[0] - 1)
+    # Log to Tensorboard
+    logger.add_scalar("Statistics/Residual Variance of " + title, residual, step)
