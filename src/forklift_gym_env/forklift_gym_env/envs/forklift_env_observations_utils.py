@@ -128,10 +128,10 @@ def flatten_and_concatenate_observation(env, obs):
                 # obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z,
 
                 # Add angle difference between the forklifts face and the target location
+                obs['forklift_theta'],
                 obs['total_angle_difference_to_goal_in_degrees'],
                 ])
             obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
-            print(f'forklift_position (x,y,theta): {tf_obs}')
 
         if ObservationType.PALLET_POSITION in env.obs_types:
             tf_obs = torch.tensor([
@@ -150,7 +150,6 @@ def flatten_and_concatenate_observation(env, obs):
         if ObservationType.LATEST_ACTION in env.obs_types:
             tf_obs = torch.tensor(obs['latest_action'])
             obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
-            print(f'latest action (x,z): {tf_obs}')
 
         # TODO: collision detection case is missing here
 
@@ -374,7 +373,7 @@ def observation_space_factory(env, obs_types):
         })
     else:
         gym_obs_space = spaces.Dict({
-            'observation': spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = np.float64),
+            'observation': spaces.Box(low = -float("inf") * np.ones((8,)), high = float("inf") * np.ones((8,)), dtype = np.float64),
         })
         
     return gym_obs_space, _get_obs
@@ -435,8 +434,9 @@ def _get_obs_forklift_position_decorator(env, func):
         inc_y = goal.y - y
         from math import atan2, pi
         angle_to_goal = atan2(inc_y, inc_x) #calculate angle through distance from robot to goal in x and y (Radians)
-        total_angle_difference_to_goal = abs(angle_to_goal - theta)
-        total_angle_difference_to_goal_degrees = total_angle_difference_to_goal / pi # in radians
+        # total_angle_difference_to_goal = abs(angle_to_goal - theta) # yields only magnitude no sign of the angle btw
+        total_angle_difference_to_goal = angle_to_goal - theta
+        total_angle_difference_to_goal_degrees = total_angle_difference_to_goal # in radians
         # TODO: normalize total_angle_difference_to_goal_degrees by dividing by 180
 
         # --------------------------------------------
@@ -453,7 +453,8 @@ def _get_obs_forklift_position_decorator(env, func):
                     }
                 } 
             },
-            'total_angle_difference_to_goal_in_degrees': total_angle_difference_to_goal_degrees
+            'forklift_theta': theta / pi, # 1/pi to normalize, Absolute yaw angle of the forklift wrt world frame (origin)
+            'total_angle_difference_to_goal_in_degrees': total_angle_difference_to_goal_degrees / pi # 1/pi to normalize, relative yaw angle btw forklift and target_tf
         }
 
         return obs

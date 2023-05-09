@@ -72,6 +72,7 @@ def train_agent(env):
         # Take action
         next_obs_dict, reward, done, info = env.step(np.copy(action))
         next_obs = torch.tensor(next_obs_dict['observation']).float()
+        env.logger.log_tabular(key="train_agent() > after env.step()", value=f'obs: {info["observation"]}, ros_clock: {env.ros_clock}')
 
         cum_episode_rewards += reward
 
@@ -91,7 +92,14 @@ def train_agent(env):
             # print(f'Episode: {cur_episode}, Iteration: {cur_iteration}/{info["max_episode_length"]},', 
             # f'Agent_location: ({info["agent_location"][0]:.2f}, {info["agent_location"][1]:.2f}), Target_location: ({info["target_location"][0]:.2f}, {info["target_location"][1]:.2f}),', \
             #     f'Action: {info["observation"]["latest_action"].tolist()}, Reward: {reward:.3f}')
+            print("-"*20)
             print(f'episode: {cur_episode}, iteration: {cur_iteration}, action: {action}, reward: {reward}')
+            print('total_angle_difference_to_goal_in_degrees:', info['observation']['total_angle_difference_to_goal_in_degrees'])
+            print('forklift_theta:', info['observation']['forklift_theta'])
+            print('forklift_position:', info['observation']['forklift_position_observation']['chassis_bottom_link']['pose']['position'])
+            print('target_tf:', info['observation']['target_transform_observation'])
+            print('latest_action:', info['observation']['latest_action'])
+            print(f'done: {done}, term: {term}')
 
 
         if done:

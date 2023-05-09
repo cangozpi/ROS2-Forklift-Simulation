@@ -235,8 +235,9 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         # diff_cont_msg.angular.z = float(diff_cont_action[0]) # use this one
         # Take diff_cont action
         self.logger.log_tabular(key="step() > ros_clock before diff_cont_cmd_vel_unstamped_publisher.publish_cmd()", value=self.ros_clock)
-        self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
-        rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
+        if not self.config['manual_control']:
+            self.diff_cont_cmd_vel_unstamped_publisher.publish_cmd(diff_cont_msg)
+            rclpy.spin_once(self.diff_cont_cmd_vel_unstamped_publisher)
         self.logger.log_tabular(key="step() > ros_clock after rclpy.spin_once(diff_cont_cmd_vel_unstamped_publisher)", value=self.ros_clock)
 
         # set fork_joint_cont action
@@ -246,8 +247,9 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         # fork_joint_cont_msg.data = fork_joint_cont_action.tolist()
         fork_joint_cont_msg.data = [0.0]
         # Take fork_joint_cont action
-        self.fork_joint_cont_cmd_publisher.publish_cmd(fork_joint_cont_msg)
-        rclpy.spin_once(self.fork_joint_cont_cmd_publisher)
+        if not self.config['manual_control']:
+            self.fork_joint_cont_cmd_publisher.publish_cmd(fork_joint_cont_msg)
+            rclpy.spin_once(self.fork_joint_cont_cmd_publisher)
 
         # Get observation after taking the action
         self.ros_clock_ckpt = self.ros_clock # will be used to make sure observation is coming from after the action was taken
