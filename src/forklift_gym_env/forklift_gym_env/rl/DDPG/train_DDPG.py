@@ -50,6 +50,11 @@ def train_agent(env):
             env.config["initial_epsilon"], env.config["epsilon_decay"], env.config['min_epsilon'], env.config['act_noise'], env.config['target_noise'], env.config['clip_noise_range'], env.config["gamma"], env.config["tau"], \
                 max_action=torch.tensor(env.action_space.high).float(), policy_update_delay=env.config['policy_update_delay'], logger=tb_summaryWriter, log_full_detail=env.config['log_full_detail'])
     agent.train_mode()
+
+    # Fix model parameters to a good initialization (Proportional Controller)
+    agent.actor.model_layers[0].weight.data[:] = torch.tensor([[0.0, 0.3], [1.5, 0.00]]) # will correspond to [-0.01*theta, -0.1*l2_dist]
+    agent.actor.model_layers[0].bias.data[:] = torch.zeros_like(agent.actor.model_layers[0].bias.data)
+
     replay_buffer = ReplayBuffer(env.config["replay_buffer_size"], concatenated_obs_dim, concatenated_action_dim, env.config["batch_size"])
 
     obs_dict = env.reset()
@@ -84,6 +89,7 @@ def train_agent(env):
         
         # Stage current (s,a,s') to replay buffer as to be appended at the end of the current episode
         replay_buffer.stage_for_append(obs, torch.tensor(action), torch.tensor(reward), next_obs, torch.tensor(term))
+        env.logger.store(state=obs.numpy().copy(), action=action.copy(), reward=reward.copy()) 
 
         # Update current state
         obs = next_obs
@@ -109,6 +115,7 @@ def train_agent(env):
             tb_summaryWriter.add_scalar("Training Reward/[per episode]", mean_ep_reward, cur_episode)
             tb_summaryWriter.add_scalar("Training Reward/[ep_rew_mean]", np.mean(rewards), cur_episode)
             tb_summaryWriter.add_scalar("Training epsilon", agent.epsilon, cur_episode)
+            env.logger.log_tensorboard(tb_summaryWriter, agent.critic, cur_episode) # TODO: unit test this function
 
             # Commit experiences to replay_buffer
             replay_buffer.commit_append()

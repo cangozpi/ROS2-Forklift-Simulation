@@ -108,7 +108,7 @@ def calc_reward_L2_dist(env, achieved_goal=None, desired_goal=None, info=None, o
         des_goal = env._target_transform
         goal_achieved = env.check_goal_achieved(np.array(ach_goal), des_goal, full_obs=False)
         if goal_achieved:
-            return 100.0
+            return np.array(100.0)
         else:
             action = observation["latest_action"]
             # Extract linear.x action

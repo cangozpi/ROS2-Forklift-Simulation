@@ -18,7 +18,7 @@ action_types: ["differential_control"] # specifies the actions that will be take
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
 render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw", "draw_coordinates"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
 step_duration: 100_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds (e.g. 1 second is 1_000_000_000).
-gui: False # Whether to launch gzclient. gzclient is run when it is True.
+gui: True # Whether to launch gzclient. gzclient is run when it is True.
 pallet_model_sdf_path: "pallet/model.sdf" # path to the model sdf file which will be used as the pallet model wrt build/forklift_gym_env/models/ path. (e.g. "pallet/model.sdf")
 collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chassis_top_link', 'fork_base_link',  
 'left_fork_link', 'left_front_wheel_link', 'lift_base_link', 'lift_body_connector_link', 
@@ -29,10 +29,10 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 mode: "train" # ['train', 'test']
 total_episodes: 200 # total number of episodes to train
 max_episode_length: 100 # maximum iteration length of an episode.
-warmup_steps: 100 # number of steps to take random actions before using the agents policy
+warmup_steps: 00 # number of steps to take random actions before using the agents policy
 update_every: 100 # update model after every update_every steps taken.
 num_updates: 200 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
-actor_hidden_dims: [32, 16] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
+actor_hidden_dims: [] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
 critic_hidden_dims: [32, 16] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
 actor_lr: 1e-3 # learning rate for the Actor Network20
 critic_lr: 1e-3 # learning rate for the Critic Network

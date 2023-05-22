@@ -224,8 +224,8 @@ class ForkliftEnv(gym.GoalEnv): # Note that gym.GoalEnv is a subclass of gym.Env
         diff_cont_action = action
         # convert diff_cont_action to Twist message
         diff_cont_msg = Twist()
-        # diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
-        diff_cont_msg.linear.x = (float(diff_cont_action[0]) + 1) / 2 # use this one
+        diff_cont_msg.linear.x = float(diff_cont_action[0]) # use this one
+        # diff_cont_msg.linear.x = (float(diff_cont_action[0]) + 1) / 2 # use this one
         diff_cont_msg.linear.y = 0.0
         diff_cont_msg.linear.z = 0.0
 

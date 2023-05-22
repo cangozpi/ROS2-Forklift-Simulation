@@ -27,7 +27,7 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         self.critic = Critic(obs_dim, action_dim, critic_hidden_dims)
 
         self.actor_target = Actor(obs_dim, action_dim, actor_hidden_dims, max_action)
-        self.critic_target = Critic(obs_dim, action_dim, actor_hidden_dims)
+        self.critic_target = Critic(obs_dim, action_dim, critic_hidden_dims)
 
         self.actor_target.load_state_dict(self.actor.state_dict())
         self.critic_target.load_state_dict(self.critic.state_dict())
@@ -102,6 +102,12 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
 
         self.critic.zero_grad()
         critic_loss.backward()
+
+        #Gradient Value Clipping
+        # torch.nn.utils.clip_grad_value_(self.critic.parameters(), clip_value=1.0)
+        # Gradient Norm Clipping
+        nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=2.0, norm_type=2)
+
         self.optim_critic.step()
 
         # Log Critic's stats to tensorboard
@@ -120,6 +126,12 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
 
             self.actor.zero_grad()
             actor_loss.backward()
+
+            #Gradient Value Clipping
+            # torch.nn.utils.clip_grad_value_(self.actor.parameters(), clip_value=1.0)
+            # Gradient Norm Clipping
+            nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=2.0, norm_type=2)
+
             self.optim_actor.step()
 
             # Log Actor's stats to tensorboard
@@ -242,7 +254,7 @@ class Actor(nn.Module):
             layers.append(torch.nn.Linear(prev_dim, hidden_dim))
             layers.append(torch.nn.ReLU())
             prev_dim = hidden_dim
-        # layers.append(torch.nn.LayerNorm(prev_dim)) # Add batchNorm to mitigate tanh saturation problem
+        # layers.append(torch.nn.LayerNorm(prev_dim)) # Add Norm to mitigate tanh saturation problem
         layers.append(torch.nn.Linear(prev_dim, action_dim))
         layers.append(torch.nn.Tanh()) 
                 
@@ -286,6 +298,7 @@ class Critic(nn.Module):
             layers.append(torch.nn.Linear(prev_dim, hidden_dim))
             layers.append(torch.nn.ReLU())
             prev_dim = hidden_dim
+        # layers.append(torch.nn.LayerNorm(prev_dim)) # Add Norm to mitigate tanh saturation problem
         layers.append(torch.nn.Linear(prev_dim, self.output_dim))
         # layers.append(torch.nn.ReLU())
                 
