@@ -107,6 +107,8 @@ def flatten_and_concatenate_observation(env, obs):
             print(f'target_tf_obs: {target_tf_obs}')
 
         if ObservationType.FORK_POSITION in env.obs_types:
+            relative_dist = np.linalg.norm([obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x - obs['target_transform_observation'][0], 
+                obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].y - obs['target_transform_observation'][1]])
             tf_obs = torch.tensor([
                 # Add Pose/transformations:
                 obs['forklift_position_observation']['chassis_bottom_link']['pose']['position'].x / 12, 
@@ -128,8 +130,9 @@ def flatten_and_concatenate_observation(env, obs):
                 # obs['forklift_position_observation']['chassis_bottom_link']['twist']['angular'].z,
 
                 # Add angle difference between the forklifts face and the target location
-                obs['forklift_theta'],
-                obs['total_angle_difference_to_goal_in_degrees'],
+                # obs['forklift_theta'],
+                # obs['total_angle_difference_to_goal_in_degrees'],
+                relative_dist
                 ])
             obs_flattened = torch.concat((obs_flattened.reshape(-1), tf_obs.reshape(-1)), dim=0)
 
@@ -373,7 +376,7 @@ def observation_space_factory(env, obs_types):
         })
     else:
         gym_obs_space = spaces.Dict({
-            'observation': spaces.Box(low = -float("inf") * np.ones((8,)), high = float("inf") * np.ones((8,)), dtype = np.float64),
+            'observation': spaces.Box(low = -float("inf") * np.ones((7,)), high = float("inf") * np.ones((7,)), dtype = np.float64),
         })
         
     return gym_obs_space, _get_obs

@@ -18,7 +18,7 @@ action_types: ["differential_control"] # specifies the actions that will be take
 depth_camera_raw_image_dimensions: [480, 640] # Corresponds to the image dimensions of the depth_camera_raw_image at the sensor topic /camera/depth/raw_image.
 render_mode: ['no_render'] # specifies which sensory informations to visualize. Currently supports ["no_render", "show_depth_camera_img_raw", "draw_coordinates"]. Corresponds to entries specified in ForkliftEnv.metadata['render_modes'] for more information.
 step_duration: 100_000_000 # specifies the duration of each step() with respect to simulation time in nanoseconds (e.g. 1 second is 1_000_000_000).
-gui: True # Whether to launch gzclient. gzclient is run when it is True.
+gui: False # Whether to launch gzclient. gzclient is run when it is True.
 pallet_model_sdf_path: "pallet/model.sdf" # path to the model sdf file which will be used as the pallet model wrt build/forklift_gym_env/models/ path. (e.g. "pallet/model.sdf")
 collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chassis_top_link', 'fork_base_link',  
 'left_fork_link', 'left_front_wheel_link', 'lift_base_link', 'lift_body_connector_link', 
@@ -29,8 +29,8 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 mode: "train" # ['train', 'test']
 total_episodes: 200 # total number of episodes to train
 max_episode_length: 100 # maximum iteration length of an episode.
-warmup_steps: 1000 # number of steps to take random actions before using the agents policy
-update_every: 200 # update model after every update_every steps taken.
+warmup_steps: 100 # number of steps to take random actions before using the agents policy
+update_every: 100 # update model after every update_every steps taken.
 num_updates: 200 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
 actor_hidden_dims: [32, 16] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
 critic_hidden_dims: [32, 16] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
@@ -39,14 +39,14 @@ critic_lr: 1e-3 # learning rate for the Critic Network
 initial_epsilon: 1.0 # epsilon used for multiplying the gaussian distribution sample to obtain the noise to add to the agent's action (exploration).
 epsilon_decay: 0.9999 # every time an action is taken epsilon is reduced by this amount (i.e. epsilon *= epsilon_decay).
 min_epsilon: 0.05 # minimum value that epsilon can decay to
-act_noise: 0.1 # stddev for Gaussian exploration noise added to policy at training time. (At test time, no noise is added.)
+act_noise: 0.01 # stddev for Gaussian exploration noise added to policy at training time. (At test time, no noise is added.)
 target_noise: 0.2 # stddev for smoothing noise added to target policy.
 clip_noise_range: 0.0 #0.5 # noise is clipped btw [-clip_noise_range, clip_noise_range] before being added to the action
 gamma: 0.9999 # next state discount rate
 tau: 0.995 # tau value used in updating the target networks using polyak averaging (i.e. targ_net = tau*targ_net + (1-tau) * net).
 policy_update_delay: 1 # Actor is updated after every policy_update_delay number of updates
 replay_buffer_size: 1_000_000 # size of the replay buffer
-batch_size: 1000
+batch_size: 100
 seed: 42 # used to set seed for reproducibility
 save_every: 5000 # specifies after every how many updates to the model the agent model is saved. Model is saved at the end of 'total_episodes' episode.
 # ======================================= 
