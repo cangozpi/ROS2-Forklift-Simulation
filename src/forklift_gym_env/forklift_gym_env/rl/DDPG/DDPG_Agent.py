@@ -57,9 +57,11 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
         Note that obs and goal_state are torch.Tensor with no batch dimension.
         """
         obs = torch.unsqueeze(obs, dim=0) # batch dimension of 1
-        action = self.actor(obs)
         # during training add noise to the action
         if self.mode == "train":
+            self.eval_mode()
+            action = self.actor(obs)
+
             noise = torch.clamp(self.epsilon * torch.randn_like(action) * self.act_noise, -self.clip_noise_range, self.clip_noise_range)
             action += noise
             action = torch.clip(action, -self.max_action, self.max_action)
@@ -72,6 +74,11 @@ class DDPG_Agent(): #TODO: make this extend a baseclass (ABC) of Agent and call 
             self.epsilon *= self.epsilon_decay
             if self.epsilon < self.min_epsilon:
                 self.epsilon = self.min_epsilon
+            
+            self.train_mode()
+
+        else:
+            action = self.actor(obs)
         
         # clip action [-1, 1]
         action = torch.clip(action, -self.max_action, self.max_action)
@@ -255,6 +262,7 @@ class Actor(nn.Module):
             layers.append(torch.nn.ReLU())
             prev_dim = hidden_dim
         # layers.append(torch.nn.LayerNorm(prev_dim)) # Add Norm to mitigate tanh saturation problem
+        layers.append(torch.nn.BatchNorm1d(prev_dim)) # Add Norm to mitigate tanh saturation problem
         layers.append(torch.nn.Linear(prev_dim, action_dim))
         layers.append(torch.nn.Tanh()) 
                 
@@ -299,6 +307,7 @@ class Critic(nn.Module):
             layers.append(torch.nn.ReLU())
             prev_dim = hidden_dim
         # layers.append(torch.nn.LayerNorm(prev_dim)) # Add Norm to mitigate tanh saturation problem
+        layers.append(torch.nn.BatchNorm1d(prev_dim)) # Add Norm to mitigate tanh saturation problem
         layers.append(torch.nn.Linear(prev_dim, self.output_dim))
         # layers.append(torch.nn.ReLU())
                 

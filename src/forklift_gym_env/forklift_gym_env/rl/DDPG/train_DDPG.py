@@ -52,8 +52,8 @@ def train_agent(env):
     agent.train_mode()
 
     # Fix model parameters to a good initialization (Proportional Controller)
-    agent.actor.model_layers[0].weight.data[:] = torch.tensor([[0.0, 0.3], [1.5, 0.00]]) # will correspond to [-0.01*theta, -0.1*l2_dist]
-    agent.actor.model_layers[0].bias.data[:] = torch.zeros_like(agent.actor.model_layers[0].bias.data)
+    agent.actor.model_layers[1].weight.data[:] = torch.tensor([[0.0, 0.3], [1.5, 0.00]]) # will correspond to [-0.01*theta, -0.1*l2_dist]
+    agent.actor.model_layers[1].bias.data[:] = torch.zeros_like(agent.actor.model_layers[0].bias.data)
 
     replay_buffer = ReplayBuffer(env.config["replay_buffer_size"], concatenated_obs_dim, concatenated_action_dim, env.config["batch_size"])
 
@@ -82,7 +82,7 @@ def train_agent(env):
         cum_episode_rewards += reward
 
         # Check if "done" stands for the terminal state or for end of max_episode_length (important for target value calculation)
-        if done and cur_iteration < env.max_episode_length:
+        if done and cur_iteration <= env.max_episode_length:
             term = True
         else:
             term = False
