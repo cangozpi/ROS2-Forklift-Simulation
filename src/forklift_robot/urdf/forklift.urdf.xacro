@@ -55,7 +55,7 @@
 
     <xacro:include filename="inertial_macros.xacro"/>
     <xacro:include filename="gazebo_colors.xacro"/>
-    <!-- <xacro:include filename="lidar.xacro"/> -->
+    <xacro:include filename="lidar.xacro"/>
     <!-- <xacro:include filename="camera.xacro"/> --> <!-- Uncomment this line, and comment the line below to switch between Depth Camera and a Regular Camera -->
     <xacro:include filename="depth_camera.xacro"/>
 

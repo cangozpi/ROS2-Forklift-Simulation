@@ -81,8 +81,8 @@ def train_agent(env):
 
         cum_episode_rewards += reward
 
-        # Check if "done" stands for the terminal state or for end of max_episode_length (important for target value calculation)
-        if done and cur_iteration <= env.max_episode_length:
+        # Check if "done" stands for the terminal state or for end of max_episode_length(i.e. truncation) (matters for target value calculation)
+        if done and cur_iteration < env.max_episode_length:
             term = True
         else:
             term = False
@@ -143,7 +143,7 @@ def train_agent(env):
 
                 # Save the model
                 if ((cur_num_updates % env.config["save_every"] == 0) and (cur_num_updates > 0 )) or \
-                    (cur_episode + 1 == env.config["total_episodes"]) :
+                    (cur_episode  == env.config["total_episodes"]) :
                     print("Saving the model ...")
                     agent.save_model()
                 

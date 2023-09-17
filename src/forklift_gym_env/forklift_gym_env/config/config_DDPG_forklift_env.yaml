@@ -29,19 +29,19 @@ collision_detection_link_names: ['back_wheel_link', 'chassis_bottom_link', 'chas
 mode: "train" # ['train', 'test']
 total_episodes: 200 # total number of episodes to train
 max_episode_length: 100 # maximum iteration length of an episode.
-warmup_steps: 00 # number of steps to take random actions before using the agents policy
+warmup_steps: 1000 # number of steps to take random actions before using the agents policy
 update_every: 100 # update model after every update_every steps taken.
-num_updates: 200 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
+num_updates: 20 # at every update_every steps while updating the model perform num_updates many updates by sampling a new batch for each of them. 
 actor_hidden_dims: [] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the actor network of ddpg agent.
 critic_hidden_dims: [32, 16] # holds dimensions of the hidden layers excluding the input layer and the input and the output dimensions for the critic network of ddpg agent.
-actor_lr: 1e-3 # learning rate for the Actor Network20
-critic_lr: 1e-3 # learning rate for the Critic Network
+actor_lr: 1e-4 # learning rate for the Actor Network20
+critic_lr: 1e-4 # learning rate for the Critic Network
 initial_epsilon: 1.0 # epsilon used for multiplying the gaussian distribution sample to obtain the noise to add to the agent's action (exploration).
 epsilon_decay: 0.9999 # every time an action is taken epsilon is reduced by this amount (i.e. epsilon *= epsilon_decay).
-min_epsilon: 0.05 # minimum value that epsilon can decay to
-act_noise: 0.01 # stddev for Gaussian exploration noise added to policy at training time. (At test time, no noise is added.)
+min_epsilon: 0.2 # minimum value that epsilon can decay to
+act_noise: 0.3 # stddev for Gaussian exploration noise added to policy at training time. (At test time, no noise is added.)
 target_noise: 0.2 # stddev for smoothing noise added to target policy.
-clip_noise_range: 0.0 #0.5 # noise is clipped btw [-clip_noise_range, clip_noise_range] before being added to the action
+clip_noise_range: 0.5 # noise is clipped btw [-clip_noise_range, clip_noise_range] before being added to the action
 gamma: 0.9999 # next state discount rate
 tau: 0.995 # tau value used in updating the target networks using polyak averaging (i.e. targ_net = tau*targ_net + (1-tau) * net).
 policy_update_delay: 1 # Actor is updated after every policy_update_delay number of updates
