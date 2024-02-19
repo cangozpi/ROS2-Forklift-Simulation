@@ -19,9 +19,14 @@ def set_GAZEBO_MODEL_PATH():
     """
     forklift_gym_env_pkg_name = 'forklift_gym_env'
     # export pallet sdf models path to GAZEBO_MODEL_PATH environment variable so that it can be spawned with mesh files
-    os.environ['GAZEBO_MODEL_PATH'] = os.environ['GAZEBO_MODEL_PATH'] + \
-        os.path.join(get_package_share_directory(forklift_gym_env_pkg_name), "../../../../", \
-            "src/forklift_gym_env/models") + ":"
+    if 'GAZEBO_MODEL_PATH' in os.environ:
+        os.environ['GAZEBO_MODEL_PATH'] = os.environ['GAZEBO_MODEL_PATH'] + \
+            os.path.join(get_package_share_directory(forklift_gym_env_pkg_name), "../../../../", \
+                "src/forklift_gym_env/models") + ":"
+    else:
+        os.environ['GAZEBO_MODEL_PATH'] = os.path.join(get_package_share_directory(forklift_gym_env_pkg_name), "../../../../", \
+                "src/forklift_gym_env/models") + ":"
+
 
 
 def set_GAZEBO_PLUGIN_PATH():
@@ -30,9 +35,13 @@ def set_GAZEBO_PLUGIN_PATH():
     """
     ros_gazebo_plugins_pkg_name = 'ros_gazebo_plugins'
     # export build/ros_gazebo_plugins path so that custom plugins defined in that pkg can be loaded into gazebo
-    os.environ['GAZEBO_PLUGIN_PATH'] = os.environ['GAZEBO_PLUGIN_PATH'] + \
-        os.path.join(get_package_share_directory(ros_gazebo_plugins_pkg_name), "../../../../", \
-            "build/ros_gazebo_plugins") + ":"
+    if 'GAZEBO_PLUGIN_PATH' in os.environ:
+        os.environ['GAZEBO_PLUGIN_PATH'] = os.environ['GAZEBO_PLUGIN_PATH'] + \
+            os.path.join(get_package_share_directory(ros_gazebo_plugins_pkg_name), "../../../../", \
+                "build/ros_gazebo_plugins") + ":"
+    else:
+        os.environ['GAZEBO_PLUGIN_PATH'] =  os.path.join(get_package_share_directory(ros_gazebo_plugins_pkg_name), "../../../../", \
+                "build/ros_gazebo_plugins") + ":"
 
 
 def get_robot_description_raw():

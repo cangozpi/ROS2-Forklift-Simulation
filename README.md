@@ -53,6 +53,40 @@ Below are the dependencies which were used during the development of the code:
   * See _requirements.txt_ for the python packages that were installed on the local machine used during the development of the code (Note that all of them might not be required).
   * Ubuntu 22.04.3
 
+## Installation:
+* __Docker Installation:__
+  ```bash
+  # -------- FIRST:
+  # build the docker image
+  docker build . -t forklift_image
+
+  # create Docker container with GUI support
+  xhost +local:*
+  docker run -it -v ~/Desktop/Docker_shared:/Docker_shared -w /Docker_shared --privileged --net=host -e DISPLAY=${DISPLAY} --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --gpus all --name forklift forklift_image bash
+
+  # Install ros2 dependencies
+  xargs sudo apt -y install < ros2_pkg_requirements.txt
+
+  # Install python dependencies
+  pip install -r requirements.txt
+
+  # <or you can install ros2 dependencies and python dependencies by running>
+  # make install_requirements
+
+  # After you are done with GUI (for safety purposes)
+  xhost -local:*
+  ```
+  To restart the container:
+  ```bash
+  xhost +local:*
+  docker start forklift
+  docker exec -it forklift bash
+  ```
+  Test if you have successfully built by running:
+  ```bash
+  make clean_build
+  make manual_launch
+  ```
 
 ## Running:
 Before training or testing the rl agents first you need to build the ROS package. Also you need to clean the build and rebuild it again if you have made changes to the code. Otherwise, those changes would not be reflected when you run the code.
@@ -61,6 +95,10 @@ Before training or testing the rl agents first you need to build the ROS package
 
     This both cleans the previous build files if they exist and build the ROS package from scratch.
       ```bash
+      # For the first time you need to build first
+      make build
+      # --
+      # Afterwards you can use clean_build to build from scratch
       make clean_build
       ```
 

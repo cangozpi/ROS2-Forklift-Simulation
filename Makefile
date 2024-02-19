@@ -51,3 +51,8 @@ start_tensorboard:
 
 start_tensorboard_sb3:
 	tensorboard --logdir sb3_tensorboard
+
+
+install_requirements:
+	xargs sudo apt -y install < ros2_pkg_requirements.txt && \
+	pip install -r requirements.txt
