@@ -58,7 +58,7 @@ diff_cont: # refer to https://github.com/ros-controls/ros2_controllers/blob/mast
     # wheel_separation: 0.655 # (chassis_bottom_width - 2*front_wheel_thickness)
     wheel_separation: 1.115 # chassis_bottom_width (shortest distance btw the centers of the two wheels)
     # wheel_separation: 0.885 # equals $chassis_bottom_width in forklift.urdf.xacro (chassis_bottom_width - front_wheel_thickness)
-    wheel_radius: 0.30 # equals front_wheel_radius in forklift.urdf.xacro
+    wheel_radius: 0.05 # equals front_wheel_radius in forklift.urdf.xacro
 
     use_stamped_vel: false
 

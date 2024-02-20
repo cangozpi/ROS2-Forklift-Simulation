@@ -56,3 +56,6 @@ start_tensorboard_sb3:
 install_requirements:
 	xargs sudo apt -y install < ros2_pkg_requirements.txt && \
 	pip install -r requirements.txt
+
+start_rviz:
+	rviz2 -d src/forklift_robot/rviz/forklift_with_sensors.rviz
